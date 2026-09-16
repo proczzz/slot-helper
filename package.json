@@ -1,16 +1,25 @@
 {
   "name": "slot-helper",
+  "private": true,
   "type": "module",
+  "description": "AI-powered customer service assistant with appointment booking",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/proczzz/slot-helper"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "hono": "^4.13.8"
   },
   "devDependencies": {
     "@types/node": "^22.20.3",
+    "prettier": "3.9.7",
     "wrangler": "^4.132.0"
   }
 }
