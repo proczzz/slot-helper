@@ -5,7 +5,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "slot-helper",
-  "main": "src/index.ts",
+  "main": "src/infrastructure/platform-entry/cloudflare.ts",
   "compatibility_date": "2026-09-15",
   "assets": {
     "binding": "ASSETS",
