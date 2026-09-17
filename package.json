@@ -11,8 +11,13 @@
   "scripts": {
     "dev:cloudflare": "wrangler dev",
     "dev:node": "tsx watch src/infrastructure/platform-entry/node.ts",
+    "typecheck:cloudflare": "tsc --noEmit -p tsconfig.cloudflare.json",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "build:node": "esbuild src/infrastructure/platform-entry/node.ts --bundle --minify --sourcemap --platform=node --format=esm --outfile=dist/node.js",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "docker:build": "docker build -t slot-helper-node .",
+    "docker:run": "docker run -p 3000:3000 slot-helper-node",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -21,12 +26,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.3",
+    "esbuild": "^0.28.2",
     "prettier": "3.9.7",
     "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
     "wrangler": "^4.132.0"
   },
   "allowScripts": {
-    "esbuild@0.28.1": true,
-    "workerd@1.20260915.1": true
+    "esbuild": true,
+    "workerd": true
   }
 }
