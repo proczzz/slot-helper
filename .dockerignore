@@ -6,6 +6,7 @@ dist
 .vscode
 .wrangler
 .dev.vars
+.env
 public
 wrangler.jsonc
 worker-configuration.d.ts
