@@ -1,7 +1,17 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
     "types": ["node"]
   },
-  "include": ["src/core/**/*.ts", "src/infrastructure/platform-entry/node.ts"]
+  "include": [
+    "src/ai/**/*.ts",
+    "src/core/**/*.ts",
+    "src/infrastructure/platform-entry/node.ts",
+    "src/infrastructure/platform-entry/shared-routes.ts",
+    "src/providers/conversation-store/sqlite.ts",
+    "src/providers/conversation-store/types.ts"
+  ]
 }

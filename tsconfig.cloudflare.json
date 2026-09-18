@@ -1,8 +1,18 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "types": ["./worker-configuration.d.ts", "node"]
-  }
+    "types": ["./worker-configuration.d.ts"]
+  },
+  "include": [
+    "src/ai/**/*.ts",
+    "src/core/**/*.ts",
+    "src/infrastructure/platform-entry/cloudflare.ts",
+    "src/infrastructure/platform-entry/shared-routes.ts",
+    "src/providers/conversation-store/types.ts"
+  ]
 }

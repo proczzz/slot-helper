@@ -10,4 +10,5 @@ dist
 public
 wrangler.jsonc
 worker-configuration.d.ts
+*.tsbuildinfo
 *.md

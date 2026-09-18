@@ -26,7 +26,7 @@
     "@hono/node-server": "^2.1.1",
     "ai": "^7.0.105",
     "hono": "^4.13.8",
-    "llm-lister": "file:../llm-lister",
+    "llm-lister": "^0.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
