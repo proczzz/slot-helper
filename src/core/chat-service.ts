@@ -1,8 +1,10 @@
 import { generateText } from 'ai';
 import type { LanguageModel } from 'ai';
-import type { ChatRequest, ChatResponse } from './types.ts';
+import { ChatRequestSchema } from './types.ts';
+import type { ChatResponse } from './types.ts';
 
-export async function handleChat(request: ChatRequest, model: LanguageModel): Promise<ChatResponse> {
+export async function handleChat(rawRequest: unknown, model: LanguageModel): Promise<ChatResponse> {
+  const request = ChatRequestSchema.parse(rawRequest);
   const result = await generateText({
     model,
     prompt: request.message,
