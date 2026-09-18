@@ -36,3 +36,4 @@ lerna-debug.log*
 !.dev.vars.example
 !.env.example
 *.tsbuildinfo
+*.db

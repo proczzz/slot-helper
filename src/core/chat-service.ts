@@ -1,13 +1,30 @@
 import { generateText } from 'ai';
 import type { LanguageModel } from 'ai';
 import { ChatRequestSchema } from './types.ts';
-import type { ChatResponse } from './types.ts';
+import type { ChatResponse, ConversationStore } from './types.ts';
 
-export async function handleChat(rawRequest: unknown, model: LanguageModel): Promise<ChatResponse> {
+export async function handleChat(
+  rawRequest: unknown,
+  model: LanguageModel,
+  conversationStore: ConversationStore | null,
+): Promise<ChatResponse> {
   const request = ChatRequestSchema.parse(rawRequest);
-  const result = await generateText({
-    model,
-    prompt: request.message,
-  });
+
+  const history = conversationStore ? await conversationStore.getMessages(request.sessionId) : [];
+
+  const messages = [
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user' as const, content: request.message },
+  ];
+
+  const result = await generateText({ model, messages });
+
+  if (conversationStore) {
+    await conversationStore.appendMessages(request.sessionId, [
+      { role: 'user', content: request.message, timestamp: Date.now() },
+      { role: 'assistant', content: result.text, timestamp: Date.now() },
+    ]);
+  }
+
   return { reply: result.text };
 }

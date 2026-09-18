@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { registerChatRoute, registerModelsRoute } from './shared-routes.ts';
+import { createConversationStore } from '../../providers/conversation-store/index.ts';
 
 const app = new Hono();
 
@@ -12,7 +13,15 @@ const env = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 };
 
-registerChatRoute(app, () => env);
+const conversationStore = createConversationStore({
+  CONVERSATION_STORE: process.env.CONVERSATION_STORE,
+});
+
+registerChatRoute(
+  app,
+  () => env,
+  () => conversationStore,
+);
 registerModelsRoute(app, () => env);
 
 const port = 3000;

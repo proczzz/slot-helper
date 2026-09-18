@@ -11,6 +11,7 @@
     "src/core/**/*.ts",
     "src/infrastructure/platform-entry/node.ts",
     "src/infrastructure/platform-entry/shared-routes.ts",
+    "src/providers/conversation-store/index.ts",
     "src/providers/conversation-store/sqlite.ts",
     "src/providers/conversation-store/types.ts"
   ]

@@ -2,12 +2,18 @@ import type { Context, Env, Hono } from 'hono';
 import { handleChat } from '../../core/chat-service.ts';
 import { createLanguageModel, listLanguageModels } from '../../ai/language-model/index.ts';
 import type { LanguageModelProviderEnv } from '../../ai/language-model/types.ts';
+import type { ConversationStore } from '../../core/types.ts';
 
-export function registerChatRoute<E extends Env>(app: Hono<E>, getEnv: (c: Context<E>) => LanguageModelProviderEnv) {
+export function registerChatRoute<E extends Env>(
+  app: Hono<E>,
+  getEnv: (c: Context<E>) => LanguageModelProviderEnv,
+  getConversationStore: (c: Context<E>) => ConversationStore | null,
+) {
   app.post('/chat', async (c) => {
     const body: unknown = await c.req.json();
     const model = createLanguageModel(getEnv(c));
-    const result = await handleChat(body, model);
+    const conversationStore = getConversationStore(c);
+    const result = await handleChat(body, model, conversationStore);
     return c.json(result);
   });
 }

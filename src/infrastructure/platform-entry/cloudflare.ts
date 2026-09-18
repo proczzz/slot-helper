@@ -13,7 +13,7 @@ const getEnv = (c: Context<{ Bindings: CloudflareBindings }>) => ({
   ANTHROPIC_API_KEY: c.env.ANTHROPIC_API_KEY,
 });
 
-registerChatRoute(app, getEnv);
+registerChatRoute(app, getEnv, () => null);
 registerModelsRoute(app, getEnv);
 
 export default app;

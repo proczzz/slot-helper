@@ -10,3 +10,14 @@ export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export interface ChatResponse {
   reply: string;
 }
+
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+export interface ConversationStore {
+  getMessages(sessionId: string): Promise<Message[]>;
+  appendMessages(sessionId: string, messages: Message[]): Promise<void>;
+}
