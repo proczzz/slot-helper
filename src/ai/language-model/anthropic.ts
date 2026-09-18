@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import type { LanguageModelProvider, LanguageModelProviderEnv, ModelInfo } from './types.ts';
+import type { LanguageModelProvider, LanguageModelProviderEnv } from './types.ts';
 
 export const anthropicProvider: LanguageModelProvider = {
   createModel(env: LanguageModelProviderEnv) {
@@ -8,13 +8,5 @@ export const anthropicProvider: LanguageModelProvider = {
     }
     const anthropic = createAnthropic({ apiKey: env.ANTHROPIC_API_KEY });
     return anthropic('claude-sonnet-5');
-  },
-
-  // TODO: 目前用固定假資料頂著,之後要換成真實打 GET https://api.anthropic.com/v1/models
-  async listModels(): Promise<ModelInfo[]> {
-    return [
-      { id: 'claude-sonnet-5', provider: 'anthropic' },
-      { id: 'claude-opus-5', provider: 'anthropic' },
-    ];
   },
 };

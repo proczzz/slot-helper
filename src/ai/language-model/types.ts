@@ -1,4 +1,7 @@
-import { LanguageModel } from 'ai';
+import type { LanguageModel } from 'ai';
+import type { ModelInfo } from 'llm-lister';
+
+export type { ModelInfo };
 
 export interface LanguageModelProviderEnv {
   AI_PROVIDER?: string;
@@ -6,12 +9,6 @@ export interface LanguageModelProviderEnv {
   ANTHROPIC_API_KEY?: string;
 }
 
-export interface ModelInfo {
-  id: string;
-  provider: string;
-}
-
 export interface LanguageModelProvider {
   createModel(env: LanguageModelProviderEnv): LanguageModel;
-  listModels(env: LanguageModelProviderEnv): Promise<ModelInfo[]>;
 }
