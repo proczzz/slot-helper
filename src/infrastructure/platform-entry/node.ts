@@ -1,23 +1,19 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { handleChat } from '../../core/chat-service.ts';
-import type { ChatRequest } from '../../core/types.ts';
-import { createLanguageModel } from '../../ai/language-model/index.ts';
+import { registerChatRoute, registerModelsRoute } from './shared-routes.ts';
 
 const app = new Hono();
 
-// 不同於 cloudflare worker ， node 環境不會銷毀重建，啟動時讀一次環境變數就好
-const model = createLanguageModel({
+// Node 是常駐進程,環境變數在啟動時讀一次、存成常數即可,
+// 不像 Cloudflare 需要每次 request 重新讀。
+const env = {
   AI_PROVIDER: process.env.AI_PROVIDER,
   DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-});
+};
 
-app.post('/chat', async (c) => {
-  const body = await c.req.json<ChatRequest>();
-  const result = await handleChat(body, model);
-  return c.json(result);
-});
+registerChatRoute(app, () => env);
+registerModelsRoute(app, () => env);
 
 const port = 3000;
 

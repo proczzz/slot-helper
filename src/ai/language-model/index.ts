@@ -1,7 +1,7 @@
 import type { LanguageModel } from 'ai';
 import { deepSeekProvider } from './deepseek.ts';
 import { anthropicProvider } from './anthropic.ts';
-import type { LanguageModelProvider, LanguageModelProviderEnv } from './types.ts';
+import type { LanguageModelProvider, LanguageModelProviderEnv, ModelInfo } from './types.ts';
 
 const providers: Record<string, LanguageModelProvider> = {
   deepseek: deepSeekProvider,
@@ -18,4 +18,8 @@ function getProvider(env: LanguageModelProviderEnv): LanguageModelProvider {
 
 export function createLanguageModel(env: LanguageModelProviderEnv): LanguageModel {
   return getProvider(env).createModel(env);
+}
+
+export function listLanguageModels(env: LanguageModelProviderEnv): Promise<ModelInfo[]> {
+  return getProvider(env).listModels(env);
 }
