@@ -1,6 +1,7 @@
 import { Hono, Context } from 'hono';
 import { registerChatRoute, registerModelsRoute } from './shared-routes.ts';
 import { createD1ConversationStore } from '../../providers/conversation-store/d1.ts';
+import { createSchedulingProvider } from '../../providers/scheduling/index.ts';
 import type { ConversationStore } from '../../core/types.ts';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
@@ -28,7 +29,16 @@ function getCloudflareConversationStore(c: Context<{ Bindings: CloudflareBinding
   throw new Error(`Unsupported CONVERSATION_STORE: "${setting}"`);
 }
 
-registerChatRoute(app, getEnv, getCloudflareConversationStore);
+function getCloudflareSchedulingProvider(c: Context<{ Bindings: CloudflareBindings }>) {
+  return createSchedulingProvider({
+    SCHEDULING_PROVIDER: c.env.SCHEDULING_PROVIDER,
+    GOOGLE_SERVICE_ACCOUNT_EMAIL: c.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    GOOGLE_PRIVATE_KEY: c.env.GOOGLE_PRIVATE_KEY,
+    GOOGLE_CALENDAR_ID: c.env.GOOGLE_CALENDAR_ID,
+  });
+}
+
+registerChatRoute(app, getEnv, getCloudflareConversationStore, getCloudflareSchedulingProvider);
 registerModelsRoute(app, getEnv);
 
 export default app;

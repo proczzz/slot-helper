@@ -9,3 +9,8 @@ ANTHROPIC_API_KEY=
 # 是否啟用"多輪對話記憶"功能。預設停用
 # 停用:none(或留空)，啟用:d1(使用 Cloudflare D1 儲存)
 CONVERSATION_STORE=d1
+
+SCHEDULING_PROVIDER=google-calendar
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_CALENDAR_ID=

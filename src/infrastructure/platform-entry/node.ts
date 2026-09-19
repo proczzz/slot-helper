@@ -2,7 +2,9 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { registerChatRoute, registerModelsRoute } from './shared-routes.ts';
 import { sqliteConversationStore } from '../../providers/conversation-store/sqlite.ts';
+import { createGoogleCalendarProvider } from '../../providers/scheduling/google-calendar.ts';
 import type { ConversationStore } from '../../core/types.ts';
+import type { SchedulingProvider } from '../../providers/scheduling/types.ts';
 
 const app = new Hono();
 
@@ -29,10 +31,29 @@ function getNodeConversationStore(): ConversationStore | null {
 
 const conversationStore = getNodeConversationStore();
 
+function getNodeSchedulingProvider(): SchedulingProvider | null {
+  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  const calendarId = process.env.GOOGLE_CALENDAR_ID;
+
+  if (!clientEmail || !privateKey || !calendarId) {
+    return null;
+  }
+
+  return createGoogleCalendarProvider({
+    clientEmail,
+    privateKey: privateKey.replace(/\\n/g, '\n'),
+    calendarId,
+  });
+}
+
+const schedulingProvider = getNodeSchedulingProvider();
+
 registerChatRoute(
   app,
   () => env,
   () => conversationStore,
+  () => schedulingProvider,
 );
 registerModelsRoute(app, () => env);
 
