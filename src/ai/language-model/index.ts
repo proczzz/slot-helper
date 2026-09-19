@@ -21,6 +21,7 @@ function getProvider(env: LanguageModelProviderEnv): LanguageModelProvider {
   if (!provider) {
     throw new Error(`Unsupported or missing AI_PROVIDER: "${env.AI_PROVIDER}"`);
   }
+  console.log(`使用AI供應商: ${env.AI_PROVIDER}`);
   return provider;
 }
 

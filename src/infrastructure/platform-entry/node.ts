@@ -17,9 +17,11 @@ const env = {
 function getNodeConversationStore(): ConversationStore | null {
   const setting = process.env.CONVERSATION_STORE;
   if (!setting || setting === 'none') {
+    console.log('AI多輪對話記憶:停用');
     return null;
   }
   if (setting === 'sqlite') {
+    console.log('AI多輪對話記憶:啟用-使用Sqlite儲存');
     return sqliteConversationStore;
   }
   throw new Error(`Unsupported CONVERSATION_STORE: "${setting}"`);

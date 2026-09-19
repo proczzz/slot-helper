@@ -1,6 +1,11 @@
+# (必填)使用哪個 AI 供應商。允許值:deepseek | anthropic
 AI_PROVIDER=deepseek
 
+# 使用 deepseek 時必填 DeepSeek API key
 DEEPSEEK_API_KEY=
+# 使用 anthropic 時必填 Anthropic API key
 ANTHROPIC_API_KEY=
 
+# 是否啟用"多輪對話記憶"功能。預設停用
+# 停用:none(或留空)，啟用:d1(使用 Cloudflare D1 儲存)
 CONVERSATION_STORE=d1

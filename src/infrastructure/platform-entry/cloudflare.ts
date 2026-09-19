@@ -18,9 +18,11 @@ const getEnv = (c: Context<{ Bindings: CloudflareBindings }>) => ({
 function getCloudflareConversationStore(c: Context<{ Bindings: CloudflareBindings }>): ConversationStore | null {
   const setting = c.env.CONVERSATION_STORE;
   if (!setting || setting === 'none') {
+    console.log('AI多輪對話記憶:停用');
     return null;
   }
   if (setting === 'd1') {
+    console.log('AI多輪對話記憶:啟用-D1儲存');
     return createD1ConversationStore(c.env.CONVERSATION_DB);
   }
   throw new Error(`Unsupported CONVERSATION_STORE: "${setting}"`);
