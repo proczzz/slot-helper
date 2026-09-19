@@ -13,6 +13,7 @@
     "src/core/**/*.ts",
     "src/infrastructure/platform-entry/cloudflare.ts",
     "src/infrastructure/platform-entry/shared-routes.ts",
+    "src/providers/conversation-store/d1.ts",
     "src/providers/conversation-store/types.ts"
   ]
 }

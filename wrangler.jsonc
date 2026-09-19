@@ -15,6 +15,13 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  "d1_databases": [
+    {
+      "binding": "CONVERSATION_DB",
+      "database_name": "slot-helper-conversations",
+      "database_id": "c07a083b-a1b5-4ec5-b9c9-50455414833e",
+    },
+  ],
   /**
    * Smart Placement
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

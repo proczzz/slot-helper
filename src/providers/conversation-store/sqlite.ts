@@ -2,8 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import type { ConversationStore } from './types.ts';
 import type { Message } from '../../core/types.ts';
 
-const DB_PATH = process.env.CONVERSATION_DB_PATH || 'conversations.db';
+const DB_DIR = process.env.CONVERSATION_DB_DIR || '.';
+const DB_NAME = process.env.CONVERSATION_DB_NAME || 'conversations.db';
+const DB_PATH = `${DB_DIR}/${DB_NAME}`;
 
+// !!! 這份 schema 必須跟 migrations/0001_create_messages_table.sql 保持一致
+// !!! D1(Cloudflare 版)透過 wrangler d1 migrations 套用同一份 schema,兩者需手動同步
 const CREATE_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

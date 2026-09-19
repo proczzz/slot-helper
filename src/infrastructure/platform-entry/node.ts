@@ -1,7 +1,8 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { registerChatRoute, registerModelsRoute } from './shared-routes.ts';
-import { createConversationStore } from '../../providers/conversation-store/index.ts';
+import { sqliteConversationStore } from '../../providers/conversation-store/sqlite.ts';
+import type { ConversationStore } from '../../core/types.ts';
 
 const app = new Hono();
 
@@ -13,9 +14,18 @@ const env = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 };
 
-const conversationStore = createConversationStore({
-  CONVERSATION_STORE: process.env.CONVERSATION_STORE,
-});
+function getNodeConversationStore(): ConversationStore | null {
+  const setting = process.env.CONVERSATION_STORE;
+  if (!setting || setting === 'none') {
+    return null;
+  }
+  if (setting === 'sqlite') {
+    return sqliteConversationStore;
+  }
+  throw new Error(`Unsupported CONVERSATION_STORE: "${setting}"`);
+}
+
+const conversationStore = getNodeConversationStore();
 
 registerChatRoute(
   app,

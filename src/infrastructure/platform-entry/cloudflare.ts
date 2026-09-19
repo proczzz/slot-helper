@@ -1,5 +1,7 @@
-import { Context, Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import { registerChatRoute, registerModelsRoute } from './shared-routes.ts';
+import { createD1ConversationStore } from '../../providers/conversation-store/d1.ts';
+import type { ConversationStore } from '../../core/types.ts';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -13,7 +15,18 @@ const getEnv = (c: Context<{ Bindings: CloudflareBindings }>) => ({
   ANTHROPIC_API_KEY: c.env.ANTHROPIC_API_KEY,
 });
 
-registerChatRoute(app, getEnv, () => null);
+function getCloudflareConversationStore(c: Context<{ Bindings: CloudflareBindings }>): ConversationStore | null {
+  const setting = c.env.CONVERSATION_STORE;
+  if (!setting || setting === 'none') {
+    return null;
+  }
+  if (setting === 'd1') {
+    return createD1ConversationStore(c.env.CONVERSATION_DB);
+  }
+  throw new Error(`Unsupported CONVERSATION_STORE: "${setting}"`);
+}
+
+registerChatRoute(app, getEnv, getCloudflareConversationStore);
 registerModelsRoute(app, getEnv);
 
 export default app;
