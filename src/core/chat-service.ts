@@ -2,6 +2,7 @@ import { generateText } from 'ai';
 import type { LanguageModel } from 'ai';
 import { ChatRequestSchema } from './types.ts';
 import type { ChatResponse, ConversationStore } from './types.ts';
+import { buildSystemPrompt } from './build-system-prompt.ts';
 
 export async function handleChat(
   rawRequest: unknown,
@@ -17,7 +18,7 @@ export async function handleChat(
     { role: 'user' as const, content: request.message },
   ];
 
-  const result = await generateText({ model, messages });
+  const result = await generateText({ model, system: buildSystemPrompt(), messages });
 
   if (conversationStore) {
     await conversationStore.appendMessages(request.sessionId, [
