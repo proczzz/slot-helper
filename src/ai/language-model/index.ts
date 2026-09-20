@@ -11,19 +11,14 @@ const providers: Record<string, LanguageModelProvider> = {
   anthropic: anthropicProvider,
 };
 
-// 供應商名稱 -> 對應的環境變數欄位名稱
-const API_KEY_ENV_MAP: Record<string, keyof AppEnv> = {
-  deepseek: 'DEEPSEEK_API_KEY',
-  anthropic: 'ANTHROPIC_API_KEY',
-};
-
 export function createLanguageModel(env: AppEnv): LanguageModel {
-  return getProvider(env).createModel(env);
+  const provider = getProvider(env);
+  return provider.createModel(getApiKey(env, provider));
 }
 
 export function listLanguageModels(env: AppEnv): Promise<ModelInfo[]> {
   const provider = env.AI_PROVIDER as Provider;
-  const apiKey = getApiKey(env);
+  const apiKey = getApiKey(env, getProvider(env));
 
   const supported = getSupportedProviders();
   if (!supported.includes(provider)) {
@@ -44,11 +39,10 @@ function getProvider(env: AppEnv): LanguageModelProvider {
   return provider;
 }
 
-function getApiKey(env: AppEnv): string {
-  const envKeyName = API_KEY_ENV_MAP[env.AI_PROVIDER ?? ''];
-  const key = envKeyName ? env[envKeyName] : undefined;
+function getApiKey(env: AppEnv, provider: LanguageModelProvider): string {
+  const key = env[provider.apiKeyEnv];
   if (!key) {
-    throw new Error(`API key is required to list ${env.AI_PROVIDER} models`);
+    throw new Error(`${provider.apiKeyEnv} is required when AI_PROVIDER=${env.AI_PROVIDER}`);
   }
   return key;
 }

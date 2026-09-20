@@ -5,5 +5,6 @@ import { AppEnv } from '../../app/services';
 export type { ModelInfo };
 
 export interface LanguageModelProvider {
-  createModel(env: AppEnv): LanguageModel;
+  readonly apiKeyEnv: keyof AppEnv;
+  createModel(apiKey: string): LanguageModel;
 }
