@@ -57,7 +57,10 @@ export function createGoogleCalendarProvider(config: {
     await assertOk(response, 'obtain Google access token');
 
     const data = (await response.json()) as { access_token: string; expires_in: number };
-    cachedToken = { accessToken: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+    cachedToken = {
+      accessToken: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1000,
+    };
     return cachedToken.accessToken;
   }
 
@@ -100,7 +103,12 @@ export function createGoogleCalendarProvider(config: {
       await assertOk(response, 'list events');
 
       const data = (await response.json()) as {
-        items: { id: string; summary: string; start: { dateTime: string }; end: { dateTime: string } }[];
+        items: {
+          id: string;
+          summary: string;
+          start: { dateTime: string };
+          end: { dateTime: string };
+        }[];
       };
 
       return data.items.map((item) => ({

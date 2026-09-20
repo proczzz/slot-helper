@@ -1,14 +1,9 @@
 import type { LanguageModel } from 'ai';
 import type { ModelInfo } from 'llm-lister';
+import { AppEnv } from '../../app/services';
 
 export type { ModelInfo };
 
-export interface LanguageModelProviderEnv {
-  AI_PROVIDER?: string;
-  DEEPSEEK_API_KEY?: string;
-  ANTHROPIC_API_KEY?: string;
-}
-
 export interface LanguageModelProvider {
-  createModel(env: LanguageModelProviderEnv): LanguageModel;
+  createModel(env: AppEnv): LanguageModel;
 }

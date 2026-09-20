@@ -8,7 +8,9 @@ export function createD1ConversationStore(db: D1Database): ConversationStore {
   return {
     async getMessages(sessionId: string): Promise<Message[]> {
       const { results } = await db
-        .prepare('SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC')
+        .prepare(
+          'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
+        )
         .bind(sessionId)
         .run<{ role: string; content: string; timestamp: number }>();
 
@@ -20,7 +22,9 @@ export function createD1ConversationStore(db: D1Database): ConversationStore {
     },
 
     async appendMessages(sessionId: string, messages: Message[]): Promise<void> {
-      const insert = db.prepare('INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)');
+      const insert = db.prepare(
+        'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)',
+      );
       const statements = messages.map((message) =>
         insert.bind(sessionId, message.role, message.content, message.timestamp),
       );

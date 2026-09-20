@@ -25,7 +25,9 @@ db.exec(CREATE_TABLE_SQL);
 export const sqliteConversationStore: ConversationStore = {
   async getMessages(sessionId: string): Promise<Message[]> {
     const rows = db
-      .prepare('SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC')
+      .prepare(
+        'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
+      )
       .all(sessionId) as { role: string; content: string; timestamp: number }[];
 
     return rows.map((row) => ({
@@ -36,7 +38,9 @@ export const sqliteConversationStore: ConversationStore = {
   },
 
   async appendMessages(sessionId: string, messages: Message[]): Promise<void> {
-    const insert = db.prepare('INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)');
+    const insert = db.prepare(
+      'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)',
+    );
     for (const message of messages) {
       insert.run(sessionId, message.role, message.content, message.timestamp);
     }

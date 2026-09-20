@@ -1,18 +1,16 @@
-import { generateText, tool, stepCountIs } from 'ai';
-import { z } from 'zod';
 import type { LanguageModel } from 'ai';
-import { ChatRequestSchema } from './types.ts';
-import type { ChatResponse, ConversationStore } from './types.ts';
-import { buildSystemPrompt } from './build-system-prompt.ts';
+import { generateText, stepCountIs, tool } from 'ai';
+import { z } from 'zod';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
+import { buildSystemPrompt } from './build-system-prompt.ts';
+import type { ChatRequest, ChatResponse, ConversationStore } from './types.ts';
 
 export async function handleChat(
-  rawRequest: unknown,
+  request: ChatRequest,
   model: LanguageModel,
   conversationStore: ConversationStore | null,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {
-  const request = ChatRequestSchema.parse(rawRequest);
   const history = conversationStore ? await conversationStore.getMessages(request.sessionId) : [];
 
   const messages = [

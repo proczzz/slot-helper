@@ -1,10 +1,11 @@
 import { createDeepSeek } from '@ai-sdk/deepseek';
-import type { LanguageModelProvider, LanguageModelProviderEnv } from './types.ts';
+import type { AppEnv } from '../../app/services.ts';
+import type { LanguageModelProvider } from './types.ts';
 
 const DEEPSEEK_MODEL_ID = 'deepseek-flash';
 
 export const deepSeekProvider: LanguageModelProvider = {
-  createModel(env: LanguageModelProviderEnv) {
+  createModel(env: AppEnv) {
     if (!env.DEEPSEEK_API_KEY) {
       throw new Error('DEEPSEEK_API_KEY is required when AI_PROVIDER=deepseek');
     }
