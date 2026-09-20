@@ -1,48 +1,48 @@
 import type { LanguageModel } from 'ai';
-import type { Provider } from 'llm-lister';
-import { getSupportedProviders, listModels as llmListerListModels } from 'llm-lister';
-import type { AppEnv } from '../../app/services.ts';
+import type { ModelInfo, Provider } from 'llm-lister';
+import { getSupportedProviders, listModels } from 'llm-lister';
 import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
-import type { LanguageModelProvider, ModelInfo } from './types.ts';
+import type { LanguageModelEnv, LanguageModelProvider } from './types.ts';
 
 const providers: Record<string, LanguageModelProvider> = {
   deepseek: deepSeekProvider,
   anthropic: anthropicProvider,
 };
 
-export function createLanguageModel(env: AppEnv): LanguageModel {
-  const provider = getProvider(env);
-  return provider.createModel(getApiKey(env, provider));
+export function createLanguageModel(env: LanguageModelEnv): LanguageModel {
+  const { name, provider, apiKey } = resolveProvider(env);
+  console.log(`使用AI供應商: ${name}`);
+  return provider.createModel(apiKey);
 }
 
-export function listLanguageModels(env: AppEnv): Promise<ModelInfo[]> {
-  const provider = env.AI_PROVIDER as Provider;
-  const apiKey = getApiKey(env, getProvider(env));
-
+export function listLanguageModels(name: string, apiKey: string): Promise<ModelInfo[]> {
   const supported = getSupportedProviders();
-  if (!supported.includes(provider)) {
+  if (!supported.includes(name as Provider)) {
     throw new Error(
-      `llm-lister does not support listing models for "${provider}" yet. Currently supported: ${supported.join(', ')}`,
+      `llm-lister does not support listing models for "${name}" yet. Currently supported: ${supported.join(', ')}`,
     );
   }
-
-  return llmListerListModels(provider, apiKey);
+  return listModels(name as Provider, apiKey);
 }
 
-function getProvider(env: AppEnv): LanguageModelProvider {
-  const provider = providers[env.AI_PROVIDER ?? ''];
+export interface ResolvedProvider {
+  name: string; // 供應商名稱
+  provider: LanguageModelProvider; // 實例
+  apiKey: string;
+}
+
+export function resolveProvider(env: LanguageModelEnv): ResolvedProvider {
+  const name = env.AI_PROVIDER ?? '';
+
+  const provider = providers[name];
   if (!provider) {
     throw new Error(`Unsupported or missing AI_PROVIDER: "${env.AI_PROVIDER}"`);
   }
-  console.log(`使用AI供應商: ${env.AI_PROVIDER}`);
-  return provider;
-}
 
-function getApiKey(env: AppEnv, provider: LanguageModelProvider): string {
-  const key = env[provider.apiKeyEnv];
-  if (!key) {
-    throw new Error(`${provider.apiKeyEnv} is required when AI_PROVIDER=${env.AI_PROVIDER}`);
+  const apiKey = env[provider.apiKeyEnv];
+  if (!apiKey) {
+    throw new Error(`${provider.apiKeyEnv} is required when AI_PROVIDER=${name}`);
   }
-  return key;
+  return { name, provider, apiKey };
 }

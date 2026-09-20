@@ -1,4 +1,4 @@
-import { createLanguageModel, listLanguageModels } from '../ai/language-model/index.ts';
+import { createLanguageModel, listLanguageModels, resolveProvider } from '../ai/language-model/index.ts';
 import type { ConversationStore } from '../core/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
@@ -61,7 +61,10 @@ export function createServices(env: AppEnv, stores: StoreFactories): Services {
   const { model, schedulingProvider } = getSharedProviders(env);
   return {
     model,
-    listModels: () => listLanguageModels(env),
+    listModels: () => {
+      const { name, apiKey } = resolveProvider(env);
+      return listLanguageModels(name, apiKey);
+    },
     conversationStore: resolveConversationStore(env.CONVERSATION_STORE, stores),
     schedulingProvider,
   };

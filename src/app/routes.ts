@@ -13,6 +13,8 @@ routes.post('/chat', async (c) => {
   const result = await handleChat(request, model, conversationStore, schedulingProvider);
   return c.json(result);
 });
-routes.get('/models', async (c) => c.json({ data: await c.var.services.listModels() }));
+routes.get('/models', async (c) => {
+  return c.json({ data: await c.var.services.listModels() });
+});
 
 export { routes };
