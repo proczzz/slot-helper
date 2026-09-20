@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
-import type { ConversationStore } from './types.ts';
 import type { Message } from '../../core/types.ts';
+import type { ConversationStore } from './types.ts';
 
 const DB_DIR = process.env.CONVERSATION_DB_DIR || '.';
 const DB_NAME = process.env.CONVERSATION_DB_NAME || 'conversations.db';
@@ -24,17 +24,11 @@ db.exec(CREATE_TABLE_SQL);
 
 export const sqliteConversationStore: ConversationStore = {
   async getMessages(sessionId: string): Promise<Message[]> {
-    const rows = db
+    return db
       .prepare(
         'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
       )
-      .all(sessionId) as { role: string; content: string; timestamp: number }[];
-
-    return rows.map((row) => ({
-      role: row.role as Message['role'],
-      content: row.content,
-      timestamp: row.timestamp,
-    }));
+      .all(sessionId) as unknown as Message[];
   },
 
   async appendMessages(sessionId: string, messages: Message[]): Promise<void> {
