@@ -1,4 +1,4 @@
-import { createLanguageModel, listLanguageModels, resolveProvider } from '../ai/language-model/index.ts';
+import { createLanguageModel } from '../ai/language-model/index.ts';
 import type { ConversationStore } from '../core/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
@@ -21,7 +21,6 @@ export interface AppEnv {
 export type StoreFactories = Partial<Record<string, () => ConversationStore>>;
 
 // 只由環境變數字串建出來的服務,沒有綁定任何單一 request,可以跨 request 重用。
-// conversationStore 刻意不放進來:d1 版包著 request-scoped 的 D1Database binding
 interface SharedProviders {
   model: ReturnType<typeof createLanguageModel>;
   schedulingProvider: SchedulingProvider | null;
@@ -45,7 +44,6 @@ function getSharedProviders(env: AppEnv): SharedProviders {
 
 export interface Services {
   model: ReturnType<typeof createLanguageModel>;
-  listModels: () => ReturnType<typeof listLanguageModels>;
   conversationStore: ConversationStore | null;
   schedulingProvider: SchedulingProvider | null;
 }
@@ -61,10 +59,6 @@ export function createServices(env: AppEnv, stores: StoreFactories): Services {
   const { model, schedulingProvider } = getSharedProviders(env);
   return {
     model,
-    listModels: () => {
-      const { name, apiKey } = resolveProvider(env);
-      return listLanguageModels(name, apiKey);
-    },
     conversationStore: resolveConversationStore(env.CONVERSATION_STORE, stores),
     schedulingProvider,
   };
