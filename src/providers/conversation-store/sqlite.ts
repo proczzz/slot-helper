@@ -1,6 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import type { Message } from '../../core/types.ts';
-import type { ConversationStore } from './types.ts';
+import type { ConversationStore, Message } from '../../core/types.ts';
 
 const DB_DIR = process.env.CONVERSATION_DB_DIR || '.';
 const DB_NAME = process.env.CONVERSATION_DB_NAME || 'conversations.db';

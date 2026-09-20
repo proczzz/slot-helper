@@ -12,7 +12,6 @@
     "src/core/**/*.ts",
     "src/infra/node.ts",
     "src/providers/conversation-store/sqlite.ts",
-    "src/providers/conversation-store/types.ts",
     "src/providers/scheduling/*.ts"
   ]
 }
