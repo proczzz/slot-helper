@@ -74,7 +74,6 @@ export function createGoogleCalendarProvider(config: {
         body: JSON.stringify({
           timeMin: start,
           timeMax: end,
-          timeZone: TIMEZONE,
           items: [{ id: config.calendarId }],
         }),
       });
@@ -91,7 +90,6 @@ export function createGoogleCalendarProvider(config: {
       const params = new URLSearchParams({
         timeMin: start,
         timeMax: end,
-        timeZone: TIMEZONE,
         singleEvents: 'true',
         orderBy: 'startTime',
       });
@@ -128,8 +126,8 @@ export function createGoogleCalendarProvider(config: {
         body: JSON.stringify({
           summary: booking.summary,
           description: booking.description,
-          start: { dateTime: booking.start, timeZone: TIMEZONE },
-          end: { dateTime: booking.end, timeZone: TIMEZONE },
+          start: { dateTime: booking.start },
+          end: { dateTime: booking.end },
         }),
       });
 

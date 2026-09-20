@@ -1,50 +1,45 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
+import { shopConfig } from './shop-config.ts';
 
-const DateRangeSchema = z.object({
-  date: z.string().describe('要查詢的日期,格式 YYYY-MM-DD'),
-  startTime: z.string().describe('查詢範圍的開始時間,格式 HH:mm'),
-  endTime: z.string().describe('查詢範圍的結束時間,格式 HH:mm'),
+const TimeRangeSchema = z.object({
+  start: z.string().describe('開始時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T14:00'),
+  end: z.string().describe('結束時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T16:00'),
 });
 
-// 把日期與時間組成帶時區的 ISO 8601 字串
-function toTimeRange(date: string, startTime: string, endTime: string) {
-  return {
-    start: `${date}T${startTime}:00+08:00`,
-    end: `${date}T${endTime}:00+08:00`,
-  };
+// AI 給的是沒有時區的局部時間,補上店家時區偏移才是地球上確定的瞬間
+function toAbsolute(localTime: string): string {
+  return `${localTime}:00${shopConfig.utcOffset}`;
 }
 
 export function createSchedulingTools(schedulingProvider: SchedulingProvider) {
   return {
     checkAvailability: tool({
-      description: '查詢指定日期時段內,日曆上已經被佔用(不能預約)的時段',
-      inputSchema: DateRangeSchema,
-      execute: async ({ date, startTime, endTime }) => {
-        const { start, end } = toTimeRange(date, startTime, endTime);
-        return schedulingProvider.getBusyPeriods(start, end);
-      },
+      description: '查詢指定時間範圍內,日曆上已經被佔用(不能預約)的時段',
+      inputSchema: TimeRangeSchema,
+      execute: async ({ start, end }) =>
+        schedulingProvider.getBusyPeriods(toAbsolute(start), toAbsolute(end)),
     }),
 
     bookAppointment: tool({
       description: '在日曆上建立一筆新的預約',
-      inputSchema: DateRangeSchema.extend({
+      inputSchema: TimeRangeSchema.extend({
         summary: z.string().describe('預約標題,例如顧客姓名與服務項目'),
       }),
-      execute: async ({ date, startTime, endTime, summary }) => {
-        const { start, end } = toTimeRange(date, startTime, endTime);
-        return schedulingProvider.createBooking({ summary, start, end });
-      },
+      execute: async ({ start, end, summary }) =>
+        schedulingProvider.createBooking({
+          summary,
+          start: toAbsolute(start),
+          end: toAbsolute(end),
+        }),
     }),
 
     findAppointments: tool({
-      description: '查詢指定日期時段內的預約列表(含每筆預約的識別碼),用來找出要取消的那一筆',
-      inputSchema: DateRangeSchema,
-      execute: async ({ date, startTime, endTime }) => {
-        const { start, end } = toTimeRange(date, startTime, endTime);
-        return schedulingProvider.getEvents(start, end);
-      },
+      description: '查詢指定時間範圍內的預約列表(含每筆預約的識別碼),用來找出要取消的那一筆',
+      inputSchema: TimeRangeSchema,
+      execute: async ({ start, end }) =>
+        schedulingProvider.getEvents(toAbsolute(start), toAbsolute(end)),
     }),
 
     cancelAppointment: tool({

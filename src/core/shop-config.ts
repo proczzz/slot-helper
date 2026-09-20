@@ -1,5 +1,8 @@
 // 臨時用，未來規劃web ui
 export const shopConfig = {
+  utcOffset: '+08:00',
+  timezone: 'Asia/Taipei',
+
   systemPrompt: `
 你是「髮型工作室」的客服助理,說話語氣溫暖親切。
 負責回答顧客關於預約、服務項目、價格的問題。

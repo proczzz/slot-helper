@@ -29,5 +29,5 @@ export function buildSystemPrompt(): string {
 營業時間:
 ${formatBusinessHours()}
 
-目前時間:${new Date().toLocaleString('zh-TW')}`;
+目前時間:${new Date().toLocaleString('zh-TW', { timeZone: shopConfig.timezone })}`;
 }
