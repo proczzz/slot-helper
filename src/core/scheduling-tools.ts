@@ -3,9 +3,14 @@ import { z } from 'zod';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
 import { shopConfig } from './shop-config.ts';
 
+// AI 給的局部時間必須剛好是 YYYY-MM-DDTHH:mm,多秒數或少補零都會讓 toAbsolute 拼出錯誤字串
+const LocalTimeSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, '格式必須是 YYYY-MM-DDTHH:mm');
+
 const TimeRangeSchema = z.object({
-  start: z.string().describe('開始時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T14:00'),
-  end: z.string().describe('結束時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T16:00'),
+  start: LocalTimeSchema.describe('開始時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T14:00'),
+  end: LocalTimeSchema.describe('結束時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T16:00'),
 });
 
 // AI 給的是沒有時區的局部時間,補上店家時區偏移才是地球上確定的瞬間

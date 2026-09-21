@@ -1,10 +1,9 @@
 import { SignJWT, importPKCS8 } from 'jose';
-import type { SchedulingProvider, TimePeriod, Event, Booking } from './types.ts';
+import type { Booking, Event, SchedulingProvider, TimePeriod } from './types.ts';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FREEBUSY_URL = 'https://www.googleapis.com/calendar/v3/freeBusy';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
-const TIMEZONE = 'Asia/Taipei';
 
 interface CachedToken {
   accessToken: string;
@@ -80,8 +79,19 @@ export function createGoogleCalendarProvider(config: {
 
       await assertOk(response, 'query freebusy');
 
-      const data = (await response.json()) as { calendars: Record<string, { busy: TimePeriod[] }> };
-      return data.calendars[config.calendarId]?.busy ?? [];
+      const data = (await response.json()) as {
+        calendars: Record<string, { busy: TimePeriod[]; errors?: { reason: string }[] }>;
+      };
+
+      // 日曆 ID 錯誤或沒有權限時 Google 仍回 200,錯誤藏在 errors 欄位;
+      // 不檢查的話會拿到空的 busy,AI 誤以為所有時段都可預約
+      const calendar = data.calendars[config.calendarId];
+      if (!calendar || calendar.errors?.length) {
+        throw new Error(
+          `Failed to query freebusy: ${JSON.stringify(calendar?.errors ?? 'calendar not in response')}`,
+        );
+      }
+      return calendar.busy;
     },
 
     // 查詢指定時間範圍內的事件列表,包含 eventId,供取消功能比對使用
@@ -103,18 +113,23 @@ export function createGoogleCalendarProvider(config: {
       const data = (await response.json()) as {
         items: {
           id: string;
-          summary: string;
-          start: { dateTime: string };
-          end: { dateTime: string };
+          summary?: string; // 沒填標題的事件不會回傳此欄位
+          start: { dateTime?: string; date?: string };
+          end: { dateTime?: string; date?: string };
         }[];
       };
 
-      return data.items.map((item) => ({
-        eventId: item.id,
-        summary: item.summary,
-        start: item.start.dateTime,
-        end: item.end.dateTime,
-      }));
+      return (
+        data.items
+          // 全天事件(公休、休假)只有 date 沒有 dateTime,不是預約,略過
+          .filter((item) => item.start.dateTime && item.end.dateTime)
+          .map((item) => ({
+            eventId: item.id,
+            summary: item.summary ?? '(無標題)',
+            start: item.start.dateTime!,
+            end: item.end.dateTime!,
+          }))
+      );
     },
 
     // 在日曆上建立一筆預約事件
