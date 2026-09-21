@@ -26,6 +26,16 @@ export async function handleChat(
     stopWhen: stepCountIs(5),
   });
 
+  // 只記錄工具呼叫、結果與錯誤;推理過程和回覆文字不記,避免 log 暴量
+  // Error 物件直接 stringify 會變成 {},轉成訊息字串
+  const toolParts = result.steps
+    .flatMap((s) => s.content)
+    .filter((p) => ['tool-call', 'tool-result', 'tool-error'].includes(p.type));
+
+  console.debug(
+    JSON.stringify(toolParts, (_, value) => (value instanceof Error ? value.message : value)),
+  );
+
   if (conversationStore) {
     await conversationStore.appendMessages(request.sessionId, [
       { role: 'user', content: request.message, timestamp: Date.now() },

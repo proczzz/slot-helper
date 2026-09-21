@@ -60,6 +60,8 @@ export function createGoogleCalendarProvider(config: {
       accessToken: data.access_token,
       expiresAt: Date.now() + data.expires_in * 1000,
     };
+    
+    console.log('google日曆:已更新快取token');
     return cachedToken.accessToken;
   }
 
