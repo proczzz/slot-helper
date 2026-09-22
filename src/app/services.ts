@@ -22,7 +22,14 @@ export interface Services {
   lineClient: LineClient | null;
 }
 
-export type AppVariables = { Variables: { services: Services } };
+export type AppVariables = {
+  Variables: {
+    services: Services;
+    // line 需要即時回應 200，工作要放給另一個thread，而不同平台寫法不同
+    // node 不 await 就好，cloudflare worker 回應後會殺
+    runInBackground: (task: Promise<unknown>) => void;
+  };
+};
 
 type SharedProviders = Omit<Services, 'conversationStore'>;
 

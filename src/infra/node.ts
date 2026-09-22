@@ -14,6 +14,9 @@ app.use(async (c, next) => {
       sqlite: () => sqliteConversationStore,
     }),
   );
+  c.set('runInBackground', (task) => {
+    task.catch((error) => console.error('背景工作失敗:', error));
+  });
   await next();
 });
 

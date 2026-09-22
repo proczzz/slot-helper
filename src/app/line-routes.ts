@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
-import type { LineWebhookBody } from '../channels/line/types.ts';
+import type { LineEvent, LineWebhookBody } from '../channels/line/types.ts';
+import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const lineRoutes = new Hono<AppVariables>();
 
 lineRoutes.post('/webhook', async (c) => {
-  const { lineClient } = c.var.services;
+  const { lineClient, model, conversationStore, schedulingProvider } = c.var.services;
   // 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!lineClient) return c.text('LINE is not configured', 404);
 
@@ -20,11 +21,29 @@ lineRoutes.post('/webhook', async (c) => {
   // step2.處裡訊息與回應
   const { events } = JSON.parse(body) as LineWebhookBody;
   for (const event of events) {
-    if (event.type !== 'message' || event.message?.type !== 'text' || !event.replyToken) continue;
-    await lineClient.replyText(event.replyToken, event.message.text ?? '');
+    if (!isTextMessage(event)) continue;
+
+    const task = handleChat(
+      { sessionId: event.source.userId!, message: event.message!.text! },
+      model,
+      conversationStore,
+      schedulingProvider,
+    ).then((result) => lineClient.replyText(event.replyToken!, result.reply));
+
+    c.var.runInBackground(task);
   }
 
   return c.text('OK');
 });
+
+function isTextMessage(event: LineEvent): boolean {
+  return (
+    event.type === 'message' &&
+    event.message?.type === 'text' &&
+    !!event.message.text &&
+    !!event.replyToken &&
+    !!event.source.userId
+  );
+}
 
 export { lineRoutes };

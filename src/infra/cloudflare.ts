@@ -13,6 +13,8 @@ app.use(async (c, next) => {
       d1: () => createD1ConversationStore(c.env.CONVERSATION_DB),
     }),
   );
+  // 回應送出後 Workers 會中止未完成的工作,要用 waitUntil 讓平台等它做完
+  c.set('runInBackground', (task) => c.executionCtx.waitUntil(task));
   await next();
 });
 
