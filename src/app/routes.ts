@@ -1,9 +1,7 @@
 import { Hono } from 'hono';
 import { handleChat } from '../core/chat-service.ts';
 import { ChatRequestSchema } from '../core/types.ts';
-import type { Services } from './services.ts';
-
-export type AppVariables = { Variables: { services: Services } };
+import type { AppVariables } from './services.ts';
 
 const routes = new Hono<AppVariables>();
 

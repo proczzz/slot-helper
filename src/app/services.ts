@@ -19,6 +19,8 @@ export interface Services {
   schedulingProvider: SchedulingProvider | null;
 }
 
+export type AppVariables = { Variables: { services: Services } };
+
 type SharedProviders = Omit<Services, 'conversationStore'>;
 
 // 快取可抽換的 AI模型、預約工具

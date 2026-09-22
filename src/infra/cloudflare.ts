@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { routes, type AppVariables } from '../app/routes.ts';
+import { routes } from '../app/routes.ts';
+import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
 import { createD1ConversationStore } from '../providers/conversation-store/d1.ts';
 
