@@ -60,14 +60,14 @@ export function createGoogleCalendarProvider(config: {
       accessToken: data.access_token,
       expiresAt: Date.now() + data.expires_in * 1000,
     };
-    
+
     console.log('google日曆:已更新快取token');
     return cachedToken.accessToken;
   }
 
   return {
     // 查詢指定時間範圍內已被佔用的時段,直接回傳 Google 的結果,不做任何計算
-    async getBusyPeriods(start: string, end: string): Promise<TimePeriod[]> {
+    async getBusyPeriods({ start, end }: TimePeriod): Promise<TimePeriod[]> {
       const accessToken = await getAccessToken();
       const response = await fetch(FREEBUSY_URL, {
         method: 'POST',
@@ -97,7 +97,7 @@ export function createGoogleCalendarProvider(config: {
     },
 
     // 查詢指定時間範圍內的事件列表,包含 eventId,供取消功能比對使用
-    async getEvents(start: string, end: string): Promise<Event[]> {
+    async getEvents({ start, end }: TimePeriod): Promise<Event[]> {
       const accessToken = await getAccessToken();
       const params = new URLSearchParams({
         timeMin: start,

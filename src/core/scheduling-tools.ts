@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { SchedulingProvider } from '../providers/scheduling/types.ts';
+import type { SchedulingProvider, TimePeriod } from '../providers/scheduling/types.ts';
 import { shopConfig } from './shop-config.ts';
 
 // AI 給的局部時間必須剛好是 YYYY-MM-DDTHH:mm,多秒數或少補零都會讓 toAbsolute 拼出錯誤字串
@@ -18,13 +18,16 @@ function toAbsolute(localTime: string): string {
   return `${localTime}:00${shopConfig.utcOffset}`;
 }
 
+function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {
+  return { start: toAbsolute(range.start), end: toAbsolute(range.end) };
+}
+
 export function createSchedulingTools(schedulingProvider: SchedulingProvider) {
   return {
     checkAvailability: tool({
       description: '查詢指定時間範圍內,日曆上已經被佔用(不能預約)的時段',
       inputSchema: TimeRangeSchema,
-      execute: async ({ start, end }) =>
-        schedulingProvider.getBusyPeriods(toAbsolute(start), toAbsolute(end)),
+      execute: async (range) => schedulingProvider.getBusyPeriods(toAbsoluteRange(range)),
     }),
 
     bookAppointment: tool({
@@ -32,19 +35,17 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider) {
       inputSchema: TimeRangeSchema.extend({
         summary: z.string().describe('預約標題,例如顧客姓名與服務項目'),
       }),
-      execute: async ({ start, end, summary }) =>
+      execute: async ({ summary, ...rang }) =>
         schedulingProvider.createBooking({
           summary,
-          start: toAbsolute(start),
-          end: toAbsolute(end),
+          ...toAbsoluteRange(rang),
         }),
     }),
 
     findAppointments: tool({
       description: '查詢指定時間範圍內的預約列表(含每筆預約的識別碼),用來找出要取消的那一筆',
       inputSchema: TimeRangeSchema,
-      execute: async ({ start, end }) =>
-        schedulingProvider.getEvents(toAbsolute(start), toAbsolute(end)),
+      execute: async (rang) => schedulingProvider.getEvents(toAbsoluteRange(rang)),
     }),
 
     cancelAppointment: tool({

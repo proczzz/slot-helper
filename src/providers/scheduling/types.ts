@@ -18,8 +18,8 @@ export interface Booking {
 }
 
 export interface SchedulingProvider {
-  getBusyPeriods(start: string, end: string): Promise<TimePeriod[]>;
-  getEvents(start: string, end: string): Promise<Event[]>;
+  getBusyPeriods(range: TimePeriod): Promise<TimePeriod[]>;
+  getEvents(range: TimePeriod): Promise<Event[]>;
   createBooking(booking: Booking): Promise<{ eventId: string }>;
   cancelBooking(eventId: string): Promise<void>;
 }
