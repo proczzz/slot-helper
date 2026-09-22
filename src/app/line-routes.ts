@@ -3,6 +3,8 @@ import type { LineEvent, LineWebhookBody } from '../channels/line/types.ts';
 import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
+const FALLBACK_REPLY = '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。';
+
 const lineRoutes = new Hono<AppVariables>();
 
 lineRoutes.post('/webhook', async (c) => {
@@ -28,7 +30,14 @@ lineRoutes.post('/webhook', async (c) => {
       model,
       conversationStore,
       schedulingProvider,
-    ).then((result) => lineClient.replyText(event.replyToken!, result.reply));
+    )
+      .then((result) => result.reply || FALLBACK_REPLY)
+      .catch((error) => {
+        console.error('處理 LINE 訊息失敗:', error);
+        return FALLBACK_REPLY;
+      })
+      .then((reply) => lineClient.replyText(event.replyToken!, reply))
+      .catch((error) => console.error('LINE 回覆失敗:', error));
 
     c.var.runInBackground(task);
   }

@@ -23,7 +23,7 @@ export async function handleChat(
     system: buildSystemPrompt(),
     messages,
     tools: schedulingProvider ? createSchedulingTools(schedulingProvider) : undefined,
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(8),
   });
 
   // 只記錄工具呼叫、結果與錯誤;推理過程和回覆文字不記,避免 log 暴量
