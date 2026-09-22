@@ -5,13 +5,17 @@ import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ChatRequest, ChatResponse, ConversationStore } from './types.ts';
 
+const HISTORY_LIMIT = 40;
+
 export async function handleChat(
   request: ChatRequest,
   model: LanguageModel,
   conversationStore: ConversationStore | null,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {
-  const history = conversationStore ? await conversationStore.getMessages(request.sessionId) : [];
+  const history = conversationStore
+    ? await conversationStore.getMessages(request.sessionId, HISTORY_LIMIT)
+    : [];
 
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),

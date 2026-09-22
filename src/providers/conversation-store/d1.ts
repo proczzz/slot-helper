@@ -5,15 +5,15 @@ import type { ConversationStore, Message } from '../../core/types.ts';
 
 export function createD1ConversationStore(db: D1Database): ConversationStore {
   return {
-    async getMessages(sessionId: string): Promise<Message[]> {
+    async getMessages(sessionId: string, limit: number): Promise<Message[]> {
       const { results } = await db
         .prepare(
-          'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
+          'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?',
         )
-        .bind(sessionId)
+        .bind(sessionId, limit)
         .run<Message>();
 
-      return results;
+      return results.reverse();
     },
 
     async appendMessages(sessionId: string, messages: Message[]): Promise<void> {

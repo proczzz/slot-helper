@@ -22,12 +22,15 @@ const db = new DatabaseSync(DB_PATH);
 db.exec(CREATE_TABLE_SQL);
 
 export const sqliteConversationStore: ConversationStore = {
-  async getMessages(sessionId: string): Promise<Message[]> {
-    return db
+    async getMessages(sessionId: string, limit: number): Promise<Message[]> {
+    // 先由新到舊取最後 N 筆,再反轉成時間順序交給 AI
+    const rows = db
       .prepare(
-        'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY timestamp ASC',
+        'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?',
       )
-      .all(sessionId) as unknown as Message[];
+      .all(sessionId, limit) as unknown as Message[];
+
+    return rows.reverse();
   },
 
   async appendMessages(sessionId: string, messages: Message[]): Promise<void> {
