@@ -1,12 +1,14 @@
 import type { LanguageModel } from 'ai';
 import { createLanguageModel } from '../ai/language-model/index.ts';
 import type { LanguageModelEnv } from '../ai/language-model/types.ts';
+import { createLineClient } from '../channels/line/line-client.ts';
+import type { LineClient, LineEnv } from '../channels/line/types.ts';
 import type { ConversationStore } from '../core/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider, SchedulingProviderEnv } from '../providers/scheduling/types.ts';
 
 // CloudflareBindings 和 process.env 都能直接傳進來
-export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv {
+export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv {
   CONVERSATION_STORE?: string; // 資料庫
 }
 
@@ -17,6 +19,7 @@ export interface Services {
   model: LanguageModel;
   conversationStore: ConversationStore | null;
   schedulingProvider: SchedulingProvider | null;
+  lineClient: LineClient | null;
 }
 
 export type AppVariables = { Variables: { services: Services } };
@@ -32,6 +35,7 @@ function getSharedProviders(env: AppEnv): SharedProviders {
   cachedProviders = {
     model: createLanguageModel(env),
     schedulingProvider: createSchedulingProvider(env),
+    lineClient: createLineClient(env),
   };
   return cachedProviders;
 }

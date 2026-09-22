@@ -11,6 +11,7 @@
   "include": [
     "src/ai/**/*.ts",
     "src/app/**/*.ts",
+    "src/channels/**/*.ts",
     "src/core/**/*.ts",
     "src/infra/cloudflare.ts",
     "src/providers/conversation-store/d1.ts",

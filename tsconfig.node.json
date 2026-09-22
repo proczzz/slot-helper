@@ -9,6 +9,7 @@
   "include": [
     "src/ai/**/*.ts",
     "src/app/**/*.ts",
+    "src/channels/**/*.ts",
     "src/core/**/*.ts",
     "src/infra/node.ts",
     "src/providers/conversation-store/sqlite.ts",
