@@ -28,7 +28,9 @@ export async function handleChat(
     model,
     system: buildSystemPrompt(),
     messages,
-    tools: schedulingProvider ? createSchedulingTools(schedulingProvider, request.customerId) : undefined,
+    tools: schedulingProvider
+      ? createSchedulingTools(schedulingProvider, request.customerId)
+      : undefined,
     stopWhen: stepCountIs(8),
   });
 

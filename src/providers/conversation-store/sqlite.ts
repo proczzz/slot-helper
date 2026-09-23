@@ -22,7 +22,7 @@ const db = new DatabaseSync(DB_PATH);
 db.exec(CREATE_TABLE_SQL);
 
 export const sqliteConversationStore: ConversationStore = {
-    async getMessages(sessionId: string, limit: number): Promise<Message[]> {
+  async getMessages(sessionId: string, limit: number): Promise<Message[]> {
     // 先由新到舊取最後 N 筆,再反轉成時間順序交給 AI
     const rows = db
       .prepare(

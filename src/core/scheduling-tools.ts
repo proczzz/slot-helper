@@ -12,7 +12,7 @@ const TimeRangeSchema = z.object({
   end: LocalTimeSchema.describe('結束時間,格式 YYYY-MM-DDTHH:mm,例如 2026-09-22T16:00'),
 });
 
-// AI 給的是沒有時區的局部時間,補上店家時區偏移才是地球上確定的瞬間
+// AI 給的是沒有時區的局部時間，補上店家時區偏移才是地球上確定的瞬間
 function toAbsolute(localTime: string): string {
   return `${localTime}:00${shopConfig.utcOffset}`;
 }
@@ -48,7 +48,12 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
     findAppointments: tool({
       description: '查詢指定時間範圍內的預約列表(含每筆預約的識別碼),用來找出要取消的那一筆',
       inputSchema: TimeRangeSchema,
-      execute: async (rang) => schedulingProvider.getEvents(toAbsoluteRange(rang)),
+      execute: async (range) => {
+        const events = await schedulingProvider.getEvents(toAbsoluteRange(range));
+        // 沒有顧客身分時(例如 /chat)不過濾,維持原本行為
+        if (!customerTag) return events;
+        return events.filter((event) => event.description === customerTag);
+      },
     }),
 
     cancelAppointment: tool({
@@ -58,6 +63,12 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
         eventId: z.string().describe('要取消的預約識別碼,從 findAppointments 的查詢結果取得'),
       }),
       execute: async ({ eventId }) => {
+        if (customerTag) {
+          const event = await schedulingProvider.getEvent(eventId);
+          if (event.description !== customerTag) {
+            throw new Error('這筆預約不屬於這位顧客,不能取消');
+          }
+        }
         await schedulingProvider.cancelBooking(eventId);
         return { success: true };
       },

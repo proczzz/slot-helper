@@ -3,23 +3,23 @@ export interface TimePeriod {
   end: string;
 }
 
-export interface Event {
+// 從日曆拿到的
+export interface Event extends TimePeriod {
   eventId: string;
   summary: string;
-  start: string;
-  end: string;
+  description?: string;
 }
 
-export interface Booking {
+// 準備寫入日曆的
+export interface Booking extends TimePeriod {
   summary: string;
-  start: string;
-  end: string;
   description?: string;
 }
 
 export interface SchedulingProvider {
   getBusyPeriods(range: TimePeriod): Promise<TimePeriod[]>;
   getEvents(range: TimePeriod): Promise<Event[]>;
+  getEvent(eventId: string): Promise<Event>;
   createBooking(booking: Booking): Promise<{ eventId: string }>;
   cancelBooking(eventId: string): Promise<void>;
 }

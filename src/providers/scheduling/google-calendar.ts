@@ -61,7 +61,7 @@ export function createGoogleCalendarProvider(config: {
       expiresAt: Date.now() + data.expires_in * 1000,
     };
 
-    console.log('google日曆:已更新快取token');
+    console.log('Google Calendar: 已更新快取token');
     return cachedToken.accessToken;
   }
 
@@ -115,7 +115,8 @@ export function createGoogleCalendarProvider(config: {
       const data = (await response.json()) as {
         items: {
           id: string;
-          summary?: string; // 沒填標題的事件不會回傳此欄位
+          summary?: string;
+          description?: string;
           start: { dateTime?: string; date?: string };
           end: { dateTime?: string; date?: string };
         }[];
@@ -128,10 +129,36 @@ export function createGoogleCalendarProvider(config: {
           .map((item) => ({
             eventId: item.id,
             summary: item.summary ?? '(無標題)',
+            description: item.description,
             start: item.start.dateTime!,
             end: item.end.dateTime!,
           }))
       );
+    },
+
+    async getEvent(eventId: string): Promise<Event> {
+      const accessToken = await getAccessToken();
+      const response = await fetch(`${eventsUrl}/${encodeURIComponent(eventId)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      await assertOk(response, 'get event');
+
+      const data = (await response.json()) as {
+        id: string;
+        summary?: string;
+        description?: string;
+        start: { dateTime?: string; date?: string };
+        end: { dateTime?: string; date?: string };
+      };
+
+      return {
+        eventId: data.id,
+        summary: data.summary ?? '(無標題)',
+        description: data.description,
+        start: data.start.dateTime ?? data.start.date!,
+        end: data.end.dateTime ?? data.end.date!,
+      };
     },
 
     // 在日曆上建立一筆預約事件
