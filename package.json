@@ -10,10 +10,10 @@
   },
   "scripts": {
     "dev:cloudflare": "wrangler dev",
-    "dev:node": "node --watch --env-file=.env src/infra/node.ts",
+    "dev:node": "node --watch --env-file=.env src/backend/infra/node.ts",
     "typecheck:cloudflare": "tsc --noEmit -p tsconfig.cloudflare.json",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
-    "build:node": "esbuild src/infra/node.ts --bundle --minify --sourcemap --platform=node --format=cjs --outfile=dist/node.cjs",
+    "build:node": "esbuild src/backend/infra/node.ts --bundle --minify --sourcemap --platform=node --format=cjs --outfile=dist/node.cjs",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "docker:build": "docker build -t slot-helper-node .",
