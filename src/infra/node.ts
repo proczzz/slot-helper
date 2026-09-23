@@ -7,13 +7,16 @@ import { sqliteConversationStore } from '../providers/conversation-store/sqlite.
 
 const app = new Hono<AppVariables>();
 
+// http fliter: 在 context 提供各式物件與方法給邏輯層呼叫
 app.use(async (c, next) => {
+  // [llm、資料庫、日曆]
   c.set(
     'services',
     createServices(process.env, {
       sqlite: () => sqliteConversationStore,
     }),
   );
+  // 處裡線程拋出的例外
   c.set('runInBackground', (task) => {
     task.catch((error) => console.error('背景工作失敗:', error));
   });

@@ -3,7 +3,6 @@ import { z } from 'zod';
 import type { SchedulingProvider, TimePeriod } from '../providers/scheduling/types.ts';
 import { shopConfig } from './shop-config.ts';
 
-// AI 給的局部時間必須剛好是 YYYY-MM-DDTHH:mm,多秒數或少補零都會讓 toAbsolute 拼出錯誤字串
 const LocalTimeSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, '格式必須是 YYYY-MM-DDTHH:mm');
@@ -22,7 +21,10 @@ function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {
   return { start: toAbsolute(range.start), end: toAbsolute(range.end) };
 }
 
-export function createSchedulingTools(schedulingProvider: SchedulingProvider) {
+export function createSchedulingTools(schedulingProvider: SchedulingProvider, customerId?: string) {
+  // 寫進日曆活動的 description，用來辨識預約屬於哪位顧客
+  // createSchedulingTools 方法在請求後呼叫，所以 customerTag 不再請求之間共用
+  const customerTag = customerId ? `LINE:${customerId}` : undefined;
   return {
     checkAvailability: tool({
       description: '查詢指定時間範圍內,日曆上已經被佔用(不能預約)的時段',
@@ -38,6 +40,7 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider) {
       execute: async ({ summary, ...rang }) =>
         schedulingProvider.createBooking({
           summary,
+          description: customerTag,
           ...toAbsoluteRange(rang),
         }),
     }),
