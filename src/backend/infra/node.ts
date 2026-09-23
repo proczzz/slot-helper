@@ -4,6 +4,7 @@ import { routes } from '../app/routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
 import { sqliteConversationStore } from '../providers/conversation-store/sqlite.ts';
+import { serveStatic } from '@hono/node-server/serve-static';
 
 const app = new Hono<AppVariables>();
 
@@ -24,6 +25,7 @@ app.use(async (c, next) => {
 });
 
 app.route('/', routes);
+app.use('/*', serveStatic({ root: 'public' }));
 
 serve({ fetch: app.fetch, port: 3000 }, (info) => {
   console.log(`server is running on port ${info.port}`);

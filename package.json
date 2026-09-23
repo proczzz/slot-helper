@@ -9,12 +9,15 @@
     "url": "https://github.com/proczzz/slot-helper"
   },
   "scripts": {
+    "dev:web": "vite",
     "dev:cloudflare": "wrangler dev",
     "dev:node": "node --watch --env-file=.env src/backend/infra/node.ts",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck:cloudflare": "tsc --noEmit -p tsconfig.cloudflare.json",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "build:web": "vite build",
     "build:node": "esbuild src/backend/infra/node.ts --bundle --minify --sourcemap --platform=node --format=cjs --outfile=dist/node.cjs",
-    "deploy": "wrangler deploy --minify",
+    "deploy": "npm run build:web && wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "docker:build": "docker build -t slot-helper-node .",
     "docker:up": "docker compose up --build",
@@ -32,9 +35,15 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "esbuild": "^0.28.2",
     "prettier": "3.9.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^7.0.2",
+    "vite": "^8.3.0",
     "wrangler": "^4.132.0"
   },
   "allowScripts": {
