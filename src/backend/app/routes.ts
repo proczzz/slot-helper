@@ -6,7 +6,7 @@ import type { AppVariables } from './services.ts';
 
 const routes = new Hono<AppVariables>();
 
-routes.post('/chat', async (c) => {
+routes.post('/api/chat', async (c) => {
   // 從 context 取:[llm、資料庫、日曆]的實現 & 請求本體
   const { model, conversationStore, schedulingProvider } = c.var.services;
   const request = ChatRequestSchema.parse(await c.req.json());
