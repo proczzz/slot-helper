@@ -6,12 +6,14 @@ import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
 import { CREATE_MESSAGES_TABLE, createConversationStore } from '../providers/conversation-store.ts';
 import { createSqliteDatabase } from '../providers/db/sqlite.ts';
+import { CREATE_CONFIG_TABLE } from '../providers/config-store.ts';
 
 const app = new Hono<AppVariables>();
 
 const DB_DIR = process.env.DATABASE_DIR || '.';
 const database = createSqliteDatabase(`${DB_DIR}/slot-help.db`); // 初始化資料庫
-await database.batch(CREATE_MESSAGES_TABLE); // 初始化資料表(若不存在)
+await database.batch(CREATE_MESSAGES_TABLE); // 對話記憶表
+await database.batch(CREATE_CONFIG_TABLE); // Slot-helper 應用設定表
 
 // http fliter: 在 context 提供各式物件與方法給邏輯層呼叫
 app.use(async (c, next) => {

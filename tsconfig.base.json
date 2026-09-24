@@ -6,6 +6,8 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
     "skipLibCheck": true,
     "lib": ["ESNext"]
   }

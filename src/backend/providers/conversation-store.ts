@@ -1,6 +1,7 @@
 import type { ConversationStore, Message } from '../core/types.ts';
 import type { Database, Statement } from './db/types.ts';
 
+// !!! 內容需與 migrations/000_create_messages_table.sql 保持一致
 const CREATE_TABLE = `
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

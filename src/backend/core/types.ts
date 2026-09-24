@@ -22,3 +22,8 @@ export interface ConversationStore {
   getMessages(sessionId: string, limit: number): Promise<Message[]>;
   appendMessages(sessionId: string, messages: Message[]): Promise<void>;
 }
+
+export interface ConfigStore {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
+}
