@@ -25,7 +25,8 @@ app.use(async (c, next) => {
 });
 
 app.route('/', routes);
-app.use('/*', serveStatic({ root: 'public' }));
+app.use('/*', serveStatic({ root: './public' }));
+app.get('/*', serveStatic({ path: './public/index.html' }));
 
 serve({ fetch: app.fetch, port: 3000 }, (info) => {
   console.log(`server is running on port ${info.port}`);
