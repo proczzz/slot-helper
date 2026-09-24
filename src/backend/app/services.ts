@@ -49,13 +49,6 @@ function getSharedProviders(env: AppEnv): SharedProviders {
   return cachedProviders;
 }
 
-function resolveConversationStore(setting: string | undefined, factories: StoreFactories) {
-  if (!setting || setting === 'none') return null;
-  const factory = factories[setting];
-  if (!factory) throw new Error(`此平台不支援 CONVERSATION_STORE="${setting}"`);
-  return factory();
-}
-
 export function createServices(env: AppEnv, conversationStore: ConversationStore): Services {
   return {
     ...getSharedProviders(env),

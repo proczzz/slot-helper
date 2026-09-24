@@ -1,17 +1,22 @@
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { routes } from '../app/routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
-import { sqliteConversationStore } from '../providers/conversation-store/sqlite.ts';
-import { serveStatic } from '@hono/node-server/serve-static';
+import { CREATE_MESSAGES_TABLE, createConversationStore } from '../providers/conversation-store.ts';
+import { createSqliteDatabase } from '../providers/db/sqlite.ts';
 
 const app = new Hono<AppVariables>();
+
+const DB_DIR = process.env.DATABASE_DIR || '.';
+const database = createSqliteDatabase(`${DB_DIR}/slot-help.db`); // 初始化資料庫
+await database.batch(CREATE_MESSAGES_TABLE); // 初始化資料表(若不存在)
 
 // http fliter: 在 context 提供各式物件與方法給邏輯層呼叫
 app.use(async (c, next) => {
   // [llm、資料庫、日曆]
-  c.set('services', createServices(process.env, sqliteConversationStore));
+  c.set('services', createServices(process.env, createConversationStore(database)));
   // 處裡線程拋出的例外
   c.set('runInBackground', (task) => {
     task.catch((error) => console.error('背景工作失敗:', error));

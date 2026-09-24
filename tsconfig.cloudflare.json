@@ -13,7 +13,9 @@
     "src/backend/channels/**/*.ts",
     "src/backend/core/**/*.ts",
     "src/backend/infra/cloudflare.ts",
-    "src/backend/providers/conversation-store/d1.ts",
+    "src/backend/providers/conversation-store.ts",
+    "src/backend/providers/db/d1.ts",
+    "src/backend/providers/db/types.ts",
     "src/backend/providers/scheduling/*.ts"
   ]
 }
