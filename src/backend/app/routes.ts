@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { adminRoutes } from '../admin/routes.ts';
 import { handleChat } from '../core/chat-service.ts';
 import { ChatRequestSchema } from '../core/types.ts';
 import { lineRoutes } from './line-routes.ts';
@@ -16,6 +17,7 @@ routes.post('/api/chat', async (c) => {
   return c.json(result);
 });
 
+routes.route('/api/admin', adminRoutes);
 routes.route('line', lineRoutes);
 
 export { routes };

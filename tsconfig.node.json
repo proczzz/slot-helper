@@ -7,6 +7,7 @@
     "types": ["node"]
   },
   "include": [
+    "src/backend/admin/**/*.ts",
     "src/backend/ai/**/*.ts",
     "src/backend/app/**/*.ts",
     "src/backend/channels/**/*.ts",

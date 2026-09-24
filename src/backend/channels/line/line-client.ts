@@ -10,7 +10,7 @@ export function createLineClient(env: LineEnv): LineClient | null {
   const encoder = new TextEncoder();
 
   return {
-    async verifySignature(body: string, signature: string): Promise<boolean> {
+    async verifySignature(body: string, signature: string) {
       let signatureBytes: Uint8Array;
       try {
         signatureBytes = Uint8Array.from(atob(signature), (char) => char.charCodeAt(0));
@@ -29,7 +29,7 @@ export function createLineClient(env: LineEnv): LineClient | null {
       return crypto.subtle.verify('HMAC', key, signatureBytes, encoder.encode(body));
     },
 
-    async replyText(replyToken: string, text: string): Promise<void> {
+    async replyText(replyToken: string, text: string) {
       const response = await fetch(REPLY_URL, {
         method: 'POST',
         headers: {

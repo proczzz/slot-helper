@@ -6,9 +6,11 @@ import type { LineClient, LineEnv } from '../channels/line/types.ts';
 import type { ConversationStore } from '../core/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider, SchedulingProviderEnv } from '../providers/scheduling/types.ts';
+import { AdminEnv } from '../admin/types.ts';
+import { AdminAuth, createAdminAuth } from '../admin/auth.ts';
 
 // CloudflareBindings 和 process.env 都能直接傳進來
-export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv {
+export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv, AdminEnv {
   CONVERSATION_STORE?: string; // 資料庫
 }
 
@@ -20,6 +22,7 @@ export interface Services {
   conversationStore: ConversationStore | null;
   schedulingProvider: SchedulingProvider | null;
   lineClient: LineClient | null;
+  adminAuth: AdminAuth | null;
 }
 
 export type AppVariables = {
@@ -43,6 +46,7 @@ function getSharedProviders(env: AppEnv): SharedProviders {
     model: createLanguageModel(env),
     schedulingProvider: createSchedulingProvider(env),
     lineClient: createLineClient(env),
+    adminAuth: createAdminAuth(env),
   };
   return cachedProviders;
 }
