@@ -1,4 +1,6 @@
 import type { LanguageModel } from 'ai';
+import { type AdminAuth, createAdminAuth } from '../admin/auth.ts';
+import type { AdminEnv } from '../admin/types.ts';
 import { createLanguageModel } from '../ai/language-model/index.ts';
 import type { LanguageModelEnv } from '../ai/language-model/types.ts';
 import { createLineClient } from '../channels/line/line-client.ts';
@@ -6,8 +8,6 @@ import type { LineClient, LineEnv } from '../channels/line/types.ts';
 import type { ConversationStore } from '../core/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider, SchedulingProviderEnv } from '../providers/scheduling/types.ts';
-import { AdminEnv } from '../admin/types.ts';
-import { AdminAuth, createAdminAuth } from '../admin/auth.ts';
 
 // CloudflareBindings 和 process.env 都能直接傳進來
 export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv, AdminEnv {}
