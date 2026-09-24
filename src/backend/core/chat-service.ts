@@ -10,13 +10,11 @@ const HISTORY_LIMIT = 40;
 export async function handleChat(
   request: ChatRequest,
   model: LanguageModel,
-  conversationStore: ConversationStore | null,
+  conversationStore: ConversationStore,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {
   // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
-  const history = conversationStore
-    ? await conversationStore.getMessages(request.sessionId, HISTORY_LIMIT)
-    : [];
+  const history = await conversationStore.getMessages(request.sessionId, HISTORY_LIMIT);
 
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -44,7 +42,7 @@ export async function handleChat(
     JSON.stringify(toolParts, (_, value) => (value instanceof Error ? value.message : value)),
   );
 
-  if (conversationStore) {
+  if (result.text) {
     await conversationStore.appendMessages(request.sessionId, [
       { role: 'user', content: request.message, timestamp: Date.now() },
       { role: 'assistant', content: result.text, timestamp: Date.now() },

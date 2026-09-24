@@ -10,16 +10,14 @@ import { AdminEnv } from '../admin/types.ts';
 import { AdminAuth, createAdminAuth } from '../admin/auth.ts';
 
 // CloudflareBindings 和 process.env 都能直接傳進來
-export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv, AdminEnv {
-  CONVERSATION_STORE?: string; // 資料庫
-}
+export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv, AdminEnv {}
 
 // 平台只負責提供"自己支援的"store 實作
 export type StoreFactories = Partial<Record<string, () => ConversationStore>>;
 
 export interface Services {
   model: LanguageModel;
-  conversationStore: ConversationStore | null;
+  conversationStore: ConversationStore;
   schedulingProvider: SchedulingProvider | null;
   lineClient: LineClient | null;
   adminAuth: AdminAuth | null;
@@ -58,9 +56,9 @@ function resolveConversationStore(setting: string | undefined, factories: StoreF
   return factory();
 }
 
-export function createServices(env: AppEnv, stores: StoreFactories): Services {
+export function createServices(env: AppEnv, conversationStore: ConversationStore): Services {
   return {
     ...getSharedProviders(env),
-    conversationStore: resolveConversationStore(env.CONVERSATION_STORE, stores),
+    conversationStore,
   };
 }
