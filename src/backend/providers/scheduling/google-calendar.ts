@@ -12,9 +12,9 @@ interface CachedToken {
 
 // 統一處理 fetch 回應失敗的情況
 async function assertOk(response: Response, action: string): Promise<void> {
-  if (!response.ok) {
-    throw new Error(`Failed to ${action}: ${response.status} ${response.statusText}`);
-  }
+  if (response.ok) return;
+  const body = (await response.text()).replace(/\s+/g, ' ').trim();
+  throw new Error(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
 }
 
 // 建立 Google Calendar 的 SchedulingProvider 實作

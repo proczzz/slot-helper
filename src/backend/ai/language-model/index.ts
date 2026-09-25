@@ -3,7 +3,7 @@ import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
 import type { LanguageModelEnv, LanguageModelProvider } from './types.ts';
 
-const providers: Record<string, LanguageModelProvider> = {
+const providers: Partial<Record<string, LanguageModelProvider>> = {
   deepseek: deepSeekProvider,
   anthropic: anthropicProvider,
 };
