@@ -26,6 +26,12 @@ lineRoutes.post('/webhook', async (c) => {
   for (const event of events) {
     if (!isTextMessage(event)) continue;
 
+    if (!model) {
+      c.var.runInBackground(
+        lineClient.replyText(event.replyToken!, '尚未完成AI設定,請直接聯繫店家。'),
+      );
+      continue;
+    }
     const task = handleChat(
       {
         sessionId: event.source.userId!,

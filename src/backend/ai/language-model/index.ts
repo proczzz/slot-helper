@@ -8,18 +8,14 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
   anthropic: anthropicProvider,
 };
 
-export function createLanguageModel(env: LanguageModelEnv): LanguageModel {
+export function createLanguageModel(env: LanguageModelEnv): LanguageModel | null {
   const name = env.AI_PROVIDER ?? '';
 
   const provider = providers[name];
-  if (!provider) {
-    throw new Error(`Unsupported or missing AI_PROVIDER: "${env.AI_PROVIDER}"`);
-  }
+  if (!provider) return null;
 
   const apiKey = env[provider.apiKeyEnv];
-  if (!apiKey) {
-    throw new Error(`${provider.apiKeyEnv} is required when AI_PROVIDER=${name}`);
-  }
+  if (!apiKey) return null;
 
   console.log(`使用AI供應商: ${name}`);
   return provider.createModel(apiKey);

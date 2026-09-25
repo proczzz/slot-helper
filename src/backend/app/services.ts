@@ -16,7 +16,7 @@ export interface AppEnv extends LanguageModelEnv, SchedulingProviderEnv, LineEnv
 export type StoreFactories = Partial<Record<string, () => ConversationStore>>;
 
 export interface Services {
-  model: LanguageModel;
+  model: LanguageModel | null;
   conversationStore: ConversationStore;
   schedulingProvider: SchedulingProvider | null;
   lineClient: LineClient | null;
@@ -47,6 +47,11 @@ function getSharedProviders(env: AppEnv): SharedProviders {
     adminAuth: createAdminAuth(env),
   };
   return cachedProviders;
+}
+
+// 後台儲存設定後呼叫。Cloudflare 上只清得掉當前 isolate,其他 isolate 要等自己重建
+export function clearCachedProviders() {
+  cachedProviders = undefined;
 }
 
 export function createServices(env: AppEnv, conversationStore: ConversationStore): Services {
