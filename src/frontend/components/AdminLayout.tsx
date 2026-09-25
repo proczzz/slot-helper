@@ -5,6 +5,7 @@ const MENU = [
   { to: '/', label: '總覽', end: true },
   { to: '/settings/ai', label: 'AI 設定' },
   { to: '/settings/calendar', label: '日曆設定' },
+  { to: '/settings/line', label: 'LINE 設定' },
 ];
 
 export function AdminLayout() {

@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import './styles.css';
 import { CalendarSettingsPage } from './pages/CalendarSettingsPage.tsx';
+import { LineSettingsPage } from './pages/LineSettingPage.tsx';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/settings/calendar" element={<CalendarSettingsPage />} />
+            <Route path="/settings/line" element={<LineSettingsPage />} />
           </Route>
         </Route>
       </Routes>
