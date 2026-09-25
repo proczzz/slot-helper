@@ -1,12 +1,10 @@
 import { createGoogleCalendarProvider } from './google-calendar.ts';
 import type { SchedulingProvider, SchedulingProviderEnv } from './types.ts';
 
-function createGoogleProvider(env: SchedulingProviderEnv): SchedulingProvider {
+function createGoogleProvider(env: SchedulingProviderEnv): SchedulingProvider | null {
   const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID } = env;
   if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
-    throw new Error(
-      'GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY and GOOGLE_CALENDAR_ID are all required when SCHEDULING_PROVIDER=google-calendar',
-    );
+    return null;
   }
   return createGoogleCalendarProvider({
     clientEmail: GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -15,7 +13,9 @@ function createGoogleProvider(env: SchedulingProviderEnv): SchedulingProvider {
   });
 }
 
-const providers: Record<string, (env: SchedulingProviderEnv) => SchedulingProvider> = {
+type ProviderFactory = (env: SchedulingProviderEnv) => SchedulingProvider | null;
+
+const providers: Partial<Record<string, ProviderFactory>> = {
   'google-calendar': createGoogleProvider,
 };
 

@@ -7,6 +7,7 @@ import { AiSettingsPage } from './pages/AiSettingPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import './styles.css';
+import { CalendarSettingsPage } from './pages/CalendarSettingsPage.tsx';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route element={<AdminLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
+            <Route path="/settings/calendar" element={<CalendarSettingsPage />} />
           </Route>
         </Route>
       </Routes>
