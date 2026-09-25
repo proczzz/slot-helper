@@ -2,9 +2,12 @@ import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
 import type { AppVariables } from '../app/services.ts';
+import { clearCachedProviders, CONFIG_KEYS } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 
 const LoginSchema = z.object({ password: z.string() });
+
+const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
 const adminRoutes = new Hono<AppVariables>();
 
@@ -46,5 +49,27 @@ adminRoutes.use('/*', async (c, next) => {
 });
 
 adminRoutes.get('/me', (c) => c.json({ ok: true }));
+
+// 取全部設定
+adminRoutes.get('/config', async (c) => {
+  const { configStore } = c.var.services;
+  const entries = await Promise.all(
+    CONFIG_KEYS.map(async (key) => [key, (await configStore.get(key)) ?? ''] as const),
+  );
+  return c.json(Object.fromEntries(entries));
+});
+
+// 寫全部設定
+adminRoutes.put('/config', async (c) => {
+  const { configStore } = c.var.services;
+  const values = ConfigSchema.parse(await c.req.json());
+
+  await configStore.setMany(Object.entries(values).map(([key, value]) => ({ key, value })));
+
+  // 清掉跨 request 快取,下一個 request 才會用到新設定
+  clearCachedProviders();
+
+  return c.json({ ok: true });
+});
 
 export { adminRoutes };

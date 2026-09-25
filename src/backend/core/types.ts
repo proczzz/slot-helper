@@ -18,12 +18,15 @@ export interface Message {
   timestamp: number;
 }
 
+// 對話記憶-資料庫
 export interface ConversationStore {
   getMessages(sessionId: string, limit: number): Promise<Message[]>;
   appendMessages(sessionId: string, messages: Message[]): Promise<void>;
 }
 
+// 設定-資料庫
 export interface ConfigStore {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
+  setMany(entries: { key: string; value: string }[]): Promise<void>;
 }

@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS config (
   },
 ];
 
+const UPSERT =
+  'INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value';
+
 export function createConfigStore(database: Database): ConfigStore {
   return {
     async get(key) {
@@ -24,10 +27,13 @@ export function createConfigStore(database: Database): ConfigStore {
     },
 
     async set(key, value) {
-      await database.execute({
-        sql: 'INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-        params: [key, value],
-      });
+      await database.execute({ sql: UPSERT, params: [key, value] });
+    },
+
+    async setMany(entries) {
+      await database.batch(
+        entries.map(({ key, value }) => ({ sql: UPSERT, params: [key, value] })),
+      );
     },
   };
 }
