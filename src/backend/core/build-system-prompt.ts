@@ -1,33 +1,43 @@
 import { shopConfig } from './shop-config.ts';
+import type { BusinessHours, ShopSettings } from './types.ts';
 
-const DAY_NAMES: Record<string, string> = {
-  monday: '週一',
-  tuesday: '週二',
-  wednesday: '週三',
-  thursday: '週四',
-  friday: '週五',
-  saturday: '週六',
-  sunday: '週日',
-};
+const DAYS: [string, string][] = [
+  ['mon', '週一'],
+  ['tue', '週二'],
+  ['wed', '週三'],
+  ['thu', '週四'],
+  ['fri', '週五'],
+  ['sat', '週六'],
+  ['sun', '週日'],
+];
 
-function formatBusinessHours(): string {
-  return Object.entries(shopConfig.businessHours)
-    .map(([day, slots]) => {
-      const dayName = DAY_NAMES[day];
-      if (slots.length === 0) {
-        return `${dayName}:公休`;
-      }
-      const slotsText = slots.map((s) => `${s.open}-${s.close}`).join('、');
-      return `${dayName}:${slotsText}`;
-    })
-    .join('\n');
+const DAY_MINUTES = 24 * 60; // 一天有 1440 分鐘
+
+export function buildSystemPrompt(settings: ShopSettings): string {
+  const now = new Date().toLocaleString('zh-TW', { timeZone: shopConfig.timezone });
+
+  return `${settings.instructions}
+
+營業時間
+${formatBusinessHours(settings.businessHours)}
+
+目前時間:${now}`;
 }
 
-export function buildSystemPrompt(): string {
-  return `${shopConfig.systemPrompt}
+function formatBusinessHours(hours: BusinessHours): string {
+  return DAYS.map(([key, label]) => {
+    const periods = hours[key] ?? [];
+    if (periods.length === 0) return `${label} 公休`;
 
-營業時間:
-${formatBusinessHours()}
+    return `${label} ${periods.map(([start, end]) => `${start} 至 ${formatTime(end)}`).join('、')}`;
+  }).join('\n');
+}
 
-目前時間:${new Date().toLocaleString('zh-TW', { timeZone: shopConfig.timezone })}`;
+// 內部以超過 24:00 表示跨日,顯示給 AI 時換成「次日 HH:mm」
+function formatTime(time: string): string {
+  const [hour, minute] = time.split(':');
+  const total = Number(hour) * 60 + Number(minute);
+  if (total < DAY_MINUTES) return time;
+  const nextDay = total - DAY_MINUTES;
+  return `次日 ${String(Math.floor(nextDay / 60)).padStart(2, '0')}:${String(nextDay % 60).padStart(2, '0')}`;
 }

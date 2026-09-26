@@ -9,7 +9,7 @@ const lineRoutes = new Hono<AppVariables>();
 
 lineRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆]的實現
-  const { lineClient, model, conversationStore, schedulingProvider } = c.var.services;
+  const { lineClient, model, shopSettings, conversationStore, schedulingProvider } = c.var.services;
   // 檢查: 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!lineClient) return c.text('LINE is not configured', 404);
 
@@ -39,6 +39,7 @@ lineRoutes.post('/webhook', async (c) => {
         customerId: event.source.userId!, // 有點怪
       },
       model,
+      shopSettings,
       conversationStore,
       schedulingProvider,
     )

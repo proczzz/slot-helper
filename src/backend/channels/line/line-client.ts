@@ -1,10 +1,10 @@
-import type { LineClient, LineEnv } from './types.ts';
+import type { LineClient, LineConfig } from './types.ts';
 
 const REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 
-export function createLineClient(env: LineEnv): LineClient | null {
-  const channelSecret = env.LINE_CHANNEL_SECRET;
-  const accessToken = env.LINE_CHANNEL_ACCESS_TOKEN;
+export function createLineClient(config: LineConfig): LineClient | null {
+  const channelSecret = config.LINE_CHANNEL_SECRET;
+  const accessToken = config.LINE_CHANNEL_ACCESS_TOKEN;
   if (!channelSecret || !accessToken) return null; // 老闆沒要用line
 
   const encoder = new TextEncoder();

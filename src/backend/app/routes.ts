@@ -8,13 +8,19 @@ import type { AppVariables } from './services.ts';
 const routes = new Hono<AppVariables>();
 
 routes.post('/api/chat', async (c) => {
-  // 從 context 取:[llm、資料庫、日曆]的實現 & 請求本體
-  const { model, conversationStore, schedulingProvider } = c.var.services;
+  // 從 context 取:[llm、營業資訊、資料庫、日曆]的實現 & 請求本體
+  const { model, shopSettings, conversationStore, schedulingProvider } = c.var.services;
   if (!model) return c.json({ error: 'AI 尚未設定' }, 503);
 
   const request = ChatRequestSchema.parse(await c.req.json());
   // 核心業務
-  const result = await handleChat(request, model, conversationStore, schedulingProvider);
+  const result = await handleChat(
+    request,
+    model,
+    shopSettings,
+    conversationStore,
+    schedulingProvider,
+  );
   // Response 給測試人員
   return c.json(result);
 });

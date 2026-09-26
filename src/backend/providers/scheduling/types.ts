@@ -24,7 +24,7 @@ export interface SchedulingProvider {
   cancelBooking(eventId: string): Promise<void>;
 }
 
-export interface SchedulingProviderEnv {
+export interface SchedulingProviderConfig {
   SCHEDULING_PROVIDER?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;

@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage.tsx';
 import './styles.css';
 import { CalendarSettingsPage } from './pages/CalendarSettingsPage.tsx';
 import { LineSettingsPage } from './pages/LineSettingPage.tsx';
+import { BusinessHoursPage } from './pages/BusinessHoursPage.tsx';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route element={<AdminLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
+            <Route path="/settings/business-hours" element={<BusinessHoursPage />} />
             <Route path="/settings/calendar" element={<CalendarSettingsPage />} />
             <Route path="/settings/line" element={<LineSettingsPage />} />
           </Route>

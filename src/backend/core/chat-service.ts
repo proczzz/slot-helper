@@ -3,13 +3,14 @@ import { generateText, stepCountIs } from 'ai';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
-import type { ChatRequest, ChatResponse, ConversationStore } from './types.ts';
+import type { ChatRequest, ChatResponse, ConversationStore, ShopSettings } from './types.ts';
 
 const HISTORY_LIMIT = 40;
 
 export async function handleChat(
   request: ChatRequest,
   model: LanguageModel,
+  shopSettings: ShopSettings,
   conversationStore: ConversationStore,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {
@@ -24,7 +25,7 @@ export async function handleChat(
   // 實際呼叫 llm
   const result = await generateText({
     model,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(shopSettings),
     messages,
     tools: schedulingProvider
       ? createSchedulingTools(schedulingProvider, request.customerId)

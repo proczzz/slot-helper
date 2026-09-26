@@ -5,6 +5,7 @@ import { logout } from '../lib/admin.ts';
 const MENU = [
   { to: '/', label: '總覽', end: true },
   { to: '/settings/ai', label: 'AI' },
+  { to: '/settings/business-hours', label: '營業時間' },
   { to: '/settings/calendar', label: 'Google 日曆' },
   { to: '/settings/line', label: 'LINE' },
 ];

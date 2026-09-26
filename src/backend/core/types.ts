@@ -30,3 +30,11 @@ export interface ConfigStore {
   set(key: string, value: string): Promise<void>;
   setMany(entries: { key: string; value: string }[]): Promise<void>;
 }
+
+// <星期, 時段['HH:mm','HH:mm'][]>
+export type BusinessHours = Record<string, [string, string][]>;
+
+export interface ShopSettings {
+  instructions: string;
+  businessHours: BusinessHours;
+}

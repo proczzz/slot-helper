@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
 import type { AppVariables } from '../app/services.ts';
-import { clearCachedProviders, CONFIG_KEYS } from '../app/services.ts';
+import { clearCachedProviders } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
+import { CONFIG_KEYS } from '../app/config.ts';
 
 const LoginSchema = z.object({ password: z.string() });
 

@@ -1,8 +1,8 @@
 import { createGoogleCalendarProvider } from './google-calendar.ts';
-import type { SchedulingProvider, SchedulingProviderEnv } from './types.ts';
+import type { SchedulingProvider, SchedulingProviderConfig } from './types.ts';
 
-function createGoogleProvider(env: SchedulingProviderEnv): SchedulingProvider | null {
-  const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID } = env;
+function createGoogleProvider(config: SchedulingProviderConfig): SchedulingProvider | null {
+  const { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID } = config;
   if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !GOOGLE_CALENDAR_ID) {
     return null;
   }
@@ -13,20 +13,22 @@ function createGoogleProvider(env: SchedulingProviderEnv): SchedulingProvider | 
   });
 }
 
-type ProviderFactory = (env: SchedulingProviderEnv) => SchedulingProvider | null;
+type ProviderFactory = (config: SchedulingProviderConfig) => SchedulingProvider | null;
 
 const providers: Partial<Record<string, ProviderFactory>> = {
   'google-calendar': createGoogleProvider,
 };
 
 // 依 SCHEDULING_PROVIDER 決定要不要啟用、啟用哪個排程供應商;未設定或設為 none 時停用
-export function createSchedulingProvider(env: SchedulingProviderEnv): SchedulingProvider | null {
-  if (!env.SCHEDULING_PROVIDER || env.SCHEDULING_PROVIDER === 'none') {
+export function createSchedulingProvider(
+  config: SchedulingProviderConfig,
+): SchedulingProvider | null {
+  if (!config.SCHEDULING_PROVIDER || config.SCHEDULING_PROVIDER === 'none') {
     return null;
   }
-  const factory = providers[env.SCHEDULING_PROVIDER];
+  const factory = providers[config.SCHEDULING_PROVIDER];
   if (!factory) {
-    throw new Error(`Unsupported SCHEDULING_PROVIDER: "${env.SCHEDULING_PROVIDER}"`);
+    throw new Error(`Unsupported SCHEDULING_PROVIDER: "${config.SCHEDULING_PROVIDER}"`);
   }
-  return factory(env);
+  return factory(config);
 }
