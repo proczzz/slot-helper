@@ -13,6 +13,7 @@ export function AiSettingsPage() {
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getConfig().then((config) => {
@@ -23,6 +24,12 @@ export function AiSettingsPage() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   function changeProvider(next: string) {
     setProvider(next);
     setApiKey('');
@@ -30,11 +37,13 @@ export function AiSettingsPage() {
   }
 
   async function submit() {
+    setSaving(true);
     setMessage('');
     const ok = await saveConfig({
       AI_PROVIDER: provider,
       [KEY_FIELD[provider]!]: apiKey,
     });
+    setSaving(false);
     setMessage(ok ? '已儲存' : '儲存失敗');
   }
 
@@ -85,12 +94,21 @@ export function AiSettingsPage() {
             />
           </fieldset>
 
-          <button type="submit" className="btn btn-primary" disabled={!provider || !apiKey}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={saving || !provider || !apiKey}
+          >
+            {saving && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>
 
-        {message && <div className="alert">{message}</div>}
+        {message && (
+          <div className="toast toast-end">
+            <div className="alert">{message}</div>
+          </div>
+        )}
       </div>
     </div>
   );
