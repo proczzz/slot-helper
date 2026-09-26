@@ -24,9 +24,9 @@ adminRoutes.post('/login', async (c) => {
 
   // Step2. 發 jwt 憑證
   setCookie(c, ADMIN_COOKIE_NAME, await adminAuth.issueToken(), {
-    httpOnly: true,
-    secure: adminAuth.cookieSecure,
-    sameSite: 'Strict',
+    httpOnly: true, // JS 無法讀取此 cookie
+    secure: true, // 非 https 瀏覽器發給後端
+    sameSite: 'Strict', // 同ip + 同port 才能用這個 cookie
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
   });

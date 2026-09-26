@@ -7,7 +7,6 @@ const EXPIRES_IN = '7d';
 export const ADMIN_COOKIE_NAME = 'admin_token';
 
 export interface AdminAuth {
-  cookieSecure: boolean;
   passwordMatches(password: string): boolean;
   issueToken(): Promise<string>;
   verifyToken(token: string): Promise<boolean>;
@@ -21,8 +20,6 @@ export function createAdminAuth(env: AdminEnv): AdminAuth | null {
   const secretKey = new TextEncoder().encode(jwtSecret);
 
   return {
-    cookieSecure: env.ADMIN_COOKIE_INSECURE !== 'true',
-
     // FIXME 目前環境變數裡存密碼，之後改成存預設密碼，實際密碼雜湊放DB
     passwordMatches(input: string) {
       return input === password;
