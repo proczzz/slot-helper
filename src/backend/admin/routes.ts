@@ -1,12 +1,11 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
+import { CONFIG_KEYS } from '../app/config.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
-import { CONFIG_KEYS } from '../app/config.ts';
-
-const LoginSchema = z.object({ password: z.string() });
+import { LoginSchema } from './model/login.ts';
 
 const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
@@ -15,17 +14,16 @@ const adminRoutes = new Hono<AppVariables>();
 adminRoutes.post('/login', async (c) => {
   // Step1. 檢查:環境配置&驗證密碼
   const { adminAuth } = c.var.services;
-  if (!adminAuth) return c.json({ error: '後台未設定' }, 404);
+  const { username, password } = LoginSchema.parse(await c.req.json());
 
-  const { password } = LoginSchema.parse(await c.req.json());
-  if (!adminAuth.passwordMatches(password)) {
-    return c.json({ error: '密碼錯誤' }, 401);
+  if (!(await adminAuth.authenticate(username, password))) {
+    return c.json({ error: '帳號或密碼錯誤' }, 401);
   }
 
   // Step2. 發 jwt 憑證
-  setCookie(c, ADMIN_COOKIE_NAME, await adminAuth.issueToken(), {
+  setCookie(c, ADMIN_COOKIE_NAME, await adminAuth.issueToken(username), {
     httpOnly: true, // JS 無法讀取此 cookie
-    secure: true, // 非 https 瀏覽器發給後端
+    secure: true, // 非 https 瀏覽器發給後端(本機用 http 開發時改成 false，不要提交)
     sameSite: 'Strict', // 同ip + 同port 才能用這個 cookie
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
@@ -43,7 +41,7 @@ adminRoutes.post('/logout', (c) => {
 adminRoutes.use('/*', async (c, next) => {
   const { adminAuth } = c.var.services;
   const token = getCookie(c, ADMIN_COOKIE_NAME);
-  if (!adminAuth || !token || !(await adminAuth.verifyToken(token))) {
+  if (!token || !(await adminAuth.verifyToken(token))) {
     return c.json({ error: '未登入' }, 401);
   }
   await next();
@@ -53,7 +51,7 @@ adminRoutes.get('/me', (c) => c.json({ ok: true }));
 
 // 取全部設定
 adminRoutes.get('/config', async (c) => {
-  const { configRepository: configRepository } = c.var.services;
+  const { configRepository } = c.var.services;
   const entries = await Promise.all(
     CONFIG_KEYS.map(async (key) => [key, (await configRepository.get(key)) ?? ''] as const),
   );
@@ -62,12 +60,11 @@ adminRoutes.get('/config', async (c) => {
 
 // 寫全部設定
 adminRoutes.put('/config', async (c) => {
-  const { configRepository: configRepository } = c.var.services;
+  const { configRepository } = c.var.services;
   const values = ConfigSchema.parse(await c.req.json());
 
   await configRepository.setMany(Object.entries(values).map(([key, value]) => ({ key, value })));
-
-  // 清掉跨 request 快取,下一個 request 才會用到新設定
+  // 清掉跨 request 快取，下一個 request 才會用到新設定
   clearCachedProviders();
 
   return c.json({ ok: true });

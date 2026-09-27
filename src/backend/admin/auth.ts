@@ -1,35 +1,39 @@
 import { jwtVerify, SignJWT } from 'jose';
+import type { UserRepository } from '../repository/types.ts';
+import { verifyPassword } from './password.ts';
 
 const ISSUER = 'slot-helper';
 const EXPIRES_IN = '7d';
 
 export const ADMIN_COOKIE_NAME = 'admin_token';
-export const PASSWORD_KEY = 'ADMIN_PASSWORD';
 export const JWT_SECRET_KEY = 'ADMIN_JWT_SECRET';
 
 export interface AdminAuth {
-  passwordMatches(password: string): boolean;
-  issueToken(): Promise<string>;
+  authenticate(username: string, password: string): Promise<boolean>;
+  issueToken(username: string): Promise<string>;
   verifyToken(token: string): Promise<boolean>;
 }
 
-export function createAdminAuth(password: string, jwtSecret: string): AdminAuth {
+export function createAdminAuth(userRepository: UserRepository, jwtSecret: string): AdminAuth {
   const secretKey = new TextEncoder().encode(jwtSecret);
 
   return {
-    passwordMatches(input) {
-      return input === password;
+    // 驗證身分(帳密)
+    async authenticate(username, password) {
+      const user = await userRepository.findByUsername(username);
+      if (!user || !user.enabled) return false;
+      return verifyPassword(user.password, password);
     },
-
-    issueToken() {
-      return new SignJWT({})
+    // 發 jwt
+    issueToken(username) {
+      return new SignJWT({ sub: username })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuer(ISSUER)
         .setIssuedAt()
         .setExpirationTime(EXPIRES_IN)
         .sign(secretKey);
     },
-
+    // 驗 jwt
     async verifyToken(token) {
       try {
         await jwtVerify(token, secretKey, { issuer: ISSUER });

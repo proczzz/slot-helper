@@ -1,8 +1,8 @@
-export async function login(password: string): Promise<boolean> {
+export async function login(username: string, password: string): Promise<boolean> {
   const response = await fetch('/api/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ username, password }),
   });
   return response.ok;
 }

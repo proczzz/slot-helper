@@ -10,9 +10,14 @@ import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
-import type { ConfigRepository, ConversationRepository } from '../repository/types.ts';
+import type {
+  ConfigRepository,
+  ConversationRepository,
+  UserRepository,
+} from '../repository/types.ts';
 import { loadAppConfig, toShopSettings } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
+import { createUserRepository } from '../repository/user-repository.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {
@@ -37,11 +42,12 @@ export interface Services {
 export async function createServices(database: Database): Promise<Services> {
   const configRepository = createConfigRepository(database);
   const conversationRepository = createConversationRepository(database);
+  const userRepository = createUserRepository(database);
 
   return {
-    ...(await getSharedProviders(configRepository)),
-    conversationRepository: conversationRepository,
-    configRepository: configRepository,
+    ...(await getSharedProviders(configRepository, userRepository)),
+    conversationRepository,
+    configRepository,
   };
 }
 
@@ -51,10 +57,13 @@ type SharedProviders = Omit<Services, 'conversationRepository' | 'configReposito
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
 let cachedProviders: SharedProviders | undefined;
 
-async function getSharedProviders(configRepository: ConfigRepository): Promise<SharedProviders> {
+async function getSharedProviders(
+  configRepository: ConfigRepository,
+  userRepository: UserRepository,
+): Promise<SharedProviders> {
   if (cachedProviders) return cachedProviders;
 
-  await ensureInitialized(configRepository);
+  await ensureInitialized(configRepository, userRepository);
   const config = await loadAppConfig(configRepository);
 
   cachedProviders = {
@@ -62,7 +71,7 @@ async function getSharedProviders(configRepository: ConfigRepository): Promise<S
     shopSettings: toShopSettings(config),
     schedulingProvider: createSchedulingProvider(config),
     lineClient: createLineClient(config),
-    adminAuth: createAdminAuth(config.ADMIN_PASSWORD!, config.ADMIN_JWT_SECRET!),
+    adminAuth: createAdminAuth(userRepository, config.ADMIN_JWT_SECRET!),
   };
   return cachedProviders;
 }
