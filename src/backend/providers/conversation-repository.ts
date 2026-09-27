@@ -1,4 +1,4 @@
-import type { ConversationStore, Message } from '../core/types.ts';
+import type { ConversationRepository, Message } from '../core/types.ts';
 import type { Database, Statement } from './db/types.ts';
 
 // !!! 內容需與 migrations/000_create_messages_table.sql 保持一致
@@ -19,7 +19,7 @@ export const CREATE_MESSAGES_TABLE: Statement[] = [
   { sql: CREATE_INDEX, params: [] },
 ];
 
-export function createConversationStore(database: Database): ConversationStore {
+export function createConversationRepository(database: Database): ConversationRepository {
   return {
     async getMessages(sessionId, limit) {
       // 先由新到舊取最後 N 筆,再反轉成時間順序交給 AI

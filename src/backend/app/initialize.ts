@@ -1,20 +1,20 @@
 import { JWT_SECRET_KEY, PASSWORD_KEY } from '../admin/auth.ts';
-import type { ConfigStore } from '../core/types.ts';
+import type { ConfigRepository } from '../core/types.ts';
 
 const INITIALIZED_KEY = 'INITIALIZED';
 
-export async function ensureInitialized(configStore: ConfigStore): Promise<void> {
-  if (await configStore.get(INITIALIZED_KEY)) return;
-  await initialize(configStore);
+export async function ensureInitialized(configRepository: ConfigRepository): Promise<void> {
+  if (await configRepository.get(INITIALIZED_KEY)) return;
+  await initialize(configRepository);
 }
 
-async function initialize(configStore: ConfigStore): Promise<void> {
+async function initialize(configRepository: ConfigRepository): Promise<void> {
   const password = crypto.randomUUID();
 
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   const jwtSecret = btoa(String.fromCharCode(...bytes));
 
-  await configStore.setMany([
+  await configRepository.setMany([
     { key: PASSWORD_KEY, value: password },
     { key: JWT_SECRET_KEY, value: jwtSecret },
     { key: INITIALIZED_KEY, value: new Date().toISOString() },

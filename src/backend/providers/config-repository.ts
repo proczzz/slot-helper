@@ -1,4 +1,4 @@
-import type { ConfigStore } from '../core/types.ts';
+import type { ConfigRepository } from '../core/types.ts';
 import type { Database, Statement } from './db/types.ts';
 
 // !!! 內容需與 migrations/0002_create_config_table.sql 保持一致
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS config (
 const UPSERT =
   'INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value';
 
-export function createConfigStore(database: Database): ConfigStore {
+export function createConfigRepository(database: Database): ConfigRepository {
   return {
     async get(key) {
       const rows = await database.query<{ value: string }>({

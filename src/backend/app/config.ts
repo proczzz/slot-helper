@@ -1,6 +1,6 @@
 import type { LanguageModelConfig } from '../ai/language-model/types.ts';
 import type { LineConfig } from '../channels/line/types.ts';
-import type { BusinessHours, ConfigStore, ShopSettings } from '../core/types.ts';
+import type { BusinessHours, ConfigRepository, ShopSettings } from '../core/types.ts';
 import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
 
 export interface AppConfig extends LanguageModelConfig, SchedulingProviderConfig, LineConfig {
@@ -32,9 +32,9 @@ export const CONFIG_KEYS = [
 ] as const;
 
 // 抓資料庫所有配置
-export async function loadAppConfig(configStore: ConfigStore): Promise<AppConfig> {
+export async function loadAppConfig(configRepository: ConfigRepository): Promise<AppConfig> {
   const entries = await Promise.all(
-    CONFIG_KEYS.map(async (key) => [key, await configStore.get(key)] as const),
+    CONFIG_KEYS.map(async (key) => [key, await configRepository.get(key)] as const),
   );
   return Object.fromEntries(entries.filter(([, value]) => value !== null));
 }

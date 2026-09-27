@@ -5,8 +5,8 @@ import { mkdirSync } from 'node:fs';
 import { routes } from '../app/routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
-import { CREATE_CONFIG_TABLE } from '../providers/config-store.ts';
-import { CREATE_MESSAGES_TABLE } from '../providers/conversation-store.ts';
+import { CREATE_CONFIG_TABLE } from '../providers/config-repository.ts';
+import { CREATE_MESSAGES_TABLE } from '../providers/conversation-repository.ts';
 import { createSqliteDatabase } from '../providers/db/sqlite.ts';
 
 mkdirSync('./data', { recursive: true });

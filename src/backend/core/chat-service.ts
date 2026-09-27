@@ -3,7 +3,7 @@ import { generateText, stepCountIs } from 'ai';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
-import type { ChatRequest, ChatResponse, ConversationStore, ShopSettings } from './types.ts';
+import type { ChatRequest, ChatResponse, ConversationRepository, ShopSettings } from './types.ts';
 
 const HISTORY_LIMIT = 40;
 
@@ -11,11 +11,11 @@ export async function handleChat(
   request: ChatRequest,
   model: LanguageModel,
   shopSettings: ShopSettings,
-  conversationStore: ConversationStore,
+  conversationRepository: ConversationRepository,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {
   // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
-  const history = await conversationStore.getMessages(request.sessionId, HISTORY_LIMIT);
+  const history = await conversationRepository.getMessages(request.sessionId, HISTORY_LIMIT);
 
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -44,7 +44,7 @@ export async function handleChat(
   );
 
   if (result.text) {
-    await conversationStore.appendMessages(request.sessionId, [
+    await conversationRepository.appendMessages(request.sessionId, [
       { role: 'user', content: request.message, timestamp: Date.now() },
       { role: 'assistant', content: result.text, timestamp: Date.now() },
     ]);

@@ -4,9 +4,9 @@ import { createAdminAuth } from '../admin/auth.ts';
 import { createLanguageModel } from '../ai/language-model/index.ts';
 import { createLineClient } from '../channels/line/line-client.ts';
 import type { LineClient } from '../channels/line/types.ts';
-import type { ConfigStore, ConversationStore, ShopSettings } from '../core/types.ts';
-import { createConfigStore } from '../providers/config-store.ts';
-import { createConversationStore } from '../providers/conversation-store.ts';
+import type { ConfigRepository, ConversationRepository, ShopSettings } from '../core/types.ts';
+import { createConfigRepository } from '../providers/config-repository.ts';
+import { createConversationRepository } from '../providers/conversation-repository.ts';
 import type { Database } from '../providers/db/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
@@ -26,35 +26,35 @@ export type AppVariables = {
 export interface Services {
   model: LanguageModel | null; // AI
   shopSettings: ShopSettings; // 營業時間、部分提示詞
-  conversationStore: ConversationStore;
-  configStore: ConfigStore;
+  conversationRepository: ConversationRepository;
+  configRepository: ConfigRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
   adminAuth: AdminAuth; // 身分驗證模組
 }
 
 export async function createServices(database: Database): Promise<Services> {
-  const configStore = createConfigStore(database);
-  const conversationStore = createConversationStore(database);
+  const configRepository = createConfigRepository(database);
+  const conversationRepository = createConversationRepository(database);
 
   return {
-    ...(await getSharedProviders(configStore)),
-    conversationStore,
-    configStore,
+    ...(await getSharedProviders(configRepository)),
+    conversationRepository: conversationRepository,
+    configRepository: configRepository,
   };
 }
 
-// 扣掉綁 request 的兩個 store，其餘只由設定字串建出來，可以跨 request 重用
-type SharedProviders = Omit<Services, 'conversationStore' | 'configStore'>;
+// 扣掉綁 request 的兩個 repository，其餘只由設定字串建出來，可以跨 request 重用
+type SharedProviders = Omit<Services, 'conversationRepository' | 'configRepository'>;
 
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
 let cachedProviders: SharedProviders | undefined;
 
-async function getSharedProviders(configStore: ConfigStore): Promise<SharedProviders> {
+async function getSharedProviders(configRepository: ConfigRepository): Promise<SharedProviders> {
   if (cachedProviders) return cachedProviders;
 
-  await ensureInitialized(configStore);
-  const config = await loadAppConfig(configStore);
+  await ensureInitialized(configRepository);
+  const config = await loadAppConfig(configRepository);
 
   cachedProviders = {
     model: createLanguageModel(config),

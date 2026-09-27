@@ -9,7 +9,7 @@ const routes = new Hono<AppVariables>();
 
 routes.post('/api/chat', async (c) => {
   // 從 context 取:[llm、營業資訊、資料庫、日曆]的實現 & 請求本體
-  const { model, shopSettings, conversationStore, schedulingProvider } = c.var.services;
+  const { model, shopSettings, conversationRepository: conversationRepository, schedulingProvider } = c.var.services;
   if (!model) return c.json({ error: 'AI 尚未設定' }, 503);
 
   const request = ChatRequestSchema.parse(await c.req.json());
@@ -18,7 +18,7 @@ routes.post('/api/chat', async (c) => {
     request,
     model,
     shopSettings,
-    conversationStore,
+    conversationRepository,
     schedulingProvider,
   );
   // Response 給測試人員
