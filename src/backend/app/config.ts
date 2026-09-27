@@ -1,7 +1,8 @@
 import type { LanguageModelConfig } from '../ai/language-model/types.ts';
 import type { LineConfig } from '../channels/line/types.ts';
-import type { BusinessHours, ConfigRepository, ShopSettings } from '../core/types.ts';
+import type { BusinessHours, ShopSettings } from '../core/types.ts';
 import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
+import type { ConfigRepository } from '../repository/types.ts';
 
 export interface AppConfig extends LanguageModelConfig, SchedulingProviderConfig, LineConfig {
   SYSTEM_PROMPT?: string;

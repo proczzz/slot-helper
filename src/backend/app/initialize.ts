@@ -1,5 +1,5 @@
 import { JWT_SECRET_KEY, PASSWORD_KEY } from '../admin/auth.ts';
-import type { ConfigRepository } from '../core/types.ts';
+import type { ConfigRepository } from '../repository/types.ts';
 
 const INITIALIZED_KEY = 'INITIALIZED';
 

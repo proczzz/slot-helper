@@ -4,12 +4,13 @@ import { createAdminAuth } from '../admin/auth.ts';
 import { createLanguageModel } from '../ai/language-model/index.ts';
 import { createLineClient } from '../channels/line/line-client.ts';
 import type { LineClient } from '../channels/line/types.ts';
-import type { ConfigRepository, ConversationRepository, ShopSettings } from '../core/types.ts';
-import { createConfigRepository } from '../providers/config-repository.ts';
-import { createConversationRepository } from '../providers/conversation-repository.ts';
+import type { ShopSettings } from '../core/types.ts';
 import type { Database } from '../providers/db/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
+import { createConfigRepository } from '../repository/config-repository.ts';
+import { createConversationRepository } from '../repository/conversation-repository.ts';
+import type { ConfigRepository, ConversationRepository } from '../repository/types.ts';
 import { loadAppConfig, toShopSettings } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
 

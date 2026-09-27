@@ -1,9 +1,10 @@
 import type { LanguageModel } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
+import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
-import type { ChatRequest, ChatResponse, ConversationRepository, ShopSettings } from './types.ts';
+import type { ChatRequest, ChatResponse, ShopSettings } from './types.ts';
 
 const HISTORY_LIMIT = 40;
 
