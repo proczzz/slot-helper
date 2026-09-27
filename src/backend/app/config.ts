@@ -1,13 +1,13 @@
-import type { AdminEnv } from '../admin/types.ts';
 import type { LanguageModelConfig } from '../ai/language-model/types.ts';
 import type { LineConfig } from '../channels/line/types.ts';
 import type { BusinessHours, ConfigStore, ShopSettings } from '../core/types.ts';
 import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
 
-export interface AppConfig
-  extends LanguageModelConfig, SchedulingProviderConfig, LineConfig, AdminEnv {
+export interface AppConfig extends LanguageModelConfig, SchedulingProviderConfig, LineConfig {
   SYSTEM_PROMPT?: string;
   BUSINESS_HOURS?: string;
+  ADMIN_PASSWORD?: string;
+  ADMIN_JWT_SECRET?: string;
 }
 
 // 這些設定存在 db config 表，由後台填寫
@@ -26,6 +26,9 @@ export const CONFIG_KEYS = [
 
   'SYSTEM_PROMPT',
   'BUSINESS_HOURS',
+
+  'ADMIN_PASSWORD', // 管理密碼
+  'ADMIN_JWT_SECRET', // 簽/驗 後臺帳號 jwt 的 HS256 key
 ] as const;
 
 // 抓資料庫所有配置

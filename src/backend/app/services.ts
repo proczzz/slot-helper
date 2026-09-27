@@ -1,7 +1,6 @@
 import type { LanguageModel } from 'ai';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
-import type { AdminEnv } from '../admin/types.ts';
 import { createLanguageModel } from '../ai/language-model/index.ts';
 import { createLineClient } from '../channels/line/line-client.ts';
 import type { LineClient } from '../channels/line/types.ts';
@@ -11,8 +10,8 @@ import { createConversationStore } from '../providers/conversation-store.ts';
 import type { Database } from '../providers/db/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
-import type { AppConfig } from './config.ts';
 import { loadAppConfig, toShopSettings } from './config.ts';
+import { ensureInitialized } from './initialize.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {
@@ -31,15 +30,15 @@ export interface Services {
   configStore: ConfigStore;
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
-  adminAuth: AdminAuth | null; // 身分驗證模組
+  adminAuth: AdminAuth; // 身分驗證模組
 }
 
-export async function createServices(env: AppConfig, database: Database): Promise<Services> {
+export async function createServices(database: Database): Promise<Services> {
   const configStore = createConfigStore(database);
   const conversationStore = createConversationStore(database);
 
   return {
-    ...(await getSharedProviders(configStore, env)),
+    ...(await getSharedProviders(configStore)),
     conversationStore,
     configStore,
   };
@@ -51,19 +50,18 @@ type SharedProviders = Omit<Services, 'conversationStore' | 'configStore'>;
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
 let cachedProviders: SharedProviders | undefined;
 
-async function getSharedProviders(
-  configStore: ConfigStore,
-  env: AdminEnv,
-): Promise<SharedProviders> {
+async function getSharedProviders(configStore: ConfigStore): Promise<SharedProviders> {
   if (cachedProviders) return cachedProviders;
 
+  await ensureInitialized(configStore);
   const config = await loadAppConfig(configStore);
+
   cachedProviders = {
     model: createLanguageModel(config),
     shopSettings: toShopSettings(config),
     schedulingProvider: createSchedulingProvider(config),
     lineClient: createLineClient(config),
-    adminAuth: createAdminAuth(env),
+    adminAuth: createAdminAuth(config.ADMIN_PASSWORD!, config.ADMIN_JWT_SECRET!),
   };
   return cachedProviders;
 }

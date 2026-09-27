@@ -1,10 +1,11 @@
 import { jwtVerify, SignJWT } from 'jose';
-import type { AdminEnv } from './types.ts';
 
 const ISSUER = 'slot-helper';
 const EXPIRES_IN = '7d';
 
 export const ADMIN_COOKIE_NAME = 'admin_token';
+export const PASSWORD_KEY = 'ADMIN_PASSWORD';
+export const JWT_SECRET_KEY = 'ADMIN_JWT_SECRET';
 
 export interface AdminAuth {
   passwordMatches(password: string): boolean;
@@ -12,16 +13,11 @@ export interface AdminAuth {
   verifyToken(token: string): Promise<boolean>;
 }
 
-export function createAdminAuth(env: AdminEnv): AdminAuth | null {
-  const password = env.ADMIN_PASSWORD;
-  const jwtSecret = env.ADMIN_JWT_SECRET;
-  if (!password || !jwtSecret) return null;
-
+export function createAdminAuth(password: string, jwtSecret: string): AdminAuth {
   const secretKey = new TextEncoder().encode(jwtSecret);
 
   return {
-    // FIXME 目前環境變數裡存密碼，之後改成存預設密碼，實際密碼雜湊放DB
-    passwordMatches(input: string) {
+    passwordMatches(input) {
       return input === password;
     },
 
@@ -34,7 +30,7 @@ export function createAdminAuth(env: AdminEnv): AdminAuth | null {
         .sign(secretKey);
     },
 
-    async verifyToken(token: string) {
+    async verifyToken(token) {
       try {
         await jwtVerify(token, secretKey, { issuer: ISSUER });
         return true;

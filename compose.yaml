@@ -4,10 +4,6 @@ services:
       context: .
     ports:
       - '3000:3000'
-    env_file:
-      - .env
-    environment:
-      - DATABASE_DIR=/app/data
     volumes:
       - C:/app/data:/app/data # Windows
       # - /app/data:/app/data  #  Linux / macOS

@@ -15,4 +15,4 @@ WORKDIR /app
 COPY --from=builder /app/dist/node.cjs ./dist/node.cjs
 COPY --from=builder /app/public ./public
 EXPOSE 3000
-CMD ["node", "--env-file-if-exists=.env", "dist/node.cjs"]
+CMD ["node", "dist/node.cjs"]

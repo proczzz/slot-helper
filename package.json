@@ -11,7 +11,7 @@
   "scripts": {
     "dev:web": "vite",
     "dev:cloudflare": "wrangler dev",
-    "dev:node": "node --watch --env-file=.env src/backend/infra/node.ts",
+    "dev:node": "node --watch src/backend/infra/node.ts",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck:cloudflare": "tsc --noEmit -p tsconfig.cloudflare.json",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
