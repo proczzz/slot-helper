@@ -6,13 +6,19 @@ import { routes } from '../app/routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
 import { createSqliteDatabase } from '../providers/db/sqlite.ts';
+import type { Statement } from '../providers/db/types.ts';
 import { CREATE_CONFIG_TABLE } from '../repository/config-repository.ts';
 import { CREATE_MESSAGES_TABLE } from '../repository/conversation-repository.ts';
+import { CREATE_USERS_TABLE } from '../repository/user-repository.ts';
 
 mkdirSync('./data', { recursive: true });
 const database = createSqliteDatabase('./data/slot-helper.db'); // 初始化資料庫
-await database.batch(CREATE_MESSAGES_TABLE); // 對話記憶表
-await database.batch(CREATE_CONFIG_TABLE); // Slot-helper 應用設定表
+export const CREATE_TABLES: Statement[] = [
+  ...CREATE_MESSAGES_TABLE, // 對話記憶表
+  ...CREATE_CONFIG_TABLE, // Slot-helper 應用設定表
+  ...CREATE_USERS_TABLE, // 後臺用戶表
+];
+await database.batch(CREATE_TABLES);
 
 const app = new Hono<AppVariables>();
 
