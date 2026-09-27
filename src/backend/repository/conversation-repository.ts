@@ -1,6 +1,6 @@
-import type { ConversationRepository } from './types.ts';
-import type { Message } from '../core/types.ts';
+import type { Message } from '../core/model/message.ts';
 import type { Database, Statement } from '../providers/db/types.ts';
+import type { ConversationRepository } from './types.ts';
 
 // !!! 內容需與 migrations/000_create_messages_table.sql 保持一致
 const CREATE_TABLE = `

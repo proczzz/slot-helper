@@ -4,7 +4,7 @@ import { createAdminAuth } from '../admin/auth.ts';
 import { createLanguageModel } from '../ai/language-model/index.ts';
 import { createLineClient } from '../channels/line/line-client.ts';
 import type { LineClient } from '../channels/line/types.ts';
-import type { ShopSettings } from '../core/types.ts';
+import type { ShopSettings } from '../core/model/shop-settings.ts';
 import type { Database } from '../providers/db/types.ts';
 import { createSchedulingProvider } from '../providers/scheduling/index.ts';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';

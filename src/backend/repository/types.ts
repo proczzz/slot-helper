@@ -1,4 +1,4 @@
-import type { Message } from '../core/types.ts';
+import type { Message } from '../core/model/message';
 
 export interface ConversationRepository {
   getMessages(sessionId: string, limit: number): Promise<Message[]>;

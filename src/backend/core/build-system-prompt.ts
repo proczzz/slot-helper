@@ -1,5 +1,5 @@
+import type { BusinessHours, ShopSettings } from './model/shop-settings.ts';
 import { shopConfig } from './shop-config.ts';
-import type { BusinessHours, ShopSettings } from './types.ts';
 
 const DAYS: [string, string][] = [
   ['mon', '週一'],

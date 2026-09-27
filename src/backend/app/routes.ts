@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { adminRoutes } from '../admin/routes.ts';
 import { handleChat } from '../core/chat-service.ts';
-import { ChatRequestSchema } from '../core/types.ts';
+import { ChatRequestSchema } from '../core/model/chat.ts';
 import { lineRoutes } from './line-routes.ts';
 import type { AppVariables } from './services.ts';
 

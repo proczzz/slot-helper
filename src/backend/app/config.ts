@@ -1,6 +1,6 @@
 import type { LanguageModelConfig } from '../ai/language-model/types.ts';
 import type { LineConfig } from '../channels/line/types.ts';
-import type { BusinessHours, ShopSettings } from '../core/types.ts';
+import type { BusinessHours, ShopSettings } from '../core/model/shop-settings.ts';
 import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
 import type { ConfigRepository } from '../repository/types.ts';
 
