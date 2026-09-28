@@ -38,5 +38,12 @@ export function createUserRepository(database: Database): UserRepository {
         params: [user.username, user.password, user.enabled ? 1 : 0],
       });
     },
+
+    async updatePassword(username, password) {
+      await database.execute({
+        sql: 'UPDATE users SET password = ? WHERE username = ?',
+        params: [password, username],
+      });
+    },
   };
 }

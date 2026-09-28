@@ -11,6 +11,7 @@ import { LineSettingsPage } from './pages/LineSettingPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { PromptSettingsPage } from './pages/PromptSettingsPage.tsx';
 import './styles.css';
+import { AccountPage } from './pages/AccountPage.tsx';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/settings/calendar" element={<CalendarSettingsPage />} />
             <Route path="/settings/line" element={<LineSettingsPage />} />
+            <Route path="/settings/account" element={<AccountPage />} />
           </Route>
         </Route>
       </Routes>

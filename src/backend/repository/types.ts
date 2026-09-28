@@ -15,4 +15,5 @@ export interface ConfigRepository {
 export interface UserRepository {
   findByUsername(username: string): Promise<User | null>;
   insert(user: User): Promise<void>;
+  updatePassword(username: string, password: string): Promise<void>;
 }

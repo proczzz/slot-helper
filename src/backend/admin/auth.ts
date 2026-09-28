@@ -1,6 +1,6 @@
 import { jwtVerify, SignJWT } from 'jose';
 import type { UserRepository } from '../repository/types.ts';
-import { verifyPassword } from './password.ts';
+import { hashPassword, verifyPassword } from './password.ts';
 
 const ISSUER = 'slot-helper';
 const EXPIRES_IN = '7d';
@@ -10,19 +10,26 @@ export const JWT_SECRET_KEY = 'ADMIN_JWT_SECRET';
 
 export interface AdminAuth {
   authenticate(username: string, password: string): Promise<boolean>;
+  changePassword(username: string, currentPassword: string, newPassword: string): Promise<boolean>;
   issueToken(username: string): Promise<string>;
-  verifyToken(token: string): Promise<boolean>;
+  verifyToken(token: string): Promise<string | null>;
 }
 
 export function createAdminAuth(userRepository: UserRepository, jwtSecret: string): AdminAuth {
   const secretKey = new TextEncoder().encode(jwtSecret);
 
   return {
-    // 驗證身分(帳密)
+    // 帳號密碼驗證
     async authenticate(username, password) {
       const user = await userRepository.findByUsername(username);
       if (!user || !user.enabled) return false;
       return verifyPassword(user.password, password);
+    },
+    // 更換密碼
+    async changePassword(username, currentPassword, newPassword) {
+      if (!(await this.authenticate(username, currentPassword))) return false;
+      await userRepository.updatePassword(username, await hashPassword(newPassword));
+      return true;
     },
     // 發 jwt
     issueToken(username) {
@@ -33,13 +40,13 @@ export function createAdminAuth(userRepository: UserRepository, jwtSecret: strin
         .setExpirationTime(EXPIRES_IN)
         .sign(secretKey);
     },
-    // 驗 jwt
+    // 驗 jwt 若成功將回傳用戶身份
     async verifyToken(token) {
       try {
-        await jwtVerify(token, secretKey, { issuer: ISSUER });
-        return true;
+        const { payload } = await jwtVerify(token, secretKey, { issuer: ISSUER });
+        return payload.sub ?? null;
       } catch {
-        return false;
+        return null;
       }
     },
   };

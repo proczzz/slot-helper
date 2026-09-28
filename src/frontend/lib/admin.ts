@@ -16,6 +16,18 @@ export async function isLoggedIn(): Promise<boolean> {
   return response.ok;
 }
 
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<boolean> {
+  const response = await request('/api/admin/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  return response.ok;
+}
+
 export async function getConfig(): Promise<Record<string, string>> {
   const response = await request('/api/admin/config');
   if (!response.ok) throw new Error('讀取設定失敗');

@@ -6,6 +6,7 @@ import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
+import { ChangePasswordSchema } from './model/password.ts';
 
 const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
@@ -37,17 +38,31 @@ adminRoutes.post('/logout', (c) => {
   return c.json({ ok: true });
 });
 
-// 以下路由都需要登入
+// 以下路由都需要登入，驗證身分後context存入用戶名
 adminRoutes.use('/*', async (c, next) => {
   const { adminAuth } = c.var.services;
   const token = getCookie(c, ADMIN_COOKIE_NAME);
-  if (!token || !(await adminAuth.verifyToken(token))) {
-    return c.json({ error: '未登入' }, 401);
+  const username = token ? await adminAuth.verifyToken(token) : null;
+  if (!username) {
+    return c.json(null, 401);
   }
+
+  c.set('username', username);
   await next();
 });
 
 adminRoutes.get('/me', (c) => c.json({ ok: true }));
+
+adminRoutes.post('/password', async (c) => {
+  const { adminAuth } = c.var.services;
+  const { currentPassword, newPassword } = ChangePasswordSchema.parse(await c.req.json());
+
+  if (!(await adminAuth.changePassword(c.var.username, currentPassword, newPassword))) {
+    return c.json({ error: '目前密碼錯誤' }, 400);
+  }
+
+  return c.json({ ok: true });
+});
 
 // 取全部設定
 adminRoutes.get('/config', async (c) => {
