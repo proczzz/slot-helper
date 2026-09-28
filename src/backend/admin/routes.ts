@@ -7,6 +7,7 @@ import { clearCachedProviders } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
 import { ChangePasswordSchema } from './model/password.ts';
+import { jsend } from '../app/jsend.ts';
 
 const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
@@ -18,24 +19,24 @@ adminRoutes.post('/login', async (c) => {
   const { username, password } = LoginSchema.parse(await c.req.json());
 
   if (!(await adminAuth.authenticate(username, password))) {
-    return c.json({ error: '帳號或密碼錯誤' }, 401);
+    return c.json(jsend.fail('帳號或密碼錯誤'), 401);
   }
 
   // Step2. 發 jwt 憑證
   setCookie(c, ADMIN_COOKIE_NAME, await adminAuth.issueToken(username), {
     httpOnly: true, // JS 無法讀取此 cookie
-    secure: true, // 非 https 瀏覽器發給後端(本機用 http 開發時改成 false，不要提交)
-    sameSite: 'Strict', // 同ip + 同port 才能用這個 cookie
+    secure: true, // 非 https 瀏覽器發給後端(正式環境必須 true，本機開發才能用 false)
+    sameSite: 'Strict', // 只有從本站發起的請求才會帶上這個 cookie
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  return c.json({ ok: true });
+  return c.json(jsend.success(null));
 });
 
 adminRoutes.post('/logout', (c) => {
   deleteCookie(c, ADMIN_COOKIE_NAME, { path: '/' });
-  return c.json({ ok: true });
+  return c.json(jsend.success(null));
 });
 
 // 以下路由都需要登入，驗證身分後context存入用戶名
@@ -44,24 +45,24 @@ adminRoutes.use('/*', async (c, next) => {
   const token = getCookie(c, ADMIN_COOKIE_NAME);
   const username = token ? await adminAuth.verifyToken(token) : null;
   if (!username) {
-    return c.json(null, 401);
+    return c.body(null, 401);
   }
 
   c.set('username', username);
   await next();
 });
 
-adminRoutes.get('/me', (c) => c.json({ ok: true }));
+adminRoutes.get('/me', (c) => c.json(jsend.success(null)));
 
 adminRoutes.post('/password', async (c) => {
   const { adminAuth } = c.var.services;
   const { currentPassword, newPassword } = ChangePasswordSchema.parse(await c.req.json());
 
   if (!(await adminAuth.changePassword(c.var.username, currentPassword, newPassword))) {
-    return c.json({ error: '目前密碼錯誤' }, 400);
+    return c.json(jsend.fail({ currentPassword: '目前密碼錯誤' }), 400);
   }
 
-  return c.json({ ok: true });
+  return c.json(jsend.success(null));
 });
 
 // 取全部設定
@@ -70,7 +71,7 @@ adminRoutes.get('/config', async (c) => {
   const entries = await Promise.all(
     CONFIG_KEYS.map(async (key) => [key, (await configRepository.get(key)) ?? ''] as const),
   );
-  return c.json(Object.fromEntries(entries));
+  return c.json(jsend.success(Object.fromEntries(entries)));
 });
 
 // 寫全部設定
@@ -82,7 +83,7 @@ adminRoutes.put('/config', async (c) => {
   // 清掉跨 request 快取，下一個 request 才會用到新設定
   clearCachedProviders();
 
-  return c.json({ ok: true });
+  return c.json(jsend.success(null));
 });
 
 export { adminRoutes };
