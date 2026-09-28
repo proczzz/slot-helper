@@ -13,11 +13,12 @@ export function LoginPage() {
     setSubmitting(true);
     setError('');
 
-    if (await login(username, password)) {
-      navigate('/', { replace: true });
-    } else {
-      setError('帳號或密碼錯誤');
+    const message = await login(username, password);
+    if (message) {
+      setError(message);
       setSubmitting(false);
+    } else {
+      navigate('/', { replace: true });
     }
   }
 

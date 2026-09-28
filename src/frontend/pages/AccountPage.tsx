@@ -16,17 +16,18 @@ export function AccountPage() {
 
   async function submit() {
     setSaving(true);
-    const ok = await changePassword(currentPassword, newPassword);
+    const message = await changePassword(currentPassword, newPassword);
     setSaving(false);
 
-    if (ok) {
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setMessage('密碼已更新');
-    } else {
-      setMessage('目前密碼錯誤');
+    if (message) {
+      setMessage(message);
+      return;
     }
+
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setMessage('密碼已更新');
   }
 
   const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
