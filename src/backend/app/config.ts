@@ -1,3 +1,4 @@
+import z from 'zod';
 import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
 import { LineConfigSchema, type LineConfig } from '../channels/line/types.ts';
 import type { BusinessHours, ShopSettings } from '../core/model/shop-settings.ts';
@@ -5,10 +6,8 @@ import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts'
 import type { ConfigRepository } from '../repository/types.ts';
 
 export interface AppConfig extends SchedulingProviderConfig {
-  AI_KEYS?: string;
   SYSTEM_PROMPT?: string;
   BUSINESS_HOURS?: string;
-  ADMIN_JWT_SECRET?: string;
 }
 
 // 這些設定存在 db config 表，由後台填寫
@@ -20,10 +19,9 @@ export const CONFIG_KEYS = [
 
   'SYSTEM_PROMPT',
   'BUSINESS_HOURS',
-
-  'ADMIN_JWT_SECRET', // 簽/驗 後臺帳號 jwt 的 HS256 key
 ] as const;
 
+export const SYSTEM_CONFIG_KEY = 'system';
 export const AI_CONFIG_KEY = 'ai';
 export const LINE_CONFIG_KEY = 'line';
 
@@ -33,6 +31,27 @@ export async function loadAppConfig(configRepository: ConfigRepository): Promise
     CONFIG_KEYS.map(async (key) => [key, await configRepository.get(key)] as const),
   );
   return Object.fromEntries(entries.filter(([, value]) => value !== null));
+}
+
+const SystemConfigSchema = z.object({
+  jwtSecret: z.string(),
+  initializedAt: z.string(),
+});
+
+export type SystemConfig = z.infer<typeof SystemConfigSchema>;
+
+export async function loadSystemConfig(
+  configRepository: ConfigRepository,
+): Promise<SystemConfig | null> {
+  const raw = await configRepository.get(SYSTEM_CONFIG_KEY);
+  if (!raw) return null;
+
+  try {
+    return SystemConfigSchema.parse(JSON.parse(raw));
+  } catch {
+    console.error('system 設定格式錯誤');
+    return null;
+  }
 }
 
 export function toShopSettings(config: AppConfig): ShopSettings {

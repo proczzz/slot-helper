@@ -1,15 +1,14 @@
-import { JWT_SECRET_KEY } from '../admin/auth.ts';
 import { hashPassword } from '../admin/password.ts';
 import type { ConfigRepository, UserRepository } from '../repository/types.ts';
+import { SYSTEM_CONFIG_KEY } from './config.ts';
 
-const INITIALIZED_KEY = 'INITIALIZED';
 const DEFAULT_USERNAME = 'admin';
 
 export async function ensureInitialized(
   configRepository: ConfigRepository,
   userRepository: UserRepository,
 ): Promise<void> {
-  if (await configRepository.get(INITIALIZED_KEY)) return;
+  if (await configRepository.get(SYSTEM_CONFIG_KEY)) return;
   await initialize(configRepository, userRepository);
 }
 
@@ -28,10 +27,10 @@ async function initialize(
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   const jwtSecret = btoa(String.fromCharCode(...bytes));
 
-  await configRepository.setMany([
-    { key: JWT_SECRET_KEY, value: jwtSecret },
-    { key: INITIALIZED_KEY, value: new Date().toISOString() },
-  ]);
+  await configRepository.set(
+    SYSTEM_CONFIG_KEY,
+    JSON.stringify({ jwtSecret, initializedAt: new Date().toISOString() }),
+  );
 
   console.log('─'.repeat(50));
   console.log(`SlotHelper 已初始化，管理帳號: ${DEFAULT_USERNAME}`);
