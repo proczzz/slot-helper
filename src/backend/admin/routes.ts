@@ -4,8 +4,8 @@ import { AiKeysSchema } from '../ai/language-model/types.ts';
 import {
   AI_CONFIG_KEY,
   LINE_CONFIG_KEY,
+  PUBLIC_SECTIONS,
   SCHEDULING_CONFIG_KEY,
-  SECTION_KEYS,
   SHOP_CONFIG_KEY,
 } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
@@ -74,11 +74,11 @@ adminRoutes.post('/password', async (c) => {
 
 adminRoutes.get('/config/:section', async (c) => {
   const { configRepository } = c.var.services;
+  const section = c.req.param('section');
 
-  const key = SECTION_KEYS[c.req.param('section')];
-  if (!key) return c.json(jsend.fail('未知的設定區塊'), 400);
+  if (!PUBLIC_SECTIONS.has(section)) return c.json(jsend.fail('未知的設定區塊'), 400);
 
-  const raw = await configRepository.get(key);
+  const raw = await configRepository.get(section);
   return c.json(jsend.success(raw ? JSON.parse(raw) : null));
 });
 
