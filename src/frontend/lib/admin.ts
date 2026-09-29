@@ -24,22 +24,6 @@ export async function logout(): Promise<void> {
   await request('/api/admin/logout', { method: 'POST' });
 }
 
-export async function getConfig(): Promise<Record<string, string>> {
-  const response = await request('/api/admin/config');
-  const body = (await response.json()) as JSendBody<Record<string, string>>;
-  if (body.status !== 'success') throw new Error('讀取設定失敗');
-  return body.data ?? {};
-}
-
-export async function saveConfig(values: Record<string, string>): Promise<boolean> {
-  const response = await request('/api/admin/config', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(values),
-  });
-  return response.ok;
-}
-
 export interface AiKey {
   name: string;
   provider: string;
@@ -59,6 +43,31 @@ export async function saveAiKeys(keys: AiKey[]): Promise<string | null> {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(keys),
+  });
+
+  if (response.ok) return null;
+  return toErrorMessage(await response.json());
+}
+
+export type BusinessHours = Record<string, [string, string][]>;
+
+export interface ShopSettings {
+  instructions: string;
+  businessHours: BusinessHours;
+}
+
+export async function getShopSettings(): Promise<ShopSettings | null> {
+  const response = await request('/api/admin/shop');
+  const body = (await response.json()) as JSendBody<ShopSettings | null>;
+  if (body.status !== 'success') throw new Error('讀取店家設定失敗');
+  return body.data ?? null;
+}
+
+export async function saveShopSettings(settings: ShopSettings): Promise<string | null> {
+  const response = await request('/api/admin/shop', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
   });
 
   if (response.ok) return null;

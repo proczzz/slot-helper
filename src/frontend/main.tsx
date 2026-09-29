@@ -3,15 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AdminLayout } from './components/AdminLayout.tsx';
 import { RequireAuth } from './components/RequireAuth.tsx';
+import { AccountPage } from './pages/AccountPage.tsx';
 import { AiSettingsPage } from './pages/AiSettingPage.tsx';
-import { BusinessHoursPage } from './pages/BusinessHoursPage.tsx';
 import { CalendarSettingsPage } from './pages/CalendarSettingsPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { LineSettingsPage } from './pages/LineSettingPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
-import { PromptSettingsPage } from './pages/PromptSettingsPage.tsx';
+import { ShopSettingsPage } from './pages/ShopSettingsPage.tsx';
 import './styles.css';
-import { AccountPage } from './pages/AccountPage.tsx';
 
 function App() {
   return (
@@ -21,8 +20,7 @@ function App() {
         <Route element={<RequireAuth />}>
           <Route element={<AdminLayout />}>
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/settings/prompt" element={<PromptSettingsPage />} />
-            <Route path="/settings/hours" element={<BusinessHoursPage />} />
+            <Route path="/settings/shop" element={<ShopSettingsPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/settings/calendar" element={<CalendarSettingsPage />} />
             <Route path="/settings/line" element={<LineSettingsPage />} />

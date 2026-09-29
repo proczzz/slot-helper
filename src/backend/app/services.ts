@@ -18,11 +18,10 @@ import type {
 import { createUserRepository } from '../repository/user-repository.ts';
 import {
   loadAiKeys,
-  loadAppConfig,
   loadLineConfig,
   loadSchedulingConfig,
+  loadShopSettings,
   loadSystemConfig,
-  toShopSettings,
 } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
 
@@ -72,12 +71,12 @@ async function getSharedProviders(
   if (cachedProviders) return cachedProviders;
 
   await ensureInitialized(configRepository, userRepository);
+
   const system = await loadSystemConfig(configRepository);
-  const config = await loadAppConfig(configRepository);
 
   cachedProviders = {
     model: createLanguageModel(await loadAiKeys(configRepository)),
-    shopSettings: toShopSettings(config),
+    shopSettings: await loadShopSettings(configRepository),
     schedulingProvider: createSchedulingProvider(await loadSchedulingConfig(configRepository)),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     adminAuth: createAdminAuth(userRepository, system!.jwtSecret),

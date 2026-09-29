@@ -1,23 +1,21 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { z } from 'zod';
 import { AiKeysSchema } from '../ai/language-model/types.ts';
 import {
   AI_CONFIG_KEY,
-  CONFIG_KEYS,
   LINE_CONFIG_KEY,
   SCHEDULING_CONFIG_KEY,
+  SHOP_CONFIG_KEY,
 } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { LineConfigSchema } from '../channels/line/types.ts';
+import { ShopSettingsSchema } from '../core/model/shop-settings.ts';
 import { SchedulingConfigSchema } from '../providers/scheduling/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
 import { ChangePasswordSchema } from './model/password.ts';
-
-const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
 const adminRoutes = new Hono<AppVariables>();
 
@@ -73,26 +71,6 @@ adminRoutes.post('/password', async (c) => {
   return c.json(jsend.success(null));
 });
 
-// 取全部設定
-adminRoutes.get('/config', async (c) => {
-  const { configRepository } = c.var.services;
-  const entries = await Promise.all(
-    CONFIG_KEYS.map(async (key) => [key, (await configRepository.get(key)) ?? ''] as const),
-  );
-  return c.json(jsend.success(Object.fromEntries(entries)));
-});
-
-// 寫全部設定
-adminRoutes.put('/config', async (c) => {
-  const { configRepository } = c.var.services;
-  const values = ConfigSchema.parse(await c.req.json());
-
-  await configRepository.setMany(Object.entries(values).map(([key, value]) => ({ key, value })));
-  clearCachedProviders();
-
-  return c.json(jsend.success(null));
-});
-
 adminRoutes.get('/ai', async (c) => {
   const { configRepository } = c.var.services;
   const raw = await configRepository.get(AI_CONFIG_KEY);
@@ -104,6 +82,22 @@ adminRoutes.put('/ai', async (c) => {
   const keys = AiKeysSchema.parse(await c.req.json());
 
   await configRepository.set(AI_CONFIG_KEY, JSON.stringify(keys));
+  clearCachedProviders();
+
+  return c.json(jsend.success(null));
+});
+
+adminRoutes.get('/shop', async (c) => {
+  const { configRepository } = c.var.services;
+  const raw = await configRepository.get(SHOP_CONFIG_KEY);
+  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
+});
+
+adminRoutes.put('/shop', async (c) => {
+  const { configRepository } = c.var.services;
+  const settings = ShopSettingsSchema.parse(await c.req.json());
+
+  await configRepository.set(SHOP_CONFIG_KEY, JSON.stringify(settings));
   clearCachedProviders();
 
   return c.json(jsend.success(null));
