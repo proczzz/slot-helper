@@ -2,10 +2,10 @@ import z from 'zod';
 import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
 import { LineConfigSchema, type LineConfig } from '../channels/line/types.ts';
 import type { BusinessHours, ShopSettings } from '../core/model/shop-settings.ts';
-import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
+import { SchedulingConfigSchema, type SchedulingConfig } from '../providers/scheduling/types.ts';
 import type { ConfigRepository } from '../repository/types.ts';
 
-export interface AppConfig extends SchedulingProviderConfig {
+export interface AppConfig {
   SYSTEM_PROMPT?: string;
   BUSINESS_HOURS?: string;
 }
@@ -24,6 +24,7 @@ export const CONFIG_KEYS = [
 export const SYSTEM_CONFIG_KEY = 'system';
 export const AI_CONFIG_KEY = 'ai';
 export const LINE_CONFIG_KEY = 'line';
+export const SCHEDULING_CONFIG_KEY = 'scheduling';
 
 // 抓資料庫所有配置
 export async function loadAppConfig(configRepository: ConfigRepository): Promise<AppConfig> {
@@ -90,6 +91,20 @@ export async function loadLineConfig(
     return LineConfigSchema.parse(JSON.parse(raw));
   } catch {
     console.error('line 設定格式錯誤，視為未設定');
+    return null;
+  }
+}
+
+export async function loadSchedulingConfig(
+  configRepository: ConfigRepository,
+): Promise<SchedulingConfig | null> {
+  const raw = await configRepository.get(SCHEDULING_CONFIG_KEY);
+  if (!raw) return null;
+
+  try {
+    return SchedulingConfigSchema.parse(JSON.parse(raw));
+  } catch {
+    console.error('scheduling 設定格式錯誤，視為未設定');
     return null;
   }
 }

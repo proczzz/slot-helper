@@ -16,7 +16,14 @@ import type {
   UserRepository,
 } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
-import { loadAiKeys, loadAppConfig, loadLineConfig, loadSystemConfig, toShopSettings } from './config.ts';
+import {
+  loadAiKeys,
+  loadAppConfig,
+  loadLineConfig,
+  loadSchedulingConfig,
+  loadSystemConfig,
+  toShopSettings,
+} from './config.ts';
 import { ensureInitialized } from './initialize.ts';
 
 // 放 Hono Context 裡
@@ -71,7 +78,7 @@ async function getSharedProviders(
   cachedProviders = {
     model: createLanguageModel(await loadAiKeys(configRepository)),
     shopSettings: toShopSettings(config),
-    schedulingProvider: createSchedulingProvider(config),
+    schedulingProvider: createSchedulingProvider(await loadSchedulingConfig(configRepository)),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     adminAuth: createAdminAuth(userRepository, system!.jwtSecret),
   };

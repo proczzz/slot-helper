@@ -1,25 +1,38 @@
 import { useEffect, useState } from 'react';
-import { getConfig, saveConfig } from '../lib/admin.ts';
+import { getSchedulingConfig, saveSchedulingConfig } from '../lib/admin.ts';
+
+const PROVIDER = 'google-calendar';
 
 export function CalendarSettingsPage() {
   const [enabled, setEnabled] = useState(false);
   const [email, setEmail] = useState('');
   const [privateKey, setPrivateKey] = useState('');
   const [calendarId, setCalendarId] = useState('');
+  const [calendarName, setCalendarName] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getConfig().then((config) => {
-      setEnabled(config.SCHEDULING_PROVIDER === 'google-calendar');
-      setEmail(config.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? '');
-      setPrivateKey(config.GOOGLE_PRIVATE_KEY ?? '');
-      setCalendarId(config.GOOGLE_CALENDAR_ID ?? '');
+    getSchedulingConfig().then((config) => {
+      if (config) {
+        setEnabled(true);
+        setEmail(config.google.serviceAccountEmail);
+        setPrivateKey(config.google.privateKey);
+        setCalendarId(config.google.calendars[0]?.id ?? '');
+        setCalendarName(config.google.calendars[0]?.name ?? '');
+      }
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   async function importServiceAccountJson(file: File) {
     setMessage('');
@@ -40,7 +53,7 @@ export function CalendarSettingsPage() {
     }
   }
 
-  // 移除檔案時一併清空,避免留下與檔案不一致的內容
+  // 移除檔案時一併清空，避免留下與檔案不一致的內容
   function removeFile() {
     setFileName(null);
     setEmail('');
@@ -49,14 +62,21 @@ export function CalendarSettingsPage() {
   }
 
   async function submit() {
-    setMessage('');
-    const ok = await saveConfig({
-      SCHEDULING_PROVIDER: enabled ? 'google-calendar' : '',
-      GOOGLE_SERVICE_ACCOUNT_EMAIL: email,
-      GOOGLE_PRIVATE_KEY: privateKey,
-      GOOGLE_CALENDAR_ID: calendarId,
-    });
-    setMessage(ok ? '已儲存' : '儲存失敗');
+    setSaving(true);
+    const error = await saveSchedulingConfig(
+      enabled
+        ? {
+            provider: PROVIDER,
+            google: {
+              serviceAccountEmail: email,
+              privateKey,
+              calendars: [{ id: calendarId, name: calendarName }],
+            },
+          }
+        : null,
+    );
+    setSaving(false);
+    setMessage(error ?? '已儲存');
   }
 
   if (loading) {
@@ -68,10 +88,10 @@ export function CalendarSettingsPage() {
   }
 
   const fieldsLocked = fileName !== null;
-  const canSubmit = !enabled || (!!email && !!privateKey && !!calendarId);
+  const canSubmit = !enabled || (!!email && !!privateKey && !!calendarId && !!calendarName);
 
   return (
-    <div className="card bg-base-100 shadow-sm max-w-2xl">
+    <div className="card max-w-2xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">Google 日曆設定</h2>
 
@@ -128,7 +148,7 @@ export function CalendarSettingsPage() {
                 <span className="font-medium">拖曳金鑰檔到這裡</span>
                 <span className="text-sm text-base-content/60">或點擊選擇檔案</span>
                 <span className="text-xs text-base-content/50">
-                  Google 下載的 Service Account JSON,會自動填入下面兩欄
+                  Google 下載的 Service Account JSON，會自動填入下面兩欄
                 </span>
                 <input
                   type="file"
@@ -158,12 +178,24 @@ export function CalendarSettingsPage() {
             <fieldset className="fieldset">
               <legend className="fieldset-legend">私鑰</legend>
               <textarea
-                className="textarea w-full font-mono text-xs"
+                className="textarea textarea-bordered w-full font-mono text-xs"
                 rows={8}
                 value={privateKey}
                 onChange={(event) => setPrivateKey(event.target.value)}
                 disabled={fieldsLocked}
+                spellCheck={false}
                 placeholder="-----BEGIN PRIVATE KEY-----"
+              />
+            </fieldset>
+
+            <fieldset className="fieldset">
+              <legend className="fieldset-legend">日曆名稱</legend>
+              <input
+                type="text"
+                className="input w-full"
+                value={calendarName}
+                onChange={(event) => setCalendarName(event.target.value)}
+                placeholder="自己辨識用，例如「台北店」"
               />
             </fieldset>
 
@@ -179,12 +211,17 @@ export function CalendarSettingsPage() {
             </fieldset>
           </fieldset>
 
-          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+          <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
+            {saving && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>
 
-        {message && <div className="alert">{message}</div>}
+        {message && (
+          <div className="toast toast-end">
+            <div className="alert">{message}</div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -88,6 +88,35 @@ export async function saveLineConfig(config: LineConfig): Promise<string | null>
   return toErrorMessage(await response.json());
 }
 
+export interface SchedulingConfig {
+  provider: string;
+  google: {
+    serviceAccountEmail: string;
+    privateKey: string;
+    calendars: { id: string; name: string }[];
+  };
+}
+
+export async function getSchedulingConfig(): Promise<SchedulingConfig | null> {
+  const response = await request('/api/admin/scheduling');
+  const body = (await response.json()) as JSendBody<SchedulingConfig | null>;
+  if (body.status !== 'success') throw new Error('讀取日曆設定失敗');
+  return body.data ?? null;
+}
+
+export async function saveSchedulingConfig(
+  config: SchedulingConfig | null,
+): Promise<string | null> {
+  const response = await request('/api/admin/scheduling', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+
+  if (response.ok) return null;
+  return toErrorMessage(await response.json());
+}
+
 export async function changePassword(
   currentPassword: string,
   newPassword: string,

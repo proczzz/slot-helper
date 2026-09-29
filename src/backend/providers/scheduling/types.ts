@@ -1,3 +1,23 @@
+import { z } from 'zod';
+
+export const SchedulingConfigSchema = z.object({
+  provider: z.string(),
+  google: z.object({
+    serviceAccountEmail: z.string().min(1, '請輸入 Service Account 電子郵件'),
+    privateKey: z.string().min(1, '請輸入私鑰'),
+    calendars: z
+      .array(
+        z.object({
+          id: z.string().min(1, '請輸入日曆 ID'),
+          name: z.string().min(1, '請輸入日曆名稱'),
+        }),
+      )
+      .min(1, '至少需要一本日曆'),
+  }),
+});
+
+export type SchedulingConfig = z.infer<typeof SchedulingConfigSchema>;
+
 export interface TimePeriod {
   start: string;
   end: string;
