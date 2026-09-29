@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react';
-import { getConfig, saveConfig } from '../lib/admin.ts';
+import { getAiKeys, saveAiKeys } from '../lib/admin.ts';
 
 const PROVIDERS = ['deepseek', 'anthropic'];
 
-const KEY_FIELD: Record<string, string> = {
-  deepseek: 'DEEPSEEK_API_KEY',
-  anthropic: 'ANTHROPIC_API_KEY',
-};
+interface AiKey {
+  name: string;
+  provider: string;
+  apiKey: string;
+  model: string;
+}
+
+const EMPTY: AiKey = { name: '', provider: '', apiKey: '', model: '' };
 
 export function AiSettingsPage() {
-  const [provider, setProvider] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [key, setKey] = useState<AiKey>(EMPTY);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getConfig().then((config) => {
-      const current = config.AI_PROVIDER ?? '';
-      setProvider(current);
-      setApiKey(config[KEY_FIELD[current] ?? ''] ?? '');
+    getAiKeys().then((keys) => {
+      setKey(keys[0] ?? EMPTY);
       setLoading(false);
     });
   }, []);
@@ -30,21 +31,15 @@ export function AiSettingsPage() {
     return () => clearTimeout(timer);
   }, [message]);
 
-  function changeProvider(next: string) {
-    setProvider(next);
-    setApiKey('');
-    setMessage('');
+  function update(field: keyof AiKey, value: string) {
+    setKey({ ...key, [field]: value });
   }
 
   async function submit() {
     setSaving(true);
-    setMessage('');
-    const ok = await saveConfig({
-      AI_PROVIDER: provider,
-      [KEY_FIELD[provider]!]: apiKey,
-    });
+    const error = await saveAiKeys([key]);
     setSaving(false);
-    setMessage(ok ? '已儲存' : '儲存失敗');
+    setMessage(error ?? '已儲存');
   }
 
   if (loading) {
@@ -55,10 +50,12 @@ export function AiSettingsPage() {
     );
   }
 
+  const canSubmit = key.name && key.provider && key.apiKey && key.model;
+
   return (
-    <div className="card bg-base-100 shadow-sm max-w-md">
+    <div className="card max-w-md bg-base-100 shadow-sm">
       <div className="card-body gap-4">
-        <h2 className="card-title">AI 設定</h2>
+        <h2 className="card-title">AI 模型</h2>
 
         <form
           className="flex flex-col gap-4"
@@ -68,11 +65,22 @@ export function AiSettingsPage() {
           }}
         >
           <fieldset className="fieldset">
+            <legend className="fieldset-legend">名稱</legend>
+            <input
+              type="text"
+              className="input w-full"
+              value={key.name}
+              onChange={(event) => update('name', event.target.value)}
+              placeholder="自己辨識用，例如「主力」"
+            />
+          </fieldset>
+
+          <fieldset className="fieldset">
             <legend className="fieldset-legend">供應商</legend>
             <select
               className="select w-full"
-              value={provider}
-              onChange={(event) => changeProvider(event.target.value)}
+              value={key.provider}
+              onChange={(event) => update('provider', event.target.value)}
             >
               <option value="">請選擇</option>
               {PROVIDERS.map((name) => (
@@ -88,17 +96,23 @@ export function AiSettingsPage() {
             <input
               type="password"
               className="input w-full"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              disabled={!provider}
+              value={key.apiKey}
+              onChange={(event) => update('apiKey', event.target.value)}
             />
           </fieldset>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={saving || !provider || !apiKey}
-          >
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">模型</legend>
+            <input
+              type="text"
+              className="input w-full"
+              value={key.model}
+              onChange={(event) => update('model', event.target.value)}
+              placeholder="deepseek-chat"
+            />
+          </fieldset>
+
+          <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
             {saving && <span className="loading loading-spinner" />}
             儲存
           </button>

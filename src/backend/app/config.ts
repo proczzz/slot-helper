@@ -1,10 +1,11 @@
-import type { LanguageModelConfig } from '../ai/language-model/types.ts';
+import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
 import type { LineConfig } from '../channels/line/types.ts';
 import type { BusinessHours, ShopSettings } from '../core/model/shop-settings.ts';
 import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
 import type { ConfigRepository } from '../repository/types.ts';
 
-export interface AppConfig extends LanguageModelConfig, SchedulingProviderConfig, LineConfig {
+export interface AppConfig extends SchedulingProviderConfig, LineConfig {
+  AI_KEYS?: string;
   SYSTEM_PROMPT?: string;
   BUSINESS_HOURS?: string;
   ADMIN_JWT_SECRET?: string;
@@ -12,10 +13,6 @@ export interface AppConfig extends LanguageModelConfig, SchedulingProviderConfig
 
 // 這些設定存在 db config 表，由後台填寫
 export const CONFIG_KEYS = [
-  'AI_PROVIDER',
-  'DEEPSEEK_API_KEY',
-  'ANTHROPIC_API_KEY',
-
   'SCHEDULING_PROVIDER',
   'GOOGLE_SERVICE_ACCOUNT_EMAIL',
   'GOOGLE_PRIVATE_KEY',
@@ -29,6 +26,8 @@ export const CONFIG_KEYS = [
 
   'ADMIN_JWT_SECRET', // 簽/驗 後臺帳號 jwt 的 HS256 key
 ] as const;
+
+export const AI_CONFIG_KEY = 'ai';
 
 // 抓資料庫所有配置
 export async function loadAppConfig(configRepository: ConfigRepository): Promise<AppConfig> {
@@ -50,4 +49,16 @@ export function toShopSettings(config: AppConfig): ShopSettings {
     instructions: config.SYSTEM_PROMPT ?? '',
     businessHours,
   };
+}
+
+export async function loadAiKeys(configRepository: ConfigRepository): Promise<AiKey[]> {
+  const raw = await configRepository.get(AI_CONFIG_KEY);
+  if (!raw) return [];
+
+  try {
+    return AiKeysSchema.parse(JSON.parse(raw));
+  } catch {
+    console.error('ai 設定格式錯誤，視為未設定');
+    return [];
+  }
 }

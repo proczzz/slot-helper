@@ -40,6 +40,31 @@ export async function saveConfig(values: Record<string, string>): Promise<boolea
   return response.ok;
 }
 
+export interface AiKey {
+  name: string;
+  provider: string;
+  apiKey: string;
+  model: string;
+}
+
+export async function getAiKeys(): Promise<AiKey[]> {
+  const response = await request('/api/admin/ai');
+  const body = (await response.json()) as JSendBody<AiKey[]>;
+  if (body.status !== 'success') throw new Error('讀取 AI 設定失敗');
+  return body.data ?? [];
+}
+
+export async function saveAiKeys(keys: AiKey[]): Promise<string | null> {
+  const response = await request('/api/admin/ai', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(keys),
+  });
+
+  if (response.ok) return null;
+  return toErrorMessage(await response.json());
+}
+
 export async function changePassword(
   currentPassword: string,
   newPassword: string,

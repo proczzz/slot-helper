@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
-import { CONFIG_KEYS } from '../app/config.ts';
+import { AiKeysSchema } from '../ai/language-model/types.ts';
+import { AI_CONFIG_KEY, CONFIG_KEYS } from '../app/config.ts';
+import { jsend } from '../app/jsend.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
 import { ChangePasswordSchema } from './model/password.ts';
-import { jsend } from '../app/jsend.ts';
 
 const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
@@ -80,7 +81,22 @@ adminRoutes.put('/config', async (c) => {
   const values = ConfigSchema.parse(await c.req.json());
 
   await configRepository.setMany(Object.entries(values).map(([key, value]) => ({ key, value })));
-  // 清掉跨 request 快取，下一個 request 才會用到新設定
+  clearCachedProviders();
+
+  return c.json(jsend.success(null));
+});
+
+adminRoutes.get('/ai', async (c) => {
+  const { configRepository } = c.var.services;
+  const raw = await configRepository.get(AI_CONFIG_KEY);
+  return c.json(jsend.success(raw ? JSON.parse(raw) : []));
+});
+
+adminRoutes.put('/ai', async (c) => {
+  const { configRepository } = c.var.services;
+  const keys = AiKeysSchema.parse(await c.req.json());
+
+  await configRepository.set(AI_CONFIG_KEY, JSON.stringify(keys));
   clearCachedProviders();
 
   return c.json(jsend.success(null));

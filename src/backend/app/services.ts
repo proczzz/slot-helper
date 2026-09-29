@@ -15,9 +15,9 @@ import type {
   ConversationRepository,
   UserRepository,
 } from '../repository/types.ts';
-import { loadAppConfig, toShopSettings } from './config.ts';
-import { ensureInitialized } from './initialize.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
+import { loadAiKeys, loadAppConfig, toShopSettings } from './config.ts';
+import { ensureInitialized } from './initialize.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {
@@ -68,7 +68,7 @@ async function getSharedProviders(
   const config = await loadAppConfig(configRepository);
 
   cachedProviders = {
-    model: createLanguageModel(config),
+    model: createLanguageModel(await loadAiKeys(configRepository)),
     shopSettings: toShopSettings(config),
     schedulingProvider: createSchedulingProvider(config),
     lineClient: createLineClient(config),

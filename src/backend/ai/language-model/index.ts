@@ -1,22 +1,21 @@
 import type { LanguageModel } from 'ai';
 import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
-import type { LanguageModelConfig, LanguageModelProvider } from './types.ts';
+import type { AiKey, LanguageModelProvider } from './types.ts';
 
 const providers: Partial<Record<string, LanguageModelProvider>> = {
   deepseek: deepSeekProvider,
   anthropic: anthropicProvider,
 };
 
-export function createLanguageModel(config: LanguageModelConfig): LanguageModel | null {
-  const name = config.AI_PROVIDER ?? '';
+// 目前只用第一組,多組備援之後再做
+export function createLanguageModel(keys: AiKey[]): LanguageModel | null {
+  const key = keys[0];
+  if (!key) return null;
 
-  const provider = providers[name];
+  const provider = providers[key.provider];
   if (!provider) return null;
 
-  const apiKey = config[provider.apiKeyEnv];
-  if (!apiKey) return null;
-
-  console.log(`使用AI供應商: ${name}`);
-  return provider.createModel(apiKey);
+  console.log(`使用AI供應商: ${key.provider}`);
+  return provider.createModel(key.apiKey, key.model);
 }
