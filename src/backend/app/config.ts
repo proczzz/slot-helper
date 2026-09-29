@@ -11,6 +11,14 @@ export const SHOP_CONFIG_KEY = 'shop';
 export const LINE_CONFIG_KEY = 'line';
 export const SCHEDULING_CONFIG_KEY = 'scheduling';
 
+// 後台可讀寫的區塊，system 刻意不在其中
+export const SECTION_KEYS: Record<string, string> = {
+  ai: AI_CONFIG_KEY,
+  line: LINE_CONFIG_KEY,
+  scheduling: SCHEDULING_CONFIG_KEY,
+  shop: SHOP_CONFIG_KEY,
+};
+
 const SystemConfigSchema = z.object({
   jwtSecret: z.string(),
   initializedAt: z.string(),

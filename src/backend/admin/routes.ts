@@ -5,6 +5,7 @@ import {
   AI_CONFIG_KEY,
   LINE_CONFIG_KEY,
   SCHEDULING_CONFIG_KEY,
+  SECTION_KEYS,
   SHOP_CONFIG_KEY,
 } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
@@ -71,10 +72,14 @@ adminRoutes.post('/password', async (c) => {
   return c.json(jsend.success(null));
 });
 
-adminRoutes.get('/ai', async (c) => {
+adminRoutes.get('/config/:section', async (c) => {
   const { configRepository } = c.var.services;
-  const raw = await configRepository.get(AI_CONFIG_KEY);
-  return c.json(jsend.success(raw ? JSON.parse(raw) : []));
+
+  const key = SECTION_KEYS[c.req.param('section')];
+  if (!key) return c.json(jsend.fail('未知的設定區塊'), 400);
+
+  const raw = await configRepository.get(key);
+  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
 });
 
 adminRoutes.put('/ai', async (c) => {
@@ -87,12 +92,6 @@ adminRoutes.put('/ai', async (c) => {
   return c.json(jsend.success(null));
 });
 
-adminRoutes.get('/shop', async (c) => {
-  const { configRepository } = c.var.services;
-  const raw = await configRepository.get(SHOP_CONFIG_KEY);
-  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
-});
-
 adminRoutes.put('/shop', async (c) => {
   const { configRepository } = c.var.services;
   const settings = ShopSettingsSchema.parse(await c.req.json());
@@ -103,12 +102,6 @@ adminRoutes.put('/shop', async (c) => {
   return c.json(jsend.success(null));
 });
 
-adminRoutes.get('/line', async (c) => {
-  const { configRepository } = c.var.services;
-  const raw = await configRepository.get(LINE_CONFIG_KEY);
-  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
-});
-
 adminRoutes.put('/line', async (c) => {
   const { configRepository } = c.var.services;
   const config = LineConfigSchema.parse(await c.req.json());
@@ -117,12 +110,6 @@ adminRoutes.put('/line', async (c) => {
   clearCachedProviders();
 
   return c.json(jsend.success(null));
-});
-
-adminRoutes.get('/scheduling', async (c) => {
-  const { configRepository } = c.var.services;
-  const raw = await configRepository.get(SCHEDULING_CONFIG_KEY);
-  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
 });
 
 adminRoutes.put('/scheduling', async (c) => {

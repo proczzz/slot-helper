@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAiKeys, saveAiKeys } from '../lib/admin.ts';
+import { getSection, saveAiKeys } from '../lib/admin.ts';
 
 const PROVIDERS = ['deepseek', 'anthropic'];
 
@@ -19,8 +19,8 @@ export function AiSettingsPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getAiKeys().then((keys) => {
-      setKey(keys[0] ?? EMPTY);
+    getSection<AiKey[]>('ai').then((keys) => {
+      setKey(keys?.[0] ?? EMPTY);
       setLoading(false);
     });
   }, []);

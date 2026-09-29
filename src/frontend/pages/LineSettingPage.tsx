@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getLineConfig, saveLineConfig } from '../lib/admin.ts';
+import { getSection, saveLineConfig, type LineConfig } from '../lib/admin.ts';
 
 export function LineSettingsPage() {
   const [channelSecret, setChannelSecret] = useState('');
@@ -11,7 +11,7 @@ export function LineSettingsPage() {
   const webhookUrl = `${window.location.origin}/line/webhook`;
 
   useEffect(() => {
-    getLineConfig().then((config) => {
+    getSection<LineConfig>('line').then((config) => {
       setChannelSecret(config?.channelSecret ?? '');
       setAccessToken(config?.accessToken ?? '');
       setLoading(false);

@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { getShopSettings, saveShopSettings, type BusinessHours } from '../lib/admin.ts';
+import {
+  getSection,
+  saveShopSettings,
+  type BusinessHours,
+  type ShopSettings,
+} from '../lib/admin.ts';
 
 const DAYS = [
   { key: 'mon', label: '週一' },
@@ -76,7 +81,7 @@ export function ShopSettingsPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getShopSettings().then((settings) => {
+    getSection<ShopSettings>('shop').then((settings) => {
       setInstructions(settings?.instructions ?? '');
       setHours({ ...EMPTY_HOURS, ...(settings?.businessHours ?? {}) });
       setLoading(false);

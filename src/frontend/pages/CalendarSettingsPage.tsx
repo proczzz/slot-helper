@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSchedulingConfig, saveSchedulingConfig } from '../lib/admin.ts';
+import { getSection, saveSchedulingConfig, type SchedulingConfig } from '../lib/admin.ts';
 
 const PROVIDER = 'google-calendar';
 
@@ -16,7 +16,7 @@ export function CalendarSettingsPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getSchedulingConfig().then((config) => {
+    getSection<SchedulingConfig>('scheduling').then((config) => {
       if (config) {
         setEnabled(true);
         setEmail(config.google.serviceAccountEmail);

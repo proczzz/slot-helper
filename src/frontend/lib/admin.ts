@@ -24,18 +24,20 @@ export async function logout(): Promise<void> {
   await request('/api/admin/logout', { method: 'POST' });
 }
 
+export type Section = 'ai' | 'shop' | 'line' | 'scheduling';
+
+export async function getSection<T>(section: Section): Promise<T | null> {
+  const response = await request(`/api/admin/config/${section}`);
+  const body = (await response.json()) as JSendBody<T | null>;
+  if (body.status !== 'success') throw new Error(`讀取 ${section} 設定失敗`);
+  return body.data ?? null;
+}
+
 export interface AiKey {
   name: string;
   provider: string;
   apiKey: string;
   model: string;
-}
-
-export async function getAiKeys(): Promise<AiKey[]> {
-  const response = await request('/api/admin/ai');
-  const body = (await response.json()) as JSendBody<AiKey[]>;
-  if (body.status !== 'success') throw new Error('讀取 AI 設定失敗');
-  return body.data ?? [];
 }
 
 export async function saveAiKeys(keys: AiKey[]): Promise<string | null> {
@@ -56,13 +58,6 @@ export interface ShopSettings {
   businessHours: BusinessHours;
 }
 
-export async function getShopSettings(): Promise<ShopSettings | null> {
-  const response = await request('/api/admin/shop');
-  const body = (await response.json()) as JSendBody<ShopSettings | null>;
-  if (body.status !== 'success') throw new Error('讀取店家設定失敗');
-  return body.data ?? null;
-}
-
 export async function saveShopSettings(settings: ShopSettings): Promise<string | null> {
   const response = await request('/api/admin/shop', {
     method: 'PUT',
@@ -77,13 +72,6 @@ export async function saveShopSettings(settings: ShopSettings): Promise<string |
 export interface LineConfig {
   channelSecret: string;
   accessToken: string;
-}
-
-export async function getLineConfig(): Promise<LineConfig | null> {
-  const response = await request('/api/admin/line');
-  const body = (await response.json()) as JSendBody<LineConfig | null>;
-  if (body.status !== 'success') throw new Error('讀取 LINE 設定失敗');
-  return body.data ?? null;
 }
 
 export async function saveLineConfig(config: LineConfig): Promise<string | null> {
@@ -104,13 +92,6 @@ export interface SchedulingConfig {
     privateKey: string;
     calendars: { id: string; name: string }[];
   };
-}
-
-export async function getSchedulingConfig(): Promise<SchedulingConfig | null> {
-  const response = await request('/api/admin/scheduling');
-  const body = (await response.json()) as JSendBody<SchedulingConfig | null>;
-  if (body.status !== 'success') throw new Error('讀取日曆設定失敗');
-  return body.data ?? null;
 }
 
 export async function saveSchedulingConfig(
