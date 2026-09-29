@@ -2,11 +2,9 @@ import type { LineClient, LineConfig } from './types.ts';
 
 const REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 
-export function createLineClient(config: LineConfig): LineClient | null {
-  const channelSecret = config.LINE_CHANNEL_SECRET;
-  const accessToken = config.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!channelSecret || !accessToken) return null; // 老闆沒要用line
-
+export function createLineClient(config: LineConfig | null): LineClient | null {
+  if (!config) return null; // 老闆沒要用line
+  const { channelSecret, accessToken } = config;
   const encoder = new TextEncoder();
 
   return {

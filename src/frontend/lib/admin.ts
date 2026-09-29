@@ -65,6 +65,29 @@ export async function saveAiKeys(keys: AiKey[]): Promise<string | null> {
   return toErrorMessage(await response.json());
 }
 
+export interface LineConfig {
+  channelSecret: string;
+  accessToken: string;
+}
+
+export async function getLineConfig(): Promise<LineConfig | null> {
+  const response = await request('/api/admin/line');
+  const body = (await response.json()) as JSendBody<LineConfig | null>;
+  if (body.status !== 'success') throw new Error('讀取 LINE 設定失敗');
+  return body.data ?? null;
+}
+
+export async function saveLineConfig(config: LineConfig): Promise<string | null> {
+  const response = await request('/api/admin/line', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+
+  if (response.ok) return null;
+  return toErrorMessage(await response.json());
+}
+
 export async function changePassword(
   currentPassword: string,
   newPassword: string,

@@ -1,7 +1,11 @@
-export interface LineConfig {
-  LINE_CHANNEL_SECRET?: string;
-  LINE_CHANNEL_ACCESS_TOKEN?: string;
-}
+import { z } from 'zod';
+
+export const LineConfigSchema = z.object({
+  channelSecret: z.string().min(1, '請輸入 Channel secret'),
+  accessToken: z.string().min(1, '請輸入 Channel access token'),
+});
+
+export type LineConfig = z.infer<typeof LineConfigSchema>;
 
 export interface LineClient {
   verifySignature(body: string, signature: string): Promise<boolean>;

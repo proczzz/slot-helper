@@ -1,29 +1,34 @@
 import { useEffect, useState } from 'react';
-import { getConfig, saveConfig } from '../lib/admin.ts';
+import { getLineConfig, saveLineConfig } from '../lib/admin.ts';
 
 export function LineSettingsPage() {
   const [channelSecret, setChannelSecret] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   const webhookUrl = `${window.location.origin}/line/webhook`;
 
   useEffect(() => {
-    getConfig().then((config) => {
-      setChannelSecret(config.LINE_CHANNEL_SECRET ?? '');
-      setAccessToken(config.LINE_CHANNEL_ACCESS_TOKEN ?? '');
+    getLineConfig().then((config) => {
+      setChannelSecret(config?.channelSecret ?? '');
+      setAccessToken(config?.accessToken ?? '');
       setLoading(false);
     });
   }, []);
 
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   async function submit() {
-    setMessage('');
-    const ok = await saveConfig({
-      LINE_CHANNEL_SECRET: channelSecret,
-      LINE_CHANNEL_ACCESS_TOKEN: accessToken,
-    });
-    setMessage(ok ? '已儲存' : '儲存失敗');
+    setSaving(true);
+    const error = await saveLineConfig({ channelSecret, accessToken });
+    setSaving(false);
+    setMessage(error ?? '已儲存');
   }
 
   if (loading) {
@@ -35,7 +40,7 @@ export function LineSettingsPage() {
   }
 
   return (
-    <div className="card bg-base-100 shadow-sm max-w-2xl">
+    <div className="card max-w-2xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">LINE 設定</h2>
 
@@ -51,7 +56,7 @@ export function LineSettingsPage() {
               複製
             </button>
           </div>
-          <p className="label">貼到 LINE Developers 的 Webhook URL,並開啟 Use webhook</p>
+          <p className="label">貼到 LINE Developers 的 Webhook URL，並開啟 Use webhook</p>
         </fieldset>
 
         <form
@@ -74,23 +79,29 @@ export function LineSettingsPage() {
           <fieldset className="fieldset">
             <legend className="fieldset-legend">Channel access token</legend>
             <textarea
-              className="textarea w-full font-mono text-xs"
+              className="textarea textarea-bordered w-full font-mono text-xs"
               rows={4}
               value={accessToken}
               onChange={(event) => setAccessToken(event.target.value)}
+              spellCheck={false}
             />
           </fieldset>
 
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={!channelSecret || !accessToken}
+            disabled={saving || !channelSecret || !accessToken}
           >
+            {saving && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>
 
-        {message && <div className="alert">{message}</div>}
+        {message && (
+          <div className="toast toast-end">
+            <div className="alert">{message}</div>
+          </div>
+        )}
       </div>
     </div>
   );

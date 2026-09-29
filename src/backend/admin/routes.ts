@@ -2,13 +2,14 @@ import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
 import { AiKeysSchema } from '../ai/language-model/types.ts';
-import { AI_CONFIG_KEY, CONFIG_KEYS } from '../app/config.ts';
+import { AI_CONFIG_KEY, CONFIG_KEYS, LINE_CONFIG_KEY } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
 import { ChangePasswordSchema } from './model/password.ts';
+import { LineConfigSchema } from '../channels/line/types.ts';
 
 const ConfigSchema = z.partialRecord(z.enum(CONFIG_KEYS), z.string());
 
@@ -97,6 +98,22 @@ adminRoutes.put('/ai', async (c) => {
   const keys = AiKeysSchema.parse(await c.req.json());
 
   await configRepository.set(AI_CONFIG_KEY, JSON.stringify(keys));
+  clearCachedProviders();
+
+  return c.json(jsend.success(null));
+});
+
+adminRoutes.get('/line', async (c) => {
+  const { configRepository } = c.var.services;
+  const raw = await configRepository.get(LINE_CONFIG_KEY);
+  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
+});
+
+adminRoutes.put('/line', async (c) => {
+  const { configRepository } = c.var.services;
+  const config = LineConfigSchema.parse(await c.req.json());
+
+  await configRepository.set(LINE_CONFIG_KEY, JSON.stringify(config));
   clearCachedProviders();
 
   return c.json(jsend.success(null));

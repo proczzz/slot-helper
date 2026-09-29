@@ -1,10 +1,10 @@
 import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
-import type { LineConfig } from '../channels/line/types.ts';
+import { LineConfigSchema, type LineConfig } from '../channels/line/types.ts';
 import type { BusinessHours, ShopSettings } from '../core/model/shop-settings.ts';
 import type { SchedulingProviderConfig } from '../providers/scheduling/types.ts';
 import type { ConfigRepository } from '../repository/types.ts';
 
-export interface AppConfig extends SchedulingProviderConfig, LineConfig {
+export interface AppConfig extends SchedulingProviderConfig {
   AI_KEYS?: string;
   SYSTEM_PROMPT?: string;
   BUSINESS_HOURS?: string;
@@ -18,9 +18,6 @@ export const CONFIG_KEYS = [
   'GOOGLE_PRIVATE_KEY',
   'GOOGLE_CALENDAR_ID',
 
-  'LINE_CHANNEL_SECRET',
-  'LINE_CHANNEL_ACCESS_TOKEN',
-
   'SYSTEM_PROMPT',
   'BUSINESS_HOURS',
 
@@ -28,6 +25,7 @@ export const CONFIG_KEYS = [
 ] as const;
 
 export const AI_CONFIG_KEY = 'ai';
+export const LINE_CONFIG_KEY = 'line';
 
 // 抓資料庫所有配置
 export async function loadAppConfig(configRepository: ConfigRepository): Promise<AppConfig> {
@@ -60,5 +58,19 @@ export async function loadAiKeys(configRepository: ConfigRepository): Promise<Ai
   } catch {
     console.error('ai 設定格式錯誤，視為未設定');
     return [];
+  }
+}
+
+export async function loadLineConfig(
+  configRepository: ConfigRepository,
+): Promise<LineConfig | null> {
+  const raw = await configRepository.get(LINE_CONFIG_KEY);
+  if (!raw) return null;
+
+  try {
+    return LineConfigSchema.parse(JSON.parse(raw));
+  } catch {
+    console.error('line 設定格式錯誤，視為未設定');
+    return null;
   }
 }
