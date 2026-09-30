@@ -12,7 +12,12 @@ export const LINE_CONFIG_KEY = 'line';
 export const SCHEDULING_CONFIG_KEY = 'scheduling';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
-export const PUBLIC_SECTIONS = new Set(['ai', 'line', 'scheduling', 'shop']);
+export const SECTION_SCHEMAS: Partial<Record<string, z.ZodType>> = {
+  ai: AiKeysSchema,
+  line: LineConfigSchema,
+  scheduling: SchedulingConfigSchema,
+  shop: ShopSettingsSchema,
+};
 
 const SystemConfigSchema = z.object({
   jwtSecret: z.string(),

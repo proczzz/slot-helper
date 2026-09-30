@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSection, saveSchedulingConfig, type SchedulingConfig } from '../lib/admin.ts';
+import { getSection, saveSection, type SchedulingConfig } from '../lib/admin.ts';
 
 const PROVIDER = 'google-calendar';
 
@@ -16,16 +16,15 @@ export function CalendarSettingsPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getSection<SchedulingConfig>('scheduling').then((config) => {
-      if (config) {
-        setEnabled(true);
-        setEmail(config.google.serviceAccountEmail);
-        setPrivateKey(config.google.privateKey);
-        setCalendarId(config.google.calendars[0]?.id ?? '');
-        setCalendarName(config.google.calendars[0]?.name ?? '');
-      }
-      setLoading(false);
-    });
+    getSection<SchedulingConfig>('scheduling')
+      .then((config) => {
+        if (config?.provider === PROVIDER) setEnabled(true);
+        setEmail(config?.settings?.serviceAccountEmail ?? '');
+        setPrivateKey(config?.settings?.privateKey ?? '');
+        setCalendarId(config?.settings?.calendars?.[0]?.id ?? '');
+        setCalendarName(config?.settings?.calendars?.[0]?.name ?? '');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -63,18 +62,14 @@ export function CalendarSettingsPage() {
 
   async function submit() {
     setSaving(true);
-    const error = await saveSchedulingConfig(
-      enabled
-        ? {
-            provider: PROVIDER,
-            google: {
-              serviceAccountEmail: email,
-              privateKey,
-              calendars: [{ id: calendarId, name: calendarName }],
-            },
-          }
-        : null,
-    );
+    const error = await saveSection('scheduling', {
+      provider: enabled ? PROVIDER : 'none',
+      settings: {
+        serviceAccountEmail: email,
+        privateKey,
+        calendars: [{ id: calendarId, name: calendarName }],
+      },
+    });
     setSaving(false);
     setMessage(error ?? '已儲存');
   }

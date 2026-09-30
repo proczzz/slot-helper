@@ -33,22 +33,22 @@ export async function getSection<T>(section: Section): Promise<T | null> {
   return body.data ?? null;
 }
 
+export async function saveSection<T>(section: Section, data: T): Promise<string | null> {
+  const response = await request(`/api/admin/config/${section}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (response.ok) return null;
+  return toErrorMessage(await response.json());
+}
+
 export interface AiKey {
   name: string;
   provider: string;
   apiKey: string;
   model: string;
-}
-
-export async function saveAiKeys(keys: AiKey[]): Promise<string | null> {
-  const response = await request('/api/admin/ai', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(keys),
-  });
-
-  if (response.ok) return null;
-  return toErrorMessage(await response.json());
 }
 
 export type BusinessHours = Record<string, [string, string][]>;
@@ -58,53 +58,18 @@ export interface ShopSettings {
   businessHours: BusinessHours;
 }
 
-export async function saveShopSettings(settings: ShopSettings): Promise<string | null> {
-  const response = await request('/api/admin/shop', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings),
-  });
-
-  if (response.ok) return null;
-  return toErrorMessage(await response.json());
-}
-
 export interface LineConfig {
   channelSecret: string;
   accessToken: string;
 }
 
-export async function saveLineConfig(config: LineConfig): Promise<string | null> {
-  const response = await request('/api/admin/line', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config),
-  });
-
-  if (response.ok) return null;
-  return toErrorMessage(await response.json());
-}
-
 export interface SchedulingConfig {
   provider: string;
-  google: {
+  settings: {
     serviceAccountEmail: string;
     privateKey: string;
     calendars: { id: string; name: string }[];
   };
-}
-
-export async function saveSchedulingConfig(
-  config: SchedulingConfig | null,
-): Promise<string | null> {
-  const response = await request('/api/admin/scheduling', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config),
-  });
-
-  if (response.ok) return null;
-  return toErrorMessage(await response.json());
 }
 
 export async function changePassword(

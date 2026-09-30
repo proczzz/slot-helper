@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSection, saveAiKeys } from '../lib/admin.ts';
+import { getSection, saveSection } from '../lib/admin.ts';
 
 const PROVIDERS = ['deepseek', 'anthropic'];
 
@@ -37,7 +37,7 @@ export function AiSettingsPage() {
 
   async function submit() {
     setSaving(true);
-    const error = await saveAiKeys([key]);
+    const error = await saveSection('ai', [key]);
     setSaving(false);
     setMessage(error ?? '已儲存');
   }

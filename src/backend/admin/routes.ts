@@ -1,19 +1,9 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { AiKeysSchema } from '../ai/language-model/types.ts';
-import {
-  AI_CONFIG_KEY,
-  LINE_CONFIG_KEY,
-  PUBLIC_SECTIONS,
-  SCHEDULING_CONFIG_KEY,
-  SHOP_CONFIG_KEY,
-} from '../app/config.ts';
+import { SECTION_SCHEMAS } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
-import { LineConfigSchema } from '../channels/line/types.ts';
-import { ShopSettingsSchema } from '../core/model/shop-settings.ts';
-import { SchedulingConfigSchema } from '../providers/scheduling/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
 import { ChangePasswordSchema } from './model/password.ts';
@@ -76,55 +66,23 @@ adminRoutes.get('/config/:section', async (c) => {
   const { configRepository } = c.var.services;
   const section = c.req.param('section');
 
-  if (!PUBLIC_SECTIONS.has(section)) return c.json(jsend.fail('未知的設定區塊'), 400);
+  if (!SECTION_SCHEMAS[section]) return c.json(jsend.fail('未知的設定區塊'), 400);
 
   const raw = await configRepository.get(section);
   return c.json(jsend.success(raw ? JSON.parse(raw) : null));
 });
 
-adminRoutes.put('/ai', async (c) => {
+adminRoutes.put('/config/:section', async (c) => {
   const { configRepository } = c.var.services;
-  const keys = AiKeysSchema.parse(await c.req.json());
+  const section = c.req.param('section');
 
-  await configRepository.set(AI_CONFIG_KEY, JSON.stringify(keys));
+  const schema = SECTION_SCHEMAS[section];
+  if (!schema) return c.json(jsend.fail('未知的設定區塊'), 400);
+
+  const value = schema.parse(await c.req.json());
+  await configRepository.set(section, JSON.stringify(value));
   clearCachedProviders();
 
-  return c.json(jsend.success(null));
-});
-
-adminRoutes.put('/shop', async (c) => {
-  const { configRepository } = c.var.services;
-  const settings = ShopSettingsSchema.parse(await c.req.json());
-
-  await configRepository.set(SHOP_CONFIG_KEY, JSON.stringify(settings));
-  clearCachedProviders();
-
-  return c.json(jsend.success(null));
-});
-
-adminRoutes.put('/line', async (c) => {
-  const { configRepository } = c.var.services;
-  const config = LineConfigSchema.parse(await c.req.json());
-
-  await configRepository.set(LINE_CONFIG_KEY, JSON.stringify(config));
-  clearCachedProviders();
-
-  return c.json(jsend.success(null));
-});
-
-adminRoutes.put('/scheduling', async (c) => {
-  const { configRepository } = c.var.services;
-  const body = await c.req.json();
-
-  // null 代表停用日曆功能，直接刪掉整塊設定
-  if (body === null) {
-    await configRepository.remove(SCHEDULING_CONFIG_KEY);
-  } else {
-    const config = SchedulingConfigSchema.parse(body);
-    await configRepository.set(SCHEDULING_CONFIG_KEY, JSON.stringify(config));
-  }
-
-  clearCachedProviders();
   return c.json(jsend.success(null));
 });
 

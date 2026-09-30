@@ -1,23 +1,5 @@
 import { z } from 'zod';
 
-export const SchedulingConfigSchema = z.object({
-  provider: z.string(),
-  google: z.object({
-    serviceAccountEmail: z.string().min(1, '請輸入 Service Account 電子郵件'),
-    privateKey: z.string().min(1, '請輸入私鑰'),
-    calendars: z
-      .array(
-        z.object({
-          id: z.string().min(1, '請輸入日曆 ID'),
-          name: z.string().min(1, '請輸入日曆名稱'),
-        }),
-      )
-      .min(1, '至少需要一本日曆'),
-  }),
-});
-
-export type SchedulingConfig = z.infer<typeof SchedulingConfigSchema>;
-
 export interface TimePeriod {
   start: string;
   end: string;
@@ -44,9 +26,16 @@ export interface SchedulingProvider {
   cancelBooking(eventId: string): Promise<void>;
 }
 
-export interface SchedulingProviderConfig {
-  SCHEDULING_PROVIDER?: string;
-  GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
-  GOOGLE_PRIVATE_KEY?: string;
-  GOOGLE_CALENDAR_ID?: string;
+// 每個供應商自己帶著名稱,並自行解析它需要的設定;設定不合就回 null
+export interface SchedulingProviderDefinition {
+  name: string;
+  create(settings: unknown): SchedulingProvider | null;
 }
+
+// settings 的形狀由各供應商自己決定,中央不介入
+export const SchedulingConfigSchema = z.object({
+  provider: z.string(),
+  settings: z.unknown(),
+});
+
+export type SchedulingConfig = z.infer<typeof SchedulingConfigSchema>;

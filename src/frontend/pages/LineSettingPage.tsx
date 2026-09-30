@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSection, saveLineConfig, type LineConfig } from '../lib/admin.ts';
+import { getSection, saveSection, type LineConfig } from '../lib/admin.ts';
 
 export function LineSettingsPage() {
   const [channelSecret, setChannelSecret] = useState('');
@@ -26,7 +26,7 @@ export function LineSettingsPage() {
 
   async function submit() {
     setSaving(true);
-    const error = await saveLineConfig({ channelSecret, accessToken });
+    const error = await saveSection('line', { channelSecret, accessToken });
     setSaving(false);
     setMessage(error ?? '已儲存');
   }

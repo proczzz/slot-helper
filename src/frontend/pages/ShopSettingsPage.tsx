@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  getSection,
-  saveShopSettings,
-  type BusinessHours,
-  type ShopSettings,
-} from '../lib/admin.ts';
+import { getSection, saveSection, type BusinessHours, type ShopSettings } from '../lib/admin.ts';
 
 const DAYS = [
   { key: 'mon', label: '週一' },
@@ -124,7 +119,7 @@ export function ShopSettingsPage() {
     const sorted = sortAll(hours);
     setHours(sorted);
     setSaving(true);
-    const error = await saveShopSettings({ instructions, businessHours: sorted });
+    const error = await saveSection('shop', { instructions, businessHours: sorted });
     setSaving(false);
     setMessage(error ?? '已儲存');
   }

@@ -1,31 +1,24 @@
-import { createGoogleCalendarProvider } from './google-calendar.ts';
-import type { SchedulingConfig, SchedulingProvider } from './types.ts';
+import { googleCalendarProvider } from './google-calendar.ts';
+import type {
+  SchedulingConfig,
+  SchedulingProvider,
+  SchedulingProviderDefinition,
+} from './types.ts';
 
-type ProviderFactory = (config: SchedulingConfig) => SchedulingProvider | null;
+// 新增供應商 = 開一個檔實作 SchedulingProviderDefinition + 這裡加一個
+const definitions: SchedulingProviderDefinition[] = [googleCalendarProvider];
 
-const providers: Partial<Record<string, ProviderFactory>> = {
-  'google-calendar': createGoogleProvider,
-};
+export const providers: Partial<Record<string, SchedulingProviderDefinition>> = Object.fromEntries(
+  definitions.map((definition) => [definition.name, definition]),
+);
 
 export function createSchedulingProvider(
   config: SchedulingConfig | null,
 ): SchedulingProvider | null {
   if (!config) return null;
 
-  const factory = providers[config.provider];
-  if (!factory) return null;
+  const definition = providers[config.provider];
+  if (!definition) return null;
 
-  return factory(config);
-}
-
-// 目前只用第一本日曆，多本之後再做
-function createGoogleProvider(config: SchedulingConfig): SchedulingProvider | null {
-  const calendar = config.google.calendars[0];
-  if (!calendar) return null;
-
-  return createGoogleCalendarProvider({
-    clientEmail: config.google.serviceAccountEmail,
-    privateKey: config.google.privateKey.replace(/\\n/g, '\n'),
-    calendarId: calendar.id,
-  });
+  return definition.create(config.settings);
 }
