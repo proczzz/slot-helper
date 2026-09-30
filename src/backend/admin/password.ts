@@ -13,11 +13,11 @@ export async function hashPassword(password: string): Promise<string> {
   return `${ALGORITHM}$${ITERATIONS}$${toBase64(salt)}$${hash}`;
 }
 
-export async function verifyPassword(stored: string, password: string): Promise<boolean> {
-  const [algorithm, iterations, salt, hash] = stored.split('$');
+export async function verifyPassword(encodedPassword: string, rawPassword: string): Promise<boolean> {
+  const [algorithm, iterations, salt, hash] = encodedPassword.split('$');
   if (algorithm !== ALGORITHM || !iterations || !salt || !hash) return false;
 
-  return (await derive(password, fromBase64(salt), Number(iterations))) === hash;
+  return (await derive(rawPassword, fromBase64(salt), Number(iterations))) === hash;
 }
 
 async function derive(password: string, salt: Uint8Array, iterations: number): Promise<string> {

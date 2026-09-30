@@ -45,15 +45,12 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         return cachedToken.accessToken;
       }
 
-      const now = Math.floor(Date.now() / 1000);
-      const jwt = await new SignJWT({
-        iss: serviceAccountEmail,
-        scope: CALENDAR_SCOPE,
-        aud: TOKEN_URL,
-        iat: now,
-        exp: now + 3600,
-      })
+      const jwt = await new SignJWT({ scope: CALENDAR_SCOPE })
         .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+        .setIssuer(serviceAccountEmail)
+        .setAudience(TOKEN_URL)
+        .setIssuedAt()
+        .setExpirationTime('1h')
         .sign(await importPKCS8(privateKey, 'RS256'));
 
       const response = await fetch(TOKEN_URL, {

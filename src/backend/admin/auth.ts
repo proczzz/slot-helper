@@ -3,10 +3,9 @@ import type { UserRepository } from '../repository/types.ts';
 import { hashPassword, verifyPassword } from './password.ts';
 
 const ISSUER = 'slot-helper';
-const EXPIRES_IN = '7d';
+const EXPIRES_IN = '6h';
 
 export const ADMIN_COOKIE_NAME = 'admin_token';
-export const JWT_SECRET_KEY = 'ADMIN_JWT_SECRET';
 
 export interface AdminAuth {
   authenticate(username: string, password: string): Promise<boolean>;
@@ -33,8 +32,9 @@ export function createAdminAuth(userRepository: UserRepository, jwtSecret: strin
     },
     // 發 jwt
     issueToken(username) {
-      return new SignJWT({ sub: username })
+      return new SignJWT({})
         .setProtectedHeader({ alg: 'HS256' })
+        .setSubject(username)
         .setIssuer(ISSUER)
         .setIssuedAt()
         .setExpirationTime(EXPIRES_IN)
