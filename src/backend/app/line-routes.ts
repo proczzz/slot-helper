@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { LineEvent, LineWebhookBody } from '../channels/line/types.ts';
+import type { LineEvent, LineWebhookBody } from '../adapter/line/types.ts';
 import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 

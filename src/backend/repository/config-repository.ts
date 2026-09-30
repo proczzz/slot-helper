@@ -1,4 +1,4 @@
-import type { Database, Statement } from '../providers/db/types.ts';
+import type { Database, Statement } from '../db/types.ts';
 import type { ConfigRepository } from './types.ts';
 
 // !!! 內容需與 migrations/0002_create_config_table.sql 保持一致

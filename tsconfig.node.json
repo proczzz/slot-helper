@@ -5,16 +5,14 @@
     "types": ["node"]
   },
   "include": [
+    "src/backend/adapter/**/*.ts",
     "src/backend/admin/**/*.ts",
-    "src/backend/ai/**/*.ts",
     "src/backend/app/**/*.ts",
-    "src/backend/channels/**/*.ts",
     "src/backend/core/**/*.ts",
+    "src/backend/db/sqlite.ts",
+    "src/backend/db/types.ts",
     "src/backend/infra/node.ts",
     "src/backend/model/**/*.ts",
-    "src/backend/providers/db/sqlite.ts",
-    "src/backend/providers/db/types.ts",
-    "src/backend/providers/scheduling/*.ts",
     "src/backend/repository/*.ts"
   ]
 }

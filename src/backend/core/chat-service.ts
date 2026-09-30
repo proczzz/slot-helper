@@ -1,6 +1,6 @@
 import type { LanguageModel } from 'ai';
 import { generateText, stepCountIs } from 'ai';
-import type { SchedulingProvider } from '../providers/scheduling/types.ts';
+import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
 import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import type { ChatRequest, ChatResponse } from '../model/dto/chat.ts';

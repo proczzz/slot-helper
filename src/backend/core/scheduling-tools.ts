@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { SchedulingProvider, TimePeriod } from '../providers/scheduling/types.ts';
+import type { SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
 import { shopConfig } from './shop-config.ts';
 
 const LocalTimeSchema = z

@@ -1,8 +1,8 @@
 import z from 'zod';
-import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
-import { LineConfigSchema, type LineConfig } from '../channels/line/types.ts';
+import { AiKeysSchema, type AiKey } from '../adapter/ai/types.ts';
+import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { ShopSettingsSchema, type ShopSettings } from '../core/shop-settings.ts';
-import { SchedulingConfigSchema, type SchedulingConfig } from '../providers/scheduling/types.ts';
+import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中

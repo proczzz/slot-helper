@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { routes } from '../app/routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
-import { createD1Database } from '../providers/db/d1.ts';
+import { createD1Database } from '../db/d1.ts';
 
 const app = new Hono<{ Bindings: CloudflareBindings } & AppVariables>();
 
