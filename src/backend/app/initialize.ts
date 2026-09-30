@@ -1,6 +1,5 @@
 import { hashPassword } from '../admin/password.ts';
 import type { ConfigRepository, UserRepository } from '../repository/types.ts';
-import { SYSTEM_CONFIG_KEY } from './config.ts';
 
 const DEFAULT_USERNAME = 'admin';
 
@@ -8,7 +7,7 @@ export async function ensureInitialized(
   configRepository: ConfigRepository,
   userRepository: UserRepository,
 ): Promise<void> {
-  if (await configRepository.get(SYSTEM_CONFIG_KEY)) return;
+  if (await configRepository.get('system')) return; // 有Secret就當初始化過
   await initialize(configRepository, userRepository);
 }
 
@@ -16,8 +15,8 @@ async function initialize(
   configRepository: ConfigRepository,
   userRepository: UserRepository,
 ): Promise<void> {
+  // 先建'管理帳號'，後建'jwtSecret'，避免jwtSecret成功、管理帳號失敗(沒帳號登入)
   const password = crypto.randomUUID();
-
   await userRepository.insert({
     username: DEFAULT_USERNAME,
     password: await hashPassword(password),
@@ -28,7 +27,7 @@ async function initialize(
   const jwtSecret = btoa(String.fromCharCode(...bytes));
 
   await configRepository.set(
-    SYSTEM_CONFIG_KEY,
+    'system',
     JSON.stringify({ jwtSecret, initializedAt: new Date().toISOString() }),
   );
 

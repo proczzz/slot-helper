@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { SECTION_SCHEMAS } from '../app/config.ts';
+import { SECTION_SCHEMAS, type ConfigKey } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
@@ -64,7 +64,7 @@ adminRoutes.post('/password', async (c) => {
 
 adminRoutes.get('/config/:section', async (c) => {
   const { configRepository } = c.var.services;
-  const section = c.req.param('section');
+  const section = c.req.param('section') as ConfigKey;
 
   if (!SECTION_SCHEMAS[section]) return c.json(jsend.fail('未知的設定區塊'), 400);
 
@@ -74,7 +74,7 @@ adminRoutes.get('/config/:section', async (c) => {
 
 adminRoutes.put('/config/:section', async (c) => {
   const { configRepository } = c.var.services;
-  const section = c.req.param('section');
+  const section = c.req.param('section') as ConfigKey;
 
   const schema = SECTION_SCHEMAS[section];
   if (!schema) return c.json(jsend.fail('未知的設定區塊'), 400);

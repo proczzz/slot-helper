@@ -1,18 +1,15 @@
 import z from 'zod';
 import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
 import { LineConfigSchema, type LineConfig } from '../channels/line/types.ts';
+import { ShopSettingsSchema, type ShopSettings } from '../core/model/shop-settings.ts';
 import { SchedulingConfigSchema, type SchedulingConfig } from '../providers/scheduling/types.ts';
 import type { ConfigRepository } from '../repository/types.ts';
-import { ShopSettingsSchema, type ShopSettings } from '../core/model/shop-settings.ts';
 
-export const SYSTEM_CONFIG_KEY = 'system';
-export const AI_CONFIG_KEY = 'ai';
-export const SHOP_CONFIG_KEY = 'shop';
-export const LINE_CONFIG_KEY = 'line';
-export const SCHEDULING_CONFIG_KEY = 'scheduling';
+// config 表中的 key
+export type ConfigKey = 'system' | 'ai' | 'shop' | 'line' | 'scheduling';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
-export const SECTION_SCHEMAS: Partial<Record<string, z.ZodType>> = {
+export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
   ai: AiKeysSchema,
   line: LineConfigSchema,
   scheduling: SchedulingConfigSchema,
@@ -29,7 +26,7 @@ export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 export async function loadSystemConfig(
   configRepository: ConfigRepository,
 ): Promise<SystemConfig | null> {
-  const raw = await configRepository.get(SYSTEM_CONFIG_KEY);
+  const raw = await configRepository.get('system');
   if (!raw) return null;
 
   try {
@@ -41,7 +38,7 @@ export async function loadSystemConfig(
 }
 
 export async function loadAiKeys(configRepository: ConfigRepository): Promise<AiKey[]> {
-  const raw = await configRepository.get(AI_CONFIG_KEY);
+  const raw = await configRepository.get('ai');
   if (!raw) return [];
 
   try {
@@ -55,7 +52,7 @@ export async function loadAiKeys(configRepository: ConfigRepository): Promise<Ai
 export async function loadLineConfig(
   configRepository: ConfigRepository,
 ): Promise<LineConfig | null> {
-  const raw = await configRepository.get(LINE_CONFIG_KEY);
+  const raw = await configRepository.get('line');
   if (!raw) return null;
 
   try {
@@ -69,7 +66,7 @@ export async function loadLineConfig(
 const EMPTY_SHOP: ShopSettings = { instructions: '', businessHours: {} };
 
 export async function loadShopSettings(configRepository: ConfigRepository): Promise<ShopSettings> {
-  const raw = await configRepository.get(SHOP_CONFIG_KEY);
+  const raw = await configRepository.get('shop');
   if (!raw) return EMPTY_SHOP;
 
   try {
@@ -83,7 +80,7 @@ export async function loadShopSettings(configRepository: ConfigRepository): Prom
 export async function loadSchedulingConfig(
   configRepository: ConfigRepository,
 ): Promise<SchedulingConfig | null> {
-  const raw = await configRepository.get(SCHEDULING_CONFIG_KEY);
+  const raw = await configRepository.get('scheduling');
   if (!raw) return null;
 
   try {

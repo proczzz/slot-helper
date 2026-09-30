@@ -48,18 +48,18 @@ export interface Services {
 
 export async function createServices(database: Database): Promise<Services> {
   const configRepository = createConfigRepository(database);
-  const conversationRepository = createConversationRepository(database);
   const userRepository = createUserRepository(database);
+  const conversationRepository = createConversationRepository(database);
 
   return {
     ...(await getSharedProviders(configRepository, userRepository)),
-    conversationRepository,
     configRepository,
+    conversationRepository,
   };
 }
 
 // 扣掉綁 request 的兩個 repository，其餘只由設定字串建出來，可以跨 request 重用
-type SharedProviders = Omit<Services, 'conversationRepository' | 'configRepository'>;
+type SharedProviders = Omit<Services, 'configRepository' | 'conversationRepository'>;
 
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
 let cachedProviders: SharedProviders | undefined;

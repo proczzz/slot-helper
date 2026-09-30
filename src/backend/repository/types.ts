@@ -1,3 +1,4 @@
+import type { ConfigKey } from '../app/config';
 import type { Message } from '../core/model/message';
 import type { User } from '../core/model/user';
 
@@ -7,10 +8,10 @@ export interface ConversationRepository {
 }
 
 export interface ConfigRepository {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string): Promise<void>;
-  setMany(entries: { key: string; value: string }[]): Promise<void>;
-  remove(key: string): Promise<void>;
+  get(key: ConfigKey): Promise<string | null>;
+  set(key: ConfigKey, value: string): Promise<void>;
+  setMany(entries: { key: ConfigKey; value: string }[]): Promise<void>;
+  remove(key: ConfigKey): Promise<void>;
 }
 
 export interface UserRepository {
