@@ -1,6 +1,12 @@
 import { SignJWT, importPKCS8 } from 'jose';
 import z from 'zod';
-import type { Event, NewEvent, SchedulingProviderDefinition, TimePeriod } from './types.ts';
+import type {
+  Event,
+  EventCriteria,
+  NewEvent,
+  SchedulingProviderDefinition,
+  TimePeriod,
+} from './types.ts';
 
 const SettingsSchema = z.object({
   serviceAccountEmail: z.string().min(1),
@@ -99,15 +105,17 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         return calendar.busy;
       },
 
-      // 查詢指定時間範圍內的事件列表,包含 eventId,供取消功能比對使用
-      async getEvents({ start, end }: TimePeriod): Promise<Event[]> {
+      // 查詢事件列表，包含 eventId，供取消與改期比對使用
+      async getEvents({ start, end, keyword, limit }: EventCriteria): Promise<Event[]> {
         const accessToken = await getAccessToken();
         const params = new URLSearchParams({
           timeMin: start,
-          timeMax: end,
           singleEvents: 'true',
           orderBy: 'startTime',
         });
+        if (end) params.set('timeMax', end);
+        if (keyword) params.set('q', keyword); // 全文搜尋，會比對標題、說明等欄位
+        if (limit) params.set('maxResults', String(limit));
 
         const response = await fetch(`${eventsUrl}?${params.toString()}`, {
           headers: { Authorization: `Bearer ${accessToken}` },

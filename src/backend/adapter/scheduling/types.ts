@@ -18,12 +18,20 @@ export interface Event extends TimePeriod {
   description?: string;
 }
 
+// keyword 是模糊搜尋，各供應商自行決定搜哪些欄位
+export interface EventCriteria {
+  start: string;
+  end?: string;
+  keyword?: string;
+  limit?: number;
+}
+
 export interface SchedulingProvider {
   getBusyPeriods(range: TimePeriod): Promise<TimePeriod[]>;
-  getEvents(range: TimePeriod): Promise<Event[]>;
+  getEvents(criteria: EventCriteria): Promise<Event[]>;
   getEvent(eventId: string): Promise<Event>;
   createEvent(event: NewEvent): Promise<{ eventId: string }>;
-  updateEvent(eventId: string, changes: NewEvent): Promise<void>;
+  updateEvent(eventId: string, event: NewEvent): Promise<void>;
   deleteEvent(eventId: string): Promise<void>;
 }
 
