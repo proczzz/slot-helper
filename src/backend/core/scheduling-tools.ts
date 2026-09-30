@@ -38,7 +38,7 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
         summary: z.string().describe('預約標題,例如顧客姓名與服務項目'),
       }),
       execute: async ({ summary, ...rang }) =>
-        schedulingProvider.createBooking({
+        schedulingProvider.createEvent({
           summary,
           description: customerTag,
           ...toAbsoluteRange(rang),
@@ -69,7 +69,7 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
             throw new Error('這筆預約不屬於這位顧客,不能取消');
           }
         }
-        await schedulingProvider.cancelBooking(eventId);
+        await schedulingProvider.deleteEvent(eventId);
         return { success: true };
       },
     }),

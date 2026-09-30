@@ -1,6 +1,6 @@
 import { SignJWT, importPKCS8 } from 'jose';
 import z from 'zod';
-import type { Booking, Event, SchedulingProviderDefinition, TimePeriod } from './types.ts';
+import type { Event, NewEvent, SchedulingProviderDefinition, TimePeriod } from './types.ts';
 
 const SettingsSchema = z.object({
   serviceAccountEmail: z.string().min(1),
@@ -11,11 +11,6 @@ const SettingsSchema = z.object({
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FREEBUSY_URL = 'https://www.googleapis.com/calendar/v3/freeBusy';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
-
-interface CachedToken {
-  accessToken: string;
-  expiresAt: number;
-}
 
 // 統一處理 fetch 回應失敗的情況
 async function assertOk(response: Response, action: string): Promise<void> {
@@ -37,7 +32,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
     const calendarId = calendars[0]!.id;
     const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
 
-    let cachedToken: CachedToken | null = null;
+    let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
     // 用 Service Account 私鑰簽 JWT 換取 access token,快取到過期前 60 秒
     async function getAccessToken(): Promise<string> {
@@ -169,17 +164,17 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         };
       },
 
-      // 在日曆上建立一筆預約事件
-      async createBooking(booking: Booking): Promise<{ eventId: string }> {
+      // 在日曆上建立一筆事件
+      async createEvent(event: NewEvent): Promise<{ eventId: string }> {
         const accessToken = await getAccessToken();
         const response = await fetch(eventsUrl, {
           method: 'POST',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            summary: booking.summary,
-            description: booking.description,
-            start: { dateTime: booking.start },
-            end: { dateTime: booking.end },
+            summary: event.summary,
+            description: event.description,
+            start: { dateTime: event.start },
+            end: { dateTime: event.end },
           }),
         });
 
@@ -189,8 +184,25 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         return { eventId: data.id };
       },
 
+      // 整筆取代，未送出的欄位會被清空，所以呼叫端要給完整內容
+      async updateEvent(eventId: string, event: NewEvent): Promise<void> {
+        const accessToken = await getAccessToken();
+        const response = await fetch(`${eventsUrl}/${encodeURIComponent(eventId)}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary: event.summary,
+            description: event.description,
+            start: { dateTime: event.start },
+            end: { dateTime: event.end },
+          }),
+        });
+
+        await assertOk(response, 'update event');
+      },
+
       // 取消(刪除)指定 eventId 的預約
-      async cancelBooking(eventId: string): Promise<void> {
+      async deleteEvent(eventId: string): Promise<void> {
         const accessToken = await getAccessToken();
         const response = await fetch(`${eventsUrl}/${encodeURIComponent(eventId)}`, {
           method: 'DELETE',
