@@ -11,6 +11,7 @@
     "src/backend/channels/**/*.ts",
     "src/backend/core/**/*.ts",
     "src/backend/infra/node.ts",
+    "src/backend/model/**/*.ts",
     "src/backend/providers/db/sqlite.ts",
     "src/backend/providers/db/types.ts",
     "src/backend/providers/scheduling/*.ts",

@@ -1,7 +1,7 @@
 import z from 'zod';
 import { AiKeysSchema, type AiKey } from '../ai/language-model/types.ts';
 import { LineConfigSchema, type LineConfig } from '../channels/line/types.ts';
-import { ShopSettingsSchema, type ShopSettings } from '../core/model/shop-settings.ts';
+import { ShopSettingsSchema, type ShopSettings } from '../core/shop-settings.ts';
 import { SchedulingConfigSchema, type SchedulingConfig } from '../providers/scheduling/types.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 

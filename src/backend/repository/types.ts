@@ -1,5 +1,5 @@
-import type { Message } from '../core/model/message';
-import type { User } from '../core/model/user';
+import type { Message } from '../model/entity/message';
+import type { User } from '../model/entity/user';
 
 export interface ConversationRepository {
   getMessages(sessionId: string, limit: number): Promise<Message[]>;

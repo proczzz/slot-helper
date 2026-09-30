@@ -1,4 +1,4 @@
-import type { Message } from '../core/model/message.ts';
+import type { Message } from '../model/entity/message.ts';
 import type { Database, Statement } from '../providers/db/types.ts';
 import type { ConversationRepository } from './types.ts';
 

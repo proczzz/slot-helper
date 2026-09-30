@@ -6,8 +6,8 @@ import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
-import { LoginSchema } from './model/login.ts';
-import { ChangePasswordSchema } from './model/password.ts';
+import { LoginSchema } from '../model/dto/login.ts';
+import { ChangePasswordSchema } from '../model/dto/password.ts';
 
 const adminRoutes = new Hono<AppVariables>();
 

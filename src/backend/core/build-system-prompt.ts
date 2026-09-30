@@ -1,4 +1,4 @@
-import type { BusinessHours, ShopSettings } from './model/shop-settings.ts';
+import type { BusinessHours, ShopSettings } from './shop-settings.ts';
 import { shopConfig } from './shop-config.ts';
 
 const DAYS: [string, string][] = [

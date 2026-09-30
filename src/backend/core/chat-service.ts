@@ -3,8 +3,8 @@ import { generateText, stepCountIs } from 'ai';
 import type { SchedulingProvider } from '../providers/scheduling/types.ts';
 import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
-import type { ChatRequest, ChatResponse } from './model/chat.ts';
-import type { ShopSettings } from './model/shop-settings.ts';
+import type { ChatRequest, ChatResponse } from '../model/dto/chat.ts';
+import type { ShopSettings } from './shop-settings.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 
 const HISTORY_LIMIT = 40;
