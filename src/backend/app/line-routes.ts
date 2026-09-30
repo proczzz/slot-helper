@@ -13,7 +13,7 @@ lineRoutes.post('/webhook', async (c) => {
     lineClient,
     model,
     shopSettings,
-    conversationRepository: conversationRepository,
+    conversationRepository,
     schedulingProvider,
   } = c.var.services;
   // 檢查: 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
