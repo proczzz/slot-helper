@@ -3,7 +3,7 @@ import { adminRoutes } from '../admin/routes.ts';
 import { handleChat } from '../core/chat-service.ts';
 import { ChatRequestSchema } from '../model/dto/chat.ts';
 import { handleError } from './error-handler.ts';
-import { jsend } from './jsend.ts';
+import { jsend } from '../model/dto/jsend.ts';
 import { lineRoutes } from './line-routes.ts';
 import type { AppVariables } from './services.ts';
 

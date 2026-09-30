@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import { ZodError } from 'zod';
-import { jsend } from './jsend.ts';
+import { jsend } from '../model/dto/jsend.ts';
 
 export function handleError(err: Error, c: Context) {
   if (err instanceof ZodError) {
