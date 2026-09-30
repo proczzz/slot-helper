@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { SECTION_SCHEMAS, type ConfigKey } from '../app/config.ts';
+import { SECTION_SCHEMAS } from '../app/config.ts';
 import { jsend } from '../app/jsend.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
+import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { LoginSchema } from './model/login.ts';
 import { ChangePasswordSchema } from './model/password.ts';
