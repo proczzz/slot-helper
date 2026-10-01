@@ -3,13 +3,14 @@ import type { LineEvent, LineWebhookBody } from '../adapter/line/types.ts';
 import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
+const LINE_CHANNEL = 'line';
 const FALLBACK_REPLY = '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。';
 
 const lineRoutes = new Hono<AppVariables>();
 
 lineRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆]的實現
-  const { lineClient, model, shopSettings, conversationRepository, schedulingProvider } =
+  const { lineClient, model, shopConfig, conversationRepository, schedulingProvider } =
     c.var.services;
   // 檢查: 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!lineClient) return c.text('LINE is not configured', 404);
@@ -34,13 +35,10 @@ lineRoutes.post('/webhook', async (c) => {
       continue;
     }
     const task = handleChat(
-      {
-        sessionId: event.source.userId!,
-        message: event.message!.text!,
-        customerId: event.source.userId!, // 有點怪
-      },
+      `${LINE_CHANNEL}:${event.source.userId}`,
+      event.message!.text!,
       model,
-      shopSettings,
+      shopConfig,
       conversationRepository,
       schedulingProvider,
     )

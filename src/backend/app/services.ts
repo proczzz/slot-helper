@@ -38,7 +38,7 @@ export type AppVariables = {
 
 export interface Services {
   model: LanguageModel | null; // AI
-  shopSettings: ShopConfig; // 營業時間、部分提示詞
+  shopConfig: ShopConfig; // 營業時間、部分提示詞
   conversationRepository: ConversationRepository;
   configRepository: ConfigRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
@@ -76,7 +76,7 @@ async function getSharedProviders(
 
   cachedProviders = {
     model: createLanguageModel(await loadAiKeys(configRepository)),
-    shopSettings: await loadShopSettings(configRepository),
+    shopConfig: await loadShopSettings(configRepository),
     schedulingProvider: createSchedulingProvider(await loadSchedulingConfig(configRepository)),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     adminAuth: createAdminAuth(userRepository, system!.jwtSecret),

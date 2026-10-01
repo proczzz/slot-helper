@@ -1,37 +1,35 @@
 import type { LanguageModel } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
+import type { ChatResponse } from '../model/dto/chat.ts';
 import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
-import type { ChatRequest, ChatResponse } from '../model/dto/chat.ts';
-import type { ShopConfig } from './shop-config.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
+import type { ShopConfig } from './shop-config.ts';
 
 const HISTORY_LIMIT = 40;
 
 export async function handleChat(
-  request: ChatRequest,
+  customerId: string,
+  message: string,
   model: LanguageModel,
-  shopSettings: ShopConfig,
+  shopConfig: ShopConfig,
   conversationRepository: ConversationRepository,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {
   // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
-  const history = await conversationRepository.getMessages(request.sessionId, HISTORY_LIMIT);
-
+  const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user' as const, content: request.message },
+    { role: 'user' as const, content: message },
   ];
 
   // 實際呼叫 llm
   const result = await generateText({
     model,
-    system: buildSystemPrompt(shopSettings),
+    system: buildSystemPrompt(shopConfig),
     messages,
-    tools: schedulingProvider
-      ? createSchedulingTools(schedulingProvider, request.customerId)
-      : undefined,
+    tools: schedulingProvider ? createSchedulingTools(schedulingProvider, customerId) : undefined,
     stopWhen: stepCountIs(8),
   });
 
@@ -46,8 +44,8 @@ export async function handleChat(
   );
 
   if (result.text) {
-    await conversationRepository.appendMessages(request.sessionId, [
-      { role: 'user', content: request.message, timestamp: Date.now() },
+    await conversationRepository.appendMessages(customerId, [
+      { role: 'user', content: message, timestamp: Date.now() },
       { role: 'assistant', content: result.text, timestamp: Date.now() },
     ]);
   }
