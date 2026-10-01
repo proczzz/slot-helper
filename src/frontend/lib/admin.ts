@@ -51,11 +51,30 @@ export interface AiKey {
   model: string;
 }
 
-export type BusinessHours = Record<string, [string, string][]>;
+export type Period = [string, string];
+
+export interface BusinessHours {
+  mon: Period[];
+  tue: Period[];
+  wed: Period[];
+  thu: Period[];
+  fri: Period[];
+  sat: Period[];
+  sun: Period[];
+}
+
+export type DayKey = keyof BusinessHours;
+
+export interface Service {
+  name: string;
+  minutes: number;
+  price: number;
+}
 
 export interface ShopSettings {
   instructions: string;
   businessHours: BusinessHours;
+  services: Service[];
 }
 
 export interface LineConfig {

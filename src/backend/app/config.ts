@@ -1,8 +1,8 @@
 import z from 'zod';
 import { AiKeysSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
-import { ShopSettingsSchema, type ShopSettings } from '../core/shop-settings.ts';
 import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
+import { ShopSettingsSchema, type ShopSettings } from '../core/shop-settings.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
@@ -35,10 +35,7 @@ export function loadSchedulingConfig(
 }
 
 export function loadShopSettings(configRepository: ConfigRepository): Promise<ShopSettings> {
-  return loadSection(configRepository, 'shop', ShopSettingsSchema, {
-    instructions: '',
-    businessHours: {},
-  });
+  return loadSection(configRepository, 'shop', ShopSettingsSchema, ShopSettingsSchema.parse({}));
 }
 
 export function loadSystemConfig(configRepository: ConfigRepository): Promise<SystemConfig | null> {

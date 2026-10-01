@@ -1,43 +1,59 @@
-import type { BusinessHours, ShopSettings } from './shop-settings.ts';
 import { shopConfig } from './shop-config.ts';
+import type { BusinessHours, DayKey, Service, ShopSettings } from './shop-settings.ts';
 
-const DAYS: [string, string][] = [
-  ['mon', '週一'],
-  ['tue', '週二'],
-  ['wed', '週三'],
-  ['thu', '週四'],
-  ['fri', '週五'],
-  ['sat', '週六'],
-  ['sun', '週日'],
-];
+const DAY_LABELS: Record<DayKey, string> = {
+  mon: '週一',
+  tue: '週二',
+  wed: '週三',
+  thu: '週四',
+  fri: '週五',
+  sat: '週六',
+  sun: '週日',
+};
 
-const DAY_MINUTES = 24 * 60; // 一天有 1440 分鐘
+const DAY_KEYS = Object.keys(DAY_LABELS) as DayKey[];
+
+const DAY_MINUTES = 24 * 60;
 
 export function buildSystemPrompt(settings: ShopSettings): string {
   const now = new Date().toLocaleString('zh-TW', { timeZone: shopConfig.timezone });
 
-  return `${settings.instructions}
+  const systemPrompt = `${settings.instructions}
 
-營業時間
+${formatServices(settings.services)}
+
 ${formatBusinessHours(settings.businessHours)}
 
-目前時間:${now}`;
+目前時間${now}`;
+
+  return systemPrompt;
+}
+
+function formatServices(services: Service[]): string {
+  if (services.length === 0) return '';
+
+  const lines = services.map(
+    (service) => `${service.name} ${service.minutes} 分鐘 ${service.price} 元`,
+  );
+  return `服務項目\n${lines.join('\n')}`;
 }
 
 function formatBusinessHours(hours: BusinessHours): string {
-  return DAYS.map(([key, label]) => {
-    const periods = hours[key] ?? [];
-    if (periods.length === 0) return `${label} 公休`;
+  const lines = DAY_KEYS.filter((key) => hours[key].length > 0).map((key) => {
+    const periods = hours[key].map(([start, end]) => `${start} 至 ${formatTime(end)}`);
+    return `${DAY_LABELS[key]} ${periods.join('、')}`;
+  });
 
-    return `${label} ${periods.map(([start, end]) => `${start} 至 ${formatTime(end)}`).join('、')}`;
-  }).join('\n');
+  if (lines.length === 0) return '';
+  return `營業時間\n${lines.join('\n')}`;
 }
 
-// 內部以超過 24:00 表示跨日,顯示給 AI 時換成「次日 HH:mm」
+// 內部以超過 24:00 表示跨日，顯示給 AI 時換成「次日 HH:mm」
 function formatTime(time: string): string {
   const [hour, minute] = time.split(':');
   const total = Number(hour) * 60 + Number(minute);
   if (total < DAY_MINUTES) return time;
+
   const nextDay = total - DAY_MINUTES;
   return `次日 ${String(Math.floor(nextDay / 60)).padStart(2, '0')}:${String(nextDay % 60).padStart(2, '0')}`;
 }

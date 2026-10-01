@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getSection, saveSection, type BusinessHours, type ShopSettings } from '../lib/admin.ts';
+import {
+  getSection,
+  saveSection,
+  type BusinessHours,
+  type DayKey,
+  type Period,
+  type Service,
+  type ShopSettings,
+} from '../lib/admin.ts';
 
 const DAYS = [
   { key: 'mon', label: '週一' },
@@ -9,14 +17,21 @@ const DAYS = [
   { key: 'fri', label: '週五' },
   { key: 'sat', label: '週六' },
   { key: 'sun', label: '週日' },
-];
+] as const;
 
 const DAY_MINUTES = 24 * 60;
 
-type Period = [string, string];
 type DayErrors = { periods: Record<number, string>; overlap?: string };
 
-const EMPTY_HOURS: BusinessHours = Object.fromEntries(DAYS.map((day) => [day.key, []]));
+const EMPTY_HOURS: BusinessHours = {
+  mon: [],
+  tue: [],
+  wed: [],
+  thu: [],
+  fri: [],
+  sat: [],
+  sun: [],
+};
 
 function toMinutes(value: string): number {
   const [hour, minute] = value.split(':');
@@ -60,27 +75,29 @@ function validateDay(periods: Period[]): DayErrors {
 }
 
 function sortAll(hours: BusinessHours): BusinessHours {
-  return Object.fromEntries(
-    Object.entries(hours).map(([key, periods]) => [
-      key,
-      [...periods].sort((a, b) => toMinutes(a[0]) - toMinutes(b[0])),
-    ]),
-  );
+  const sorted = { ...hours };
+  for (const { key } of DAYS) {
+    sorted[key] = [...hours[key]].sort((a, b) => toMinutes(a[0]) - toMinutes(b[0]));
+  }
+  return sorted;
 }
 
 export function ShopSettingsPage() {
   const [instructions, setInstructions] = useState('');
   const [hours, setHours] = useState<BusinessHours>(EMPTY_HOURS);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    getSection<ShopSettings>('shop').then((settings) => {
-      setInstructions(settings?.instructions ?? '');
-      setHours({ ...EMPTY_HOURS, ...(settings?.businessHours ?? {}) });
-      setLoading(false);
-    });
+    getSection<ShopSettings>('shop')
+      .then((settings) => {
+        setInstructions(settings?.instructions ?? '');
+        setHours({ ...EMPTY_HOURS, ...(settings?.businessHours ?? {}) });
+        setServices(settings?.services ?? []);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -89,37 +106,57 @@ export function ShopSettingsPage() {
     return () => clearTimeout(timer);
   }, [message]);
 
-  function update(dayKey: string, periods: Period[]) {
+  function update(dayKey: DayKey, periods: Period[]) {
     setHours({ ...hours, [dayKey]: periods });
   }
 
-  function addPeriod(dayKey: string) {
-    const existing = hours[dayKey]!;
+  function addPeriod(dayKey: DayKey) {
+    const existing = hours[dayKey];
     const start = existing.length ? toInputValue(existing[existing.length - 1]![1]) : '10:00';
     const oneHourLater = toHHmm((toMinutes(start) + 60) % DAY_MINUTES);
     update(dayKey, [...existing, [start, normalizeEnd(start, oneHourLater)]]);
   }
 
   // start 與 end 都是輸入框上看到的值，跨日的判斷統一在這裡做
-  function changePeriod(dayKey: string, index: number, start: string, end: string) {
+  function changePeriod(dayKey: DayKey, index: number, start: string, end: string) {
     update(
       dayKey,
-      hours[dayKey]!.map((period, i) => (i === index ? [start, normalizeEnd(start, end)] : period)),
+      hours[dayKey].map((period, i) => (i === index ? [start, normalizeEnd(start, end)] : period)),
     );
   }
 
-  function removePeriod(dayKey: string, index: number) {
+  function removePeriod(dayKey: DayKey, index: number) {
     update(
       dayKey,
-      hours[dayKey]!.filter((_, i) => i !== index),
+      hours[dayKey].filter((_, i) => i !== index),
     );
+  }
+
+  function addService() {
+    setServices([...services, { name: '', minutes: 60, price: 0 }]);
+  }
+
+  function changeService(index: number, field: keyof Service, value: string) {
+    setServices(
+      services.map((service, i) =>
+        i === index ? { ...service, [field]: field === 'name' ? value : Number(value) } : service,
+      ),
+    );
+  }
+
+  function removeService(index: number) {
+    setServices(services.filter((_, i) => i !== index));
   }
 
   async function submit() {
     const sorted = sortAll(hours);
     setHours(sorted);
     setSaving(true);
-    const error = await saveSection('shop', { instructions, businessHours: sorted });
+    const error = await saveSection('shop', {
+      instructions,
+      businessHours: sorted,
+      services,
+    });
     setSaving(false);
     setMessage(error ?? '已儲存');
   }
@@ -133,10 +170,11 @@ export function ShopSettingsPage() {
   }
 
   const errors = Object.fromEntries(
-    DAYS.map(({ key }) => [key, validateDay(hours[key]!)] as const),
-  );
+    DAYS.map(({ key }) => [key, validateDay(hours[key])]),
+  ) as Record<DayKey, DayErrors>;
+
   const hasError = DAYS.some(
-    ({ key }) => errors[key]!.overlap || Object.keys(errors[key]!.periods).length > 0,
+    ({ key }) => errors[key].overlap || Object.keys(errors[key].periods).length > 0,
   );
 
   return (
@@ -158,9 +196,74 @@ export function ShopSettingsPage() {
           <div className="rounded-box bg-base-200 p-4 text-sm">
             <p className="mb-2 font-medium">系統會自動附加以下內容，不需要自己寫</p>
             <ul className="list-inside list-disc text-base-content/70">
-              <li>營業時間（下方設定）</li>
+              <li>服務項目與營業時間（下方設定）</li>
               <li>目前時間（台北時區）</li>
             </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="card bg-base-100 shadow-sm">
+        <div className="card-body gap-4">
+          <h2 className="card-title">服務項目</h2>
+          <p className="text-sm text-base-content/60">
+            AI 會依照所需時間判斷要預留多久，也會用這些價格回答顧客。
+          </p>
+
+          {services.length === 0 && (
+            <span className="text-sm text-base-content/50">尚未新增任何服務</span>
+          )}
+
+          {services.map((service, index) => (
+            <div key={index} className="flex flex-wrap items-end gap-2">
+              <fieldset className="fieldset flex-1">
+                <legend className="fieldset-legend">名稱</legend>
+                <input
+                  type="text"
+                  className="input w-full"
+                  value={service.name}
+                  onChange={(event) => changeService(index, 'name', event.target.value)}
+                  placeholder="染髮"
+                />
+              </fieldset>
+
+              <fieldset className="fieldset w-28">
+                <legend className="fieldset-legend">分鐘</legend>
+                <input
+                  type="number"
+                  className="input w-full"
+                  value={service.minutes}
+                  onChange={(event) => changeService(index, 'minutes', event.target.value)}
+                  min={1}
+                />
+              </fieldset>
+
+              <fieldset className="fieldset w-28">
+                <legend className="fieldset-legend">價格</legend>
+                <input
+                  type="number"
+                  className="input w-full"
+                  value={service.price}
+                  onChange={(event) => changeService(index, 'price', event.target.value)}
+                  min={0}
+                />
+              </fieldset>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-square mb-1"
+                onClick={() => removeService(index)}
+                aria-label={`移除第 ${index + 1} 個服務`}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+
+          <div>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={addService}>
+              ＋ 新增服務
+            </button>
           </div>
         </div>
       </div>
@@ -174,8 +277,8 @@ export function ShopSettingsPage() {
 
           <div className="flex flex-col divide-y divide-base-200">
             {DAYS.map(({ key, label }) => {
-              const periods = hours[key]!;
-              const dayErrors = errors[key]!;
+              const periods = hours[key];
+              const dayErrors = errors[key];
 
               return (
                 <div key={key} className="flex gap-3 py-3">
