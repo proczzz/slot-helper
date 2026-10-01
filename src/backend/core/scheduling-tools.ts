@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
-import { shopConfig } from './shop-config.ts';
+import { timeConfig } from './locale.ts';
 
 const MAX_APPOINTMENTS = 20;
 
@@ -97,7 +97,7 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
 
 // AI 給的是沒有時區的局部時間，補上店家時區偏移才是地球上確定的瞬間
 function toAbsolute(localTime: string): string {
-  return `${localTime}:00${shopConfig.utcOffset}`;
+  return `${localTime}:00${timeConfig.utcOffset}`;
 }
 
 function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {

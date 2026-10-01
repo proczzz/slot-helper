@@ -4,7 +4,7 @@ import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
 import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import type { ChatRequest, ChatResponse } from '../model/dto/chat.ts';
-import type { ShopSettings } from './shop-settings.ts';
+import type { ShopConfig } from './shop-config.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 
 const HISTORY_LIMIT = 40;
@@ -12,7 +12,7 @@ const HISTORY_LIMIT = 40;
 export async function handleChat(
   request: ChatRequest,
   model: LanguageModel,
-  shopSettings: ShopSettings,
+  shopSettings: ShopConfig,
   conversationRepository: ConversationRepository,
   schedulingProvider: SchedulingProvider | null,
 ): Promise<ChatResponse> {

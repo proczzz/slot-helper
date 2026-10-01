@@ -1,16 +1,16 @@
 import z from 'zod';
-import { AiKeysSchema, type AiKey } from '../adapter/ai/types.ts';
+import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
-import { ShopSettingsSchema, type ShopSettings } from '../core/shop-settings.ts';
+import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
-  ai: AiKeysSchema,
+  ai: AiConfigSchema,
   line: LineConfigSchema,
   scheduling: SchedulingConfigSchema,
-  shop: ShopSettingsSchema,
+  shop: ShopConfigSchema,
 };
 
 const SystemConfigSchema = z.object({
@@ -21,7 +21,7 @@ const SystemConfigSchema = z.object({
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 
 export function loadAiKeys(configRepository: ConfigRepository): Promise<AiKey[]> {
-  return loadSection(configRepository, 'ai', AiKeysSchema, []);
+  return loadSection(configRepository, 'ai', AiConfigSchema, []);
 }
 
 export function loadLineConfig(configRepository: ConfigRepository): Promise<LineConfig | null> {
@@ -34,8 +34,8 @@ export function loadSchedulingConfig(
   return loadSection(configRepository, 'scheduling', SchedulingConfigSchema, null);
 }
 
-export function loadShopSettings(configRepository: ConfigRepository): Promise<ShopSettings> {
-  return loadSection(configRepository, 'shop', ShopSettingsSchema, ShopSettingsSchema.parse({}));
+export function loadShopSettings(configRepository: ConfigRepository): Promise<ShopConfig> {
+  return loadSection(configRepository, 'shop', ShopConfigSchema, ShopConfigSchema.parse({}));
 }
 
 export function loadSystemConfig(configRepository: ConfigRepository): Promise<SystemConfig | null> {

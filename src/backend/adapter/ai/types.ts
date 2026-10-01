@@ -5,7 +5,7 @@ export interface LanguageModelProvider {
   createModel(apiKey: string, model: string): LanguageModel;
 }
 
-export const AiKeysSchema = z.array(
+export const AiConfigSchema = z.array(
   z.object({
     name: z.string().min(1, '請輸入名稱'),
     provider: z.string().min(1, '請選擇供應商'),
@@ -14,4 +14,5 @@ export const AiKeysSchema = z.array(
   }),
 );
 
-export type AiKey = z.infer<typeof AiKeysSchema>[number];
+export type AiConfig = z.infer<typeof AiConfigSchema>;
+export type AiKey = z.infer<typeof AiConfigSchema>[number];

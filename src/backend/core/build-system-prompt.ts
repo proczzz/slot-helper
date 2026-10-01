@@ -1,5 +1,5 @@
-import { shopConfig } from './shop-config.ts';
-import type { BusinessHours, DayKey, Service, ShopSettings } from './shop-settings.ts';
+import { timeConfig } from './locale.ts';
+import type { BusinessHours, DayKey, Service, ShopConfig } from './shop-config.ts';
 
 const DAY_LABELS: Record<DayKey, string> = {
   mon: '週一',
@@ -15,8 +15,8 @@ const DAY_KEYS = Object.keys(DAY_LABELS) as DayKey[];
 
 const DAY_MINUTES = 24 * 60;
 
-export function buildSystemPrompt(settings: ShopSettings): string {
-  const now = new Date().toLocaleString('zh-TW', { timeZone: shopConfig.timezone });
+export function buildSystemPrompt(settings: ShopConfig): string {
+  const now = new Date().toLocaleString('zh-TW', { timeZone: timeConfig.timezone });
 
   const systemPrompt = `${settings.instructions}
 

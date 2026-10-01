@@ -4,7 +4,7 @@ import { createAdminAuth } from '../admin/auth.ts';
 import { createLanguageModel } from '../adapter/ai/index.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
-import type { ShopSettings } from '../core/shop-settings.ts';
+import type { ShopConfig } from '../core/shop-config.ts';
 import type { Database } from '../db/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
@@ -38,7 +38,7 @@ export type AppVariables = {
 
 export interface Services {
   model: LanguageModel | null; // AI
-  shopSettings: ShopSettings; // 營業時間、部分提示詞
+  shopSettings: ShopConfig; // 營業時間、部分提示詞
   conversationRepository: ConversationRepository;
   configRepository: ConfigRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
