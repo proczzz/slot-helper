@@ -1,6 +1,7 @@
-import type { LineClient, LineConfig } from './types.ts';
+import type { LineClient, LineConfig, LineProfile } from './types.ts';
 
 const REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
+const PROFILE_URL = 'https://api.line.me/v2/bot/profile';
 
 export function createLineClient(config: LineConfig | null): LineClient | null {
   if (!config) return null; // 老闆沒要用line
@@ -39,6 +40,19 @@ export function createLineClient(config: LineConfig | null): LineClient | null {
       if (!response.ok) {
         throw new Error(`LINE reply failed: ${response.status} ${await response.text()}`);
       }
+    },
+
+    async getProfile(userId) {
+      const response = await fetch(`${PROFILE_URL}/${encodeURIComponent(userId)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        console.error(`取得 LINE 顧客資料失敗: ${response.status}`);
+        return null;
+      }
+
+      return (await response.json()) as LineProfile;
     },
   };
 }

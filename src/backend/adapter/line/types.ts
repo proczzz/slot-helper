@@ -7,9 +7,15 @@ export const LineConfigSchema = z.object({
 
 export type LineConfig = z.infer<typeof LineConfigSchema>;
 
+export interface LineProfile {
+  displayName: string;
+  pictureUrl?: string;
+}
+
 export interface LineClient {
   verifySignature(body: string, signature: string): Promise<boolean>;
   replyText(replyToken: string, text: string): Promise<void>;
+  getProfile(userId: string): Promise<LineProfile | null>;
 }
 
 export interface LineWebhookBody {
