@@ -15,7 +15,7 @@ const DAY_KEYS = Object.keys(DAY_LABELS) as DayKey[];
 
 const DAY_MINUTES = 24 * 60;
 
-export function buildSystemPrompt(settings: ShopConfig): string {
+export function buildSystemPrompt(settings: ShopConfig, customerName?: string | null): string {
   const now = new Date().toLocaleString('zh-TW', { timeZone: timeConfig.timezone });
 
   const systemPrompt = `${settings.instructions}
@@ -24,8 +24,10 @@ ${formatServices(settings.services)}
 
 ${formatBusinessHours(settings.businessHours)}
 
-目前時間${now}`;
+${customerName ? '目前對話的顧客: ' + customerName : ''}
+目前時間: ${now}`;
 
+  // console.log(systemPrompt);
   return systemPrompt;
 }
 

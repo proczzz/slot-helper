@@ -20,8 +20,12 @@ export interface UserRepository {
 
 export interface CustomerRepository {
   findById(id: string): Promise<Customer | null>;
-  insert(customer: Customer): Promise<void>;
-  updateProfile(id: string, name: string | null, pictureUrl: string | null): Promise<void>;
+  upsertProfile(customer: {
+    id: string;
+    channel: string;
+    name: string | null;
+    pictureUrl: string | null;
+  }): Promise<void>;
   updateDisplayName(id: string, displayName: string | null): Promise<void>;
   updateLastMessage(id: string, message: string, timestamp: number): Promise<void>;
 }

@@ -1,18 +1,20 @@
 import type { LanguageModel } from 'ai';
-import type { AdminAuth } from '../admin/auth.ts';
-import { createAdminAuth } from '../admin/auth.ts';
 import { createLanguageModel } from '../adapter/ai/index.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
-import type { ShopConfig } from '../core/shop-config.ts';
-import type { Database } from '../db/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
+import type { AdminAuth } from '../admin/auth.ts';
+import { createAdminAuth } from '../admin/auth.ts';
+import type { ShopConfig } from '../core/shop-config.ts';
+import type { Database } from '../db/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
+import { createCustomerRepository } from '../repository/customer-repository.ts';
 import type {
   ConfigRepository,
   ConversationRepository,
+  CustomerRepository,
   UserRepository,
 } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
@@ -41,6 +43,7 @@ export interface Services {
   shopConfig: ShopConfig; // 營業時間、部分提示詞
   conversationRepository: ConversationRepository;
   configRepository: ConfigRepository;
+  customerRepository: CustomerRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
   adminAuth: AdminAuth; // 身分驗證模組
@@ -49,17 +52,22 @@ export interface Services {
 export async function createServices(database: Database): Promise<Services> {
   const configRepository = createConfigRepository(database);
   const userRepository = createUserRepository(database);
+  const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
   return {
     ...(await getSharedProviders(configRepository, userRepository)),
     configRepository,
+    customerRepository,
     conversationRepository,
   };
 }
 
 // 扣掉綁 request 的兩個 repository，其餘只由設定字串建出來，可以跨 request 重用
-type SharedProviders = Omit<Services, 'configRepository' | 'conversationRepository'>;
+type SharedProviders = Omit<
+  Services,
+  'configRepository' | 'conversationRepository' | 'customerRepository'
+>;
 
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
 let cachedProviders: SharedProviders | undefined;

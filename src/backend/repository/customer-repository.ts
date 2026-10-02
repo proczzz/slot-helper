@@ -34,26 +34,14 @@ export function createCustomerRepository(database: Database): CustomerRepository
       return rows[0] ?? null;
     },
 
-    async insert(customer) {
+    // name 與 pictureUrl 傳 null 時保留原值，避免渠道暫時查不到資料就把舊的蓋掉
+    async upsertProfile({ id, channel, name, pictureUrl }) {
       await database.execute({
-        sql: `INSERT INTO customers (id, channel, name, display_name, picture_url, last_message, last_message_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        params: [
-          customer.id,
-          customer.channel,
-          customer.name,
-          customer.displayName,
-          customer.pictureUrl,
-          customer.lastMessage,
-          customer.lastMessageAt,
-        ],
-      });
-    },
-
-    async updateProfile(id, name, pictureUrl) {
-      await database.execute({
-        sql: 'UPDATE customers SET name = ?, picture_url = ? WHERE id = ?',
-        params: [name, pictureUrl, id],
+        sql: `INSERT INTO customers (id, channel, name, picture_url) VALUES (?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                name = COALESCE(excluded.name, name),
+                picture_url = COALESCE(excluded.picture_url, picture_url)`,
+        params: [id, channel, name, pictureUrl],
       });
     },
 

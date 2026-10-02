@@ -11,6 +11,7 @@ const HISTORY_LIMIT = 40;
 
 export async function handleChat(
   customerId: string,
+  customerName: string | null,
   message: string,
   model: LanguageModel,
   shopConfig: ShopConfig,
@@ -27,7 +28,7 @@ export async function handleChat(
   // 實際呼叫 llm
   const result = await generateText({
     model,
-    system: buildSystemPrompt(shopConfig),
+    system: buildSystemPrompt(shopConfig, customerName),
     messages,
     tools: schedulingProvider ? createSchedulingTools(schedulingProvider, customerId) : undefined,
     stopWhen: stepCountIs(8),

@@ -10,3 +10,10 @@ export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export interface ChatResponse {
   reply: string;
 }
+
+export const TestCustomerSchema = z.object({
+  id: z.string().min(1, '請輸入識別碼'),
+  name: z.string().min(1, '請輸入名稱'),
+});
+
+export type TestCustomerRequest = z.infer<typeof TestCustomerSchema>;
