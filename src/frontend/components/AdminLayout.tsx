@@ -4,6 +4,7 @@ import { logout } from '../lib/admin.ts';
 
 const MENU = [
   { to: '/', label: '總覽', end: true },
+  { to: '/conversations', label: '對話紀錄' },
   { to: '/settings/shop', label: '店家資訊' },
   { to: '/settings/ai', label: 'AI 模型' },
   { to: '/settings/calendar', label: 'Google 日曆' },

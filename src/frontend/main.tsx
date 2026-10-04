@@ -11,6 +11,7 @@ import { LineSettingsPage } from './pages/LineSettingPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { ShopSettingsPage } from './pages/ShopSettingsPage.tsx';
 import './styles.css';
+import { ConversationsPage } from './pages/ConversationsPage.tsx';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route element={<RequireAuth />}>
           <Route element={<AdminLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/conversations" element={<ConversationsPage />} />
             <Route path="/settings/shop" element={<ShopSettingsPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/settings/calendar" element={<CalendarSettingsPage />} />

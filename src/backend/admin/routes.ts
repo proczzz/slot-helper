@@ -105,11 +105,7 @@ adminRoutes.get('/customers', async (c) => {
   const { customerRepository } = c.var.services;
   const before = c.req.query('before');
 
-  return c.json(
-    jsend.success(
-      await customerRepository.list(before ? Number(before) : null, 20),
-    ),
-  );
+  return c.json(jsend.success(await customerRepository.list(before ? Number(before) : null, 20)));
 });
 
 adminRoutes.get('/customers/:id/messages', async (c) => {
@@ -119,11 +115,7 @@ adminRoutes.get('/customers/:id/messages', async (c) => {
 
   return c.json(
     jsend.success(
-      await conversationRepository.listMessages(
-        id,
-        before ? Number(before) : null,
-        50,
-      ),
+      await conversationRepository.listMessages(id, before ? Number(before) : null, 50),
     ),
   );
 });

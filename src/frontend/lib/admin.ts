@@ -131,6 +131,45 @@ export async function listModels(provider: string, apiKey: string): Promise<stri
   return body.data ?? [];
 }
 
+export interface Customer {
+  id: string;
+  channel: string;
+  name: string | null;
+  displayName: string | null;
+  pictureUrl: string | null;
+  lastMessage: string | null;
+  lastMessageAt: number | null;
+}
+
+export interface Message {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+export async function listCustomers(before: number | null): Promise<Customer[]> {
+  const query = before === null ? '' : `?before=${before}`;
+  const response = await request(`/api/admin/customers${query}`);
+  const body = (await response.json()) as JSendBody<Customer[]>;
+  if (body.status !== 'success') throw new Error('讀取顧客清單失敗');
+  return body.data ?? [];
+}
+
+export async function listMessages(customerId: string, before: number | null): Promise<Message[]> {
+  const query = before === null ? '' : `?before=${before}`;
+  const response = await request(
+    `/api/admin/customers/${encodeURIComponent(customerId)}/messages${query}`,
+  );
+  const body = (await response.json()) as JSendBody<Message[]>;
+  if (body.status !== 'success') throw new Error('讀取對話紀錄失敗');
+  return body.data ?? [];
+}
+
+export function customerDisplayName(customer: Customer): string {
+  return customer.displayName || customer.name || customer.id;
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, init);
   if (response.status === 401) {
