@@ -3,6 +3,7 @@ import z from 'zod';
 import type {
   Event,
   EventCriteria,
+  EventLabel,
   NewEvent,
   SchedulingProviderDefinition,
   TimePeriod,
@@ -18,13 +19,6 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FREEBUSY_URL = 'https://www.googleapis.com/calendar/v3/freeBusy';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 
-// 統一處理 fetch 回應失敗的情況
-async function assertOk(response: Response, action: string): Promise<void> {
-  if (response.ok) return;
-  const body = (await response.text()).replace(/\s+/g, ' ').trim();
-  throw new Error(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
-}
-
 export const googleCalendarProvider: SchedulingProviderDefinition = {
   name: 'google-calendar',
 
@@ -36,6 +30,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
     const privateKey = parsed.data.privateKey.replace(/\\n/g, '\n');
     // 目前只用第一本日曆,多本之後再做
     const calendarId = calendars[0]!.id;
+    const calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`;
     const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
 
     let cachedToken: { accessToken: string; expiresAt: number } | null = null;
@@ -172,6 +167,28 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         };
       },
 
+      // 標籤定義在日曆上，每本日曆各自一組
+      async getLabels(): Promise<EventLabel[]> {
+        const accessToken = await getAccessToken();
+        const response = await fetch(calendarUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        await assertOk(response, 'get calendar');
+
+        const data = (await response.json()) as {
+          labelProperties?: {
+            eventLabels?: { id: string; name?: string; backgroundColor: string }[];
+          };
+        };
+
+        return (data.labelProperties?.eventLabels ?? []).map((label) => ({
+          id: label.id,
+          name: label.name ?? '',
+          color: label.backgroundColor,
+        }));
+      },
+
       // 在日曆上建立一筆事件
       async createEvent(event: NewEvent): Promise<{ eventId: string }> {
         const accessToken = await getAccessToken();
@@ -222,3 +239,10 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
     };
   },
 };
+
+// 統一處理 fetch 回應失敗的情況
+async function assertOk(response: Response, action: string): Promise<void> {
+  if (response.ok) return;
+  const body = (await response.text()).replace(/\s+/g, ' ').trim();
+  throw new Error(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
+}

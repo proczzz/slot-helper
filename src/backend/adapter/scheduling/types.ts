@@ -26,10 +26,18 @@ export interface EventCriteria {
   limit?: number;
 }
 
+// 事件的標籤
+export interface EventLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface SchedulingProvider {
   getBusyPeriods(range: TimePeriod): Promise<TimePeriod[]>;
   getEvents(criteria: EventCriteria): Promise<Event[]>;
   getEvent(eventId: string): Promise<Event>;
+  getLabels(): Promise<EventLabel[]>;
   createEvent(event: NewEvent): Promise<{ eventId: string }>;
   updateEvent(eventId: string, event: NewEvent): Promise<void>;
   deleteEvent(eventId: string): Promise<void>;
