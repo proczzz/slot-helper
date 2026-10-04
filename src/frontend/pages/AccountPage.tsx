@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { changePassword } from '../lib/admin.ts';
 
@@ -5,30 +6,26 @@ export function AccountPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
 
+  const save = useMutation({
+    // changePassword 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
+    mutationFn: async (next: { currentPassword: string; newPassword: string }) => {
+      const failure = await changePassword(next.currentPassword, next.newPassword);
+      if (failure) throw new Error(failure);
+    },
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    },
+  });
+
+  // 成功或失敗的提示顯示三秒,reset 會把 mutation 退回 idle
   useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 3000);
+    if (save.isIdle || save.isPending) return;
+    const timer = setTimeout(() => save.reset(), 3000);
     return () => clearTimeout(timer);
-  }, [message]);
-
-  async function submit() {
-    setSaving(true);
-    const message = await changePassword(currentPassword, newPassword);
-    setSaving(false);
-
-    if (message) {
-      setMessage(message);
-      return;
-    }
-
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setMessage('密碼已更新');
-  }
+  }, [save.isSuccess, save.isError, save.reset]);
 
   const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
   const canSubmit =
@@ -43,7 +40,7 @@ export function AccountPage() {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void submit();
+            save.mutate({ currentPassword, newPassword });
           }}
         >
           <fieldset className="fieldset">
@@ -81,15 +78,21 @@ export function AccountPage() {
             {mismatch && <p className="label text-error">兩次輸入的密碼不一致</p>}
           </fieldset>
 
-          <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
-            {saving && <span className="loading loading-spinner" />}
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || !canSubmit}>
+            {save.isPending && <span className="loading loading-spinner" />}
             更新密碼
           </button>
         </form>
 
-        {message && (
+        {save.isSuccess && (
           <div className="toast toast-end">
-            <div className="alert">{message}</div>
+            <div className="alert alert-success">密碼已更新</div>
+          </div>
+        )}
+
+        {save.isError && (
+          <div className="toast toast-end">
+            <div className="alert alert-error">{save.error.message}</div>
           </div>
         )}
       </div>
