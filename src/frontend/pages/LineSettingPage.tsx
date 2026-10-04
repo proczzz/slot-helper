@@ -1,43 +1,61 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { getSection, saveSection, type LineConfig } from '../lib/admin.ts';
 
+const EMPTY: LineConfig = { channelSecret: '', accessToken: '' };
+
 export function LineSettingsPage() {
-  const [channelSecret, setChannelSecret] = useState('');
-  const [accessToken, setAccessToken] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ['config', 'line'],
+    queryFn: () => getSection<LineConfig>('line'),
+  });
 
-  const webhookUrl = `${window.location.origin}/line/webhook`;
-
-  useEffect(() => {
-    getSection<LineConfig>('line').then((config) => {
-      setChannelSecret(config?.channelSecret ?? '');
-      setAccessToken(config?.accessToken ?? '');
-      setLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 3000);
-    return () => clearTimeout(timer);
-  }, [message]);
-
-  async function submit() {
-    setSaving(true);
-    const error = await saveSection('line', { channelSecret, accessToken });
-    setSaving(false);
-    setMessage(error ?? '已儲存');
-  }
-
-  if (loading) {
+  if (isPending) {
     return (
       <div className="grid place-items-center p-12">
         <span className="loading loading-spinner loading-lg" />
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="alert alert-error max-w-2xl">
+        <span>{error.message}</span>
+      </div>
+    );
+  }
+
+  // 資料到齊才掛載表單,初始值直接交給 useState,不需要再用 useEffect 同步
+  return <LineForm config={data ?? EMPTY} />;
+}
+
+function LineForm({ config }: { config: LineConfig }) {
+  const [channelSecret, setChannelSecret] = useState(config.channelSecret);
+  const [accessToken, setAccessToken] = useState(config.accessToken);
+  const [message, setMessage] = useState('');
+  const queryClient = useQueryClient();
+
+  const webhookUrl = `${window.location.origin}/line/webhook`;
+
+  const save = useMutation({
+    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 onError
+    mutationFn: async () => {
+      const failure = await saveSection('line', { channelSecret, accessToken });
+      if (failure) throw new Error(failure);
+    },
+    onSuccess: () => {
+      setMessage('已儲存');
+      void queryClient.invalidateQueries({ queryKey: ['config', 'line'] });
+    },
+    onError: (saveError) => setMessage(saveError.message),
+  });
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -63,7 +81,7 @@ export function LineSettingsPage() {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void submit();
+            save.mutate();
           }}
         >
           <fieldset className="fieldset">
@@ -90,9 +108,9 @@ export function LineSettingsPage() {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={saving || !channelSecret || !accessToken}
+            disabled={save.isPending || !channelSecret || !accessToken}
           >
-            {saving && <span className="loading loading-spinner" />}
+            {save.isPending && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
@@ -12,6 +13,16 @@ import { LoginPage } from './pages/LoginPage.tsx';
 import { ShopSettingsPage } from './pages/ShopSettingsPage.tsx';
 import './styles.css';
 import { ConversationsPage } from './pages/ConversationsPage.tsx';
+
+// 後台讀的是設定檔,只有使用者自己送出才會變,所以快取不過期,一律靠 invalidateQueries 失效
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      staleTime: Infinity,
+    },
+  },
+});
 
 function App() {
   return (
@@ -36,6 +47,8 @@ function App() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   </StrictMode>,
 );
