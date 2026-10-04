@@ -69,9 +69,10 @@ export interface Service {
   name: string;
   minutes: number;
   price: number;
+  labelId: string;
 }
 
-export interface ShopSettings {
+export interface ShopConfig {
   instructions: string;
   businessHours: BusinessHours;
   services: Service[];
@@ -103,6 +104,19 @@ export async function changePassword(
 
   if (response.ok) return null;
   return toErrorMessage(await response.json());
+}
+
+export interface EventLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export async function getCalendarLabels(): Promise<EventLabel[]> {
+  const response = await request('/api/admin/calendar/labels');
+  const body = (await response.json()) as JSendBody<EventLabel[]>;
+  if (body.status !== 'success') throw new Error('讀取日曆標籤失敗');
+  return body.data ?? [];
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {

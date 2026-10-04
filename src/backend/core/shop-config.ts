@@ -21,6 +21,7 @@ export const ShopConfigSchema = z.object({
         name: z.string().min(1, '請輸入服務名稱'),
         minutes: z.number().int().positive('所需時間必須大於 0'),
         price: z.number().int().nonnegative('價格不能是負數'),
+        labelId: z.string().default(''),
       }),
     )
     .default([]),

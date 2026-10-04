@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
+  getCalendarLabels,
   getSection,
   saveSection,
   type BusinessHours,
   type DayKey,
+  type EventLabel,
   type Period,
   type Service,
-  type ShopSettings,
+  type ShopConfig,
 } from '../lib/admin.ts';
 
 const DAYS = [
@@ -89,13 +91,15 @@ export function ShopSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [labels, setLabels] = useState<EventLabel[]>([]);
 
   useEffect(() => {
-    getSection<ShopSettings>('shop')
-      .then((settings) => {
+    Promise.all([getSection<ShopConfig>('shop'), getCalendarLabels()])
+      .then(([settings, labelList]) => {
         setInstructions(settings?.instructions ?? '');
         setHours({ ...EMPTY_HOURS, ...(settings?.businessHours ?? {}) });
         setServices(settings?.services ?? []);
+        setLabels(labelList);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -133,13 +137,14 @@ export function ShopSettingsPage() {
   }
 
   function addService() {
-    setServices([...services, { name: '', minutes: 60, price: 0 }]);
+    setServices([...services, { name: '', minutes: 60, price: 0, labelId: '' }]);
   }
 
   function changeService(index: number, field: keyof Service, value: string) {
+    const isNumber = field === 'minutes' || field === 'price';
     setServices(
       services.map((service, i) =>
-        i === index ? { ...service, [field]: field === 'name' ? value : Number(value) } : service,
+        i === index ? { ...service, [field]: isNumber ? Number(value) : value } : service,
       ),
     );
   }
@@ -246,6 +251,15 @@ export function ShopSettingsPage() {
                   value={service.price}
                   onChange={(event) => changeService(index, 'price', event.target.value)}
                   min={0}
+                />
+              </fieldset>
+
+              <fieldset className="fieldset w-40">
+                <legend className="fieldset-legend">日曆標籤</legend>
+                <LabelPicker
+                  labels={labels}
+                  value={service.labelId}
+                  onChange={(labelId) => changeService(index, 'labelId', labelId)}
                 />
               </fieldset>
 
@@ -360,5 +374,56 @@ export function ShopSettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+
+function LabelPicker({
+  labels,
+  value,
+  onChange,
+}: {
+  labels: EventLabel[];
+  value: string;
+  onChange: (labelId: string) => void;
+}) {
+  const current = labels.find((label) => label.id === value);
+
+  return (
+    <div className="dropdown w-full">
+      <div tabIndex={0} role="button" className="btn btn-block justify-start font-normal">
+        {current ? <LabelOption label={current} /> : '不指定'}
+      </div>
+
+      <ul
+        tabIndex={0}
+        className="dropdown-content menu z-10 max-h-64 w-52 flex-nowrap overflow-y-auto rounded-box bg-base-100 p-2 shadow"
+      >
+        <li>
+          <button type="button" onClick={() => onChange('')}>
+            不指定
+          </button>
+        </li>
+        {labels.map((label) => (
+          <li key={label.id}>
+            <button type="button" onClick={() => onChange(label.id)}>
+              <LabelOption label={label} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LabelOption({ label }: { label: EventLabel }) {
+  return (
+    <>
+      <span
+        className="inline-block size-3 shrink-0 rounded-full"
+        style={{ backgroundColor: label.color }}
+      />
+      <span className="truncate">{label.name}</span>
+    </>
   );
 }

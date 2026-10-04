@@ -87,4 +87,11 @@ adminRoutes.put('/config/:section', async (c) => {
   return c.json(jsend.success(null));
 });
 
+adminRoutes.get('/calendar/labels', async (c) => {
+  const { schedulingProvider } = c.var.services;
+  if (!schedulingProvider) return c.json(jsend.success([]));
+
+  return c.json(jsend.success(await schedulingProvider.getLabels()));
+});
+
 export { adminRoutes };
