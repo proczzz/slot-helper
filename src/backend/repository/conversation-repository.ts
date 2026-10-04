@@ -1,5 +1,5 @@
-import type { Message } from '../model/entity/message.ts';
 import type { Database, Statement } from '../db/types.ts';
+import type { Message } from '../model/entity/message.ts';
 import type { ConversationRepository } from './types.ts';
 
 // !!! 內容需與 migrations/000_create_messages_table.sql 保持一致
@@ -29,6 +29,15 @@ export function createConversationRepository(database: Database): ConversationRe
         params: [sessionId, limit],
       });
       return rows.reverse();
+    },
+    // 由新到舊，before 是上一批最後一筆的 id
+    async listMessages(sessionId, before, limit) {
+      return database.query<Message>({
+        sql: `SELECT id, role, content, timestamp FROM messages
+              WHERE session_id = ? AND id < ?
+              ORDER BY id DESC LIMIT ?`,
+        params: [sessionId, before ?? Number.MAX_SAFE_INTEGER, limit],
+      });
     },
 
     async appendMessages(sessionId, messages) {

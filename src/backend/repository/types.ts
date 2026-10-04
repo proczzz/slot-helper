@@ -20,6 +20,7 @@ export interface UserRepository {
 
 export interface CustomerRepository {
   findById(id: string): Promise<Customer | null>;
+  list(before: number | null, limit: number): Promise<Customer[]>;
   upsertProfile(customer: {
     id: string;
     channel: string;
@@ -32,5 +33,6 @@ export interface CustomerRepository {
 
 export interface ConversationRepository {
   getMessages(sessionId: string, limit: number): Promise<Message[]>;
+  listMessages(sessionId: string, before: number | null, limit: number): Promise<Message[]>;
   appendMessages(sessionId: string, messages: Message[]): Promise<void>;
 }

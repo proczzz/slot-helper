@@ -9,3 +9,4 @@ CREATE TABLE IF NOT EXISTS customers (
   last_message TEXT,
   last_message_at INTEGER
 );
+CREATE INDEX IF NOT EXISTS idx_customers_last_message_at ON customers(last_message_at DESC);

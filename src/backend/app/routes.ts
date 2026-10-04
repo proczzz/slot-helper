@@ -45,6 +45,9 @@ routes.post('/api/chat', async (c) => {
     conversationRepository,
     schedulingProvider,
   );
+
+  await customerRepository.updateLastMessage(id, message, Date.now());
+
   return c.json(jsend.success(result));
 });
 

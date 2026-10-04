@@ -101,4 +101,31 @@ adminRoutes.get('/calendar/labels', async (c) => {
   return c.json(jsend.success(await schedulingProvider.getLabels()));
 });
 
+adminRoutes.get('/customers', async (c) => {
+  const { customerRepository } = c.var.services;
+  const before = c.req.query('before');
+
+  return c.json(
+    jsend.success(
+      await customerRepository.list(before ? Number(before) : null, 20),
+    ),
+  );
+});
+
+adminRoutes.get('/customers/:id/messages', async (c) => {
+  const { conversationRepository } = c.var.services;
+  const id = decodeURIComponent(c.req.param('id'));
+  const before = c.req.query('before');
+
+  return c.json(
+    jsend.success(
+      await conversationRepository.listMessages(
+        id,
+        before ? Number(before) : null,
+        50,
+      ),
+    ),
+  );
+});
+
 export { adminRoutes };

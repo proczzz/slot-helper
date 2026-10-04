@@ -70,6 +70,7 @@ lineRoutes.post('/webhook', async (c) => {
         schedulingProvider,
       );
 
+      await customerRepository.updateLastMessage(id, event.message!.text!, Date.now());
       await client.replyText(replyToken, result.reply || FALLBACK_REPLY);
     } catch (error) {
       console.error('處理 LINE 訊息失敗:', error);
