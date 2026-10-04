@@ -33,29 +33,27 @@ export function LineSettingsPage() {
 function LineForm({ config }: { config: LineConfig }) {
   const [channelSecret, setChannelSecret] = useState(config.channelSecret);
   const [accessToken, setAccessToken] = useState(config.accessToken);
-  const [message, setMessage] = useState('');
   const queryClient = useQueryClient();
 
   const webhookUrl = `${window.location.origin}/line/webhook`;
 
   const save = useMutation({
     // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 onError
-    mutationFn: async () => {
-      const failure = await saveSection('line', { channelSecret, accessToken });
+    mutationFn: async (next: LineConfig) => {
+      const failure = await saveSection('line', next);
       if (failure) throw new Error(failure);
     },
     onSuccess: () => {
-      setMessage('已儲存');
       void queryClient.invalidateQueries({ queryKey: ['config', 'line'] });
     },
-    onError: (saveError) => setMessage(saveError.message),
   });
 
+  // 成功或失敗的提示顯示三秒,reset 會把 mutation 退回 idle
   useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 3000);
+    if (save.isIdle || save.isPending) return;
+    const timer = setTimeout(() => save.reset(), 3000);
     return () => clearTimeout(timer);
-  }, [message]);
+  }, [save.isSuccess, save.isError, save.reset]);
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -81,7 +79,7 @@ function LineForm({ config }: { config: LineConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate();
+            save.mutate({ channelSecret, accessToken });
           }}
         >
           <fieldset className="fieldset">
@@ -115,9 +113,15 @@ function LineForm({ config }: { config: LineConfig }) {
           </button>
         </form>
 
-        {message && (
+        {save.isSuccess && (
           <div className="toast toast-end">
-            <div className="alert">{message}</div>
+            <div className="alert alert-success">已儲存</div>
+          </div>
+        )}
+
+        {save.isError && (
+          <div className="toast toast-end">
+            <div className="alert alert-error">{save.error.message}</div>
           </div>
         )}
       </div>
