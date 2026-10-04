@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSection, saveSection } from '../lib/admin.ts';
+import { getSection, listModels, saveSection } from '../lib/admin.ts';
 
 const PROVIDERS = ['deepseek', 'anthropic'];
 
@@ -17,6 +17,8 @@ export function AiSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [models, setModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   useEffect(() => {
     getSection<AiKey[]>('ai').then((keys) => {
@@ -33,6 +35,19 @@ export function AiSettingsPage() {
 
   function update(field: keyof AiKey, value: string) {
     setKey({ ...key, [field]: value });
+  }
+
+  async function loadModels() {
+    setLoadingModels(true);
+    setMessage('');
+    try {
+      setModels(await listModels(key.provider, key.apiKey));
+    } catch (error) {
+      setModels([]);
+      setMessage(error instanceof Error ? error.message : '無法取得模型清單');
+    } finally {
+      setLoadingModels(false);
+    }
   }
 
   async function submit() {
@@ -103,13 +118,35 @@ export function AiSettingsPage() {
 
           <fieldset className="fieldset">
             <legend className="fieldset-legend">模型</legend>
-            <input
-              type="text"
-              className="input w-full"
-              value={key.model}
-              onChange={(event) => update('model', event.target.value)}
-              placeholder="deepseek-chat"
-            />
+            <div className="join w-full">
+              <input
+                type="text"
+                className="input join-item w-full"
+                value={key.model}
+                onChange={(event) => update('model', event.target.value)}
+                placeholder="deepseek-chat"
+                list="model-options"
+              />
+              <button
+                type="button"
+                className="btn join-item"
+                onClick={() => void loadModels()}
+                disabled={loadingModels || !key.provider || !key.apiKey}
+              >
+                {loadingModels && <span className="loading loading-spinner loading-xs" />}
+                載入
+              </button>
+            </div>
+
+            <datalist id="model-options">
+              {models.map((model) => (
+                <option key={model} value={model} />
+              ))}
+            </datalist>
+
+            {models.length > 0 && (
+              <p className="label">共 {models.length} 個模型，點輸入框可以選擇</p>
+            )}
           </fieldset>
 
           <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>

@@ -119,6 +119,18 @@ export async function getCalendarLabels(): Promise<EventLabel[]> {
   return body.data ?? [];
 }
 
+export async function listModels(provider: string, apiKey: string): Promise<string[]> {
+  const response = await request('/api/admin/ai/models', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, apiKey }),
+  });
+
+  const body = (await response.json()) as JSendBody<string[]>;
+  if (body.status !== 'success') throw new Error(toErrorMessage(body));
+  return body.data ?? [];
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, init);
   if (response.status === 401) {
