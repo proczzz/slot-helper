@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import type { SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
 import { timeConfig } from './locale.ts';
+import type { Service } from './shop-config.ts';
 
 const MAX_APPOINTMENTS = 20;
 
@@ -14,7 +15,11 @@ const TimeRangeSchema = z.object({
   end: LocalTimeSchema.describe('結束時間，格式 YYYY-MM-DDTHH:mm，例如 2026-09-22T16:00'),
 });
 
-export function createSchedulingTools(schedulingProvider: SchedulingProvider, customerId?: string) {
+export function createSchedulingTools(
+  schedulingProvider: SchedulingProvider,
+  customerId: string,
+  services: Service[],
+) {
   // 取消與改期都必須確認這筆預約屬於當前顧客
   async function requireOwnEvent(eventId: string) {
     const event = await schedulingProvider.getEvent(eventId);
@@ -22,6 +27,10 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
       throw new Error('這筆預約不屬於這位顧客');
     }
     return event;
+  }
+  // AI 可能填不在清單裡的名稱,查不到就不上色
+  function labelIdOf(service: string): string | undefined {
+    return services.find((s) => s.name === service)?.labelId || undefined;
   }
 
   return {
@@ -35,11 +44,13 @@ export function createSchedulingTools(schedulingProvider: SchedulingProvider, cu
       description: '在日曆上建立一筆新的預約',
       inputSchema: TimeRangeSchema.extend({
         summary: z.string().describe('預約標題，例如顧客姓名與服務項目'),
+        service: z.string().describe('服務項目名稱，必須與服務清單中的名稱完全相同'),
       }),
-      execute: async ({ summary, ...range }) =>
+      execute: async ({ summary, service, ...range }) =>
         schedulingProvider.createEvent({
           summary,
           description: customerId,
+          labelId: labelIdOf(service),
           ...toAbsoluteRange(range),
         }),
     }),

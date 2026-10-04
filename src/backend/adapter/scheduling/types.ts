@@ -9,6 +9,7 @@ export interface TimePeriod {
 export interface NewEvent extends TimePeriod {
   summary: string;
   description?: string;
+  labelId?: string;
 }
 
 // 已存在日曆的

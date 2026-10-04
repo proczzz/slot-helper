@@ -192,12 +192,13 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
       // 在日曆上建立一筆事件
       async createEvent(event: NewEvent): Promise<{ eventId: string }> {
         const accessToken = await getAccessToken();
-        const response = await fetch(eventsUrl, {
+        const response = await fetch(`${eventsUrl}?eventLabelVersion=1`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             summary: event.summary,
             description: event.description,
+            eventLabelId: event.labelId,
             start: { dateTime: event.start },
             end: { dateTime: event.end },
           }),
