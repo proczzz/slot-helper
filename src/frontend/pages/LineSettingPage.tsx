@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { getSection, saveSection, type LineConfig } from '../lib/admin.ts';
 
 const EMPTY: LineConfig = { channelSecret: '', accessToken: '' };
@@ -48,12 +49,7 @@ function LineForm({ config }: { config: LineConfig }) {
     },
   });
 
-  // 成功或失敗的提示顯示三秒,reset 會把 mutation 退回 idle
-  useEffect(() => {
-    if (save.isIdle || save.isPending) return;
-    const timer = setTimeout(() => save.reset(), 3000);
-    return () => clearTimeout(timer);
-  }, [save.isSuccess, save.isError, save.reset]);
+  useAutoReset(save);
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">

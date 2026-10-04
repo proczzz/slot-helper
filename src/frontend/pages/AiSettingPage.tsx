@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { getSection, listModels, saveSection, type AiKey } from '../lib/admin.ts';
 
 const PROVIDERS = ['deepseek', 'anthropic'];
@@ -53,12 +54,7 @@ function AiForm({ config }: { config: AiKey }) {
       listModels(input.provider, input.apiKey),
   });
 
-  // 成功或失敗的提示顯示三秒,reset 會把 mutation 退回 idle
-  useEffect(() => {
-    if (save.isIdle || save.isPending) return;
-    const timer = setTimeout(() => save.reset(), 3000);
-    return () => clearTimeout(timer);
-  }, [save.isSuccess, save.isError, save.reset]);
+  useAutoReset(save);
 
   function update(field: keyof AiKey, value: string) {
     setKey({ ...key, [field]: value });

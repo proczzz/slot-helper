@@ -55,12 +55,12 @@ export function createCustomerRepository(database: Database): CustomerRepository
     // name 與 pictureUrl 傳 null 時保留原值，避免渠道暫時查不到資料就把舊的蓋掉
     async upsertProfile({ id, channel, name, pictureUrl }) {
       await database.execute({
-      sql: `INSERT INTO customers (id, channel, name, picture_url, last_message_at)
+        sql: `INSERT INTO customers (id, channel, name, picture_url, last_message_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               name = COALESCE(excluded.name, name),
               picture_url = COALESCE(excluded.picture_url, picture_url)`,
-      params: [id, channel, name, pictureUrl, Date.now()], // 最後訊息先填入，測試帳號才看的到
+        params: [id, channel, name, pictureUrl, Date.now()], // 最後訊息先填入，測試帳號才看的到
       });
     },
 

@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { changePassword } from '../lib/admin.ts';
 
 export function AccountPage() {
@@ -20,12 +21,7 @@ export function AccountPage() {
     },
   });
 
-  // 成功或失敗的提示顯示三秒,reset 會把 mutation 退回 idle
-  useEffect(() => {
-    if (save.isIdle || save.isPending) return;
-    const timer = setTimeout(() => save.reset(), 3000);
-    return () => clearTimeout(timer);
-  }, [save.isSuccess, save.isError, save.reset]);
+  useAutoReset(save);
 
   const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
   const canSubmit =
