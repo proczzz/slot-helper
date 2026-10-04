@@ -77,14 +77,16 @@ export function createSchedulingTools(
         '更改一筆既有預約的時間，也可以同時更改服務項目。呼叫前先用 findMyAppointments 取得識別碼',
       inputSchema: TimeRangeSchema.extend({
         eventId: z.string().describe('要更改的預約識別碼'),
-        summary: z.string().optional().describe('新的預約標題，不更改服務項目時可以省略'),
+        summary: z.string().optional().describe('新的預約標題，不更改時可以省略'),
+        service: z.string().describe('服務項目名稱，必須與服務清單中的名稱完全相同'),
       }),
-      execute: async ({ eventId, summary, ...range }) => {
+      execute: async ({ eventId, summary, service, ...range }) => {
         const event = await requireOwnEvent(eventId);
 
         await schedulingProvider.updateEvent(eventId, {
           summary: summary ?? event.summary,
           description: event.description,
+          labelId: labelIdOf(service),
           ...toAbsoluteRange(range),
         });
         return { success: true };

@@ -213,16 +213,20 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
       // 整筆取代，未送出的欄位會被清空，所以呼叫端要給完整內容
       async updateEvent(eventId: string, event: NewEvent): Promise<void> {
         const accessToken = await getAccessToken();
-        const response = await fetch(`${eventsUrl}/${encodeURIComponent(eventId)}`, {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            summary: event.summary,
-            description: event.description,
-            start: { dateTime: event.start },
-            end: { dateTime: event.end },
-          }),
-        });
+        const response = await fetch(
+          `${eventsUrl}/${encodeURIComponent(eventId)}?eventLabelVersion=1`,
+          {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              summary: event.summary,
+              description: event.description,
+              eventLabelId: event.labelId,
+              start: { dateTime: event.start },
+              end: { dateTime: event.end },
+            }),
+          },
+        );
 
         await assertOk(response, 'update event');
       },
