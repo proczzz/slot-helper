@@ -170,6 +170,27 @@ export function customerDisplayName(customer: Customer): string {
   return customer.displayName || customer.name || customer.id;
 }
 
+export async function createTestCustomer(id: string, name: string): Promise<void> {
+  const response = await request('/api/admin/test-customers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, name }),
+  });
+  if (!response.ok) throw new Error(toErrorMessage(await response.json()));
+}
+
+export async function sendTestMessage(sessionId: string, message: string): Promise<string> {
+  const response = await request('/api/admin/test-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, message }),
+  });
+
+  const body = (await response.json()) as JSendBody<{ reply: string }>;
+  if (body.status !== 'success') throw new Error(toErrorMessage(body));
+  return body.data?.reply ?? '';
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, init);
   if (response.status === 401) {
