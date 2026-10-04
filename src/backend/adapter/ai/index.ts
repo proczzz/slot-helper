@@ -1,4 +1,5 @@
 import type { LanguageModel } from 'ai';
+import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
 import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
 import type { AiKey, LanguageModelProvider } from './types.ts';
@@ -18,4 +19,15 @@ export function createLanguageModel(keys: AiKey[]): LanguageModel | null {
 
   console.log(`使用AI供應商: ${key.provider}`);
   return provider.createModel(key.apiKey, key.model);
+}
+
+// 列出可用llm
+export async function listAvailableModels(provider: string, apiKey: string): Promise<string[]> {
+  const supported = getSupportedProviders();
+  if (!supported.includes(provider as Provider)) {
+    throw new Error(`llm-lister 尚未支援 ${provider}，請手動輸入模型名稱`);
+  }
+
+  const models = await listModels(provider as Provider, apiKey);
+  return models.map((model) => model.id);
 }

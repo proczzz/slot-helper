@@ -377,7 +377,6 @@ export function ShopSettingsPage() {
   );
 }
 
-
 function LabelPicker({
   labels,
   value,

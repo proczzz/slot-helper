@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { listAvailableModels } from '../adapter/ai/index.ts';
 import { SECTION_SCHEMAS } from '../app/config.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
+import { ListModelsSchema } from '../model/dto/ai.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
@@ -85,6 +87,11 @@ adminRoutes.put('/config/:section', async (c) => {
   clearCachedProviders();
 
   return c.json(jsend.success(null));
+});
+
+adminRoutes.post('/ai/models', async (c) => {
+  const { provider, apiKey } = ListModelsSchema.parse(await c.req.json());
+  return c.json(jsend.success(await listAvailableModels(provider, apiKey)));
 });
 
 adminRoutes.get('/calendar/labels', async (c) => {
