@@ -4,7 +4,9 @@ import { listAvailableModels } from '../adapter/ai/index.ts';
 import { SECTION_SCHEMAS } from '../app/config.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
+import { handleChat } from '../core/chat-service.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
+import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
@@ -118,6 +120,48 @@ adminRoutes.get('/customers/:id/messages', async (c) => {
       await conversationRepository.listMessages(id, before ? Number(before) : null, 50),
     ),
   );
+});
+
+const TEST_CHANNEL = 'test';
+// 建立或更新測試用的顧客
+adminRoutes.post('/test-customers', async (c) => {
+  const { customerRepository } = c.var.services;
+  const { id, name } = TestCustomerSchema.parse(await c.req.json());
+
+  await customerRepository.upsertProfile({
+    id: `${TEST_CHANNEL}:${id}`,
+    channel: TEST_CHANNEL,
+    name,
+    pictureUrl: null,
+  });
+
+  return c.json(jsend.success(null));
+});
+
+adminRoutes.post('/test-chat', async (c) => {
+  const { model, shopConfig, conversationRepository, customerRepository, schedulingProvider } =
+    c.var.services;
+  if (!model) return c.json(jsend.error('AI 尚未設定'), 503);
+
+  const { sessionId, message } = ChatRequestSchema.parse(await c.req.json());
+  const id = `${TEST_CHANNEL}:${sessionId}`;
+
+  const customer = await customerRepository.findById(id);
+  if (!customer) return c.body(null, 404);
+
+  const result = await handleChat(
+    id,
+    customer.name,
+    message,
+    model,
+    shopConfig,
+    conversationRepository,
+    schedulingProvider,
+  );
+
+  await customerRepository.updateLastMessage(id, message, Date.now());
+
+  return c.json(jsend.success(result));
 });
 
 export { adminRoutes };
