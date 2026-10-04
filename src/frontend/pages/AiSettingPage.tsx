@@ -1,68 +1,67 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { getSection, listModels, saveSection } from '../lib/admin.ts';
+import { getSection, listModels, saveSection, type AiKey } from '../lib/admin.ts';
 
 const PROVIDERS = ['deepseek', 'anthropic'];
-
-interface AiKey {
-  name: string;
-  provider: string;
-  apiKey: string;
-  model: string;
-}
 
 const EMPTY: AiKey = { name: '', provider: '', apiKey: '', model: '' };
 
 export function AiSettingsPage() {
-  const [key, setKey] = useState<AiKey>(EMPTY);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [models, setModels] = useState<string[]>([]);
-  const [loadingModels, setLoadingModels] = useState(false);
+  // 設定是陣列,但目前只用第一組,多組備援之後再做
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ['config', 'ai'],
+    queryFn: async () => (await getSection<AiKey[]>('ai'))?.[0] ?? EMPTY,
+  });
 
-  useEffect(() => {
-    getSection<AiKey[]>('ai').then((keys) => {
-      setKey(keys?.[0] ?? EMPTY);
-      setLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 3000);
-    return () => clearTimeout(timer);
-  }, [message]);
-
-  function update(field: keyof AiKey, value: string) {
-    setKey({ ...key, [field]: value });
-  }
-
-  async function loadModels() {
-    setLoadingModels(true);
-    setMessage('');
-    try {
-      setModels(await listModels(key.provider, key.apiKey));
-    } catch (error) {
-      setModels([]);
-      setMessage(error instanceof Error ? error.message : '無法取得模型清單');
-    } finally {
-      setLoadingModels(false);
-    }
-  }
-
-  async function submit() {
-    setSaving(true);
-    const error = await saveSection('ai', [key]);
-    setSaving(false);
-    setMessage(error ?? '已儲存');
-  }
-
-  if (loading) {
+  if (isPending) {
     return (
       <div className="grid place-items-center p-12">
         <span className="loading loading-spinner loading-lg" />
       </div>
     );
+  }
+
+  if (isError) {
+    return (
+      <div className="alert alert-error max-w-md">
+        <span>{error.message}</span>
+      </div>
+    );
+  }
+
+  return <AiForm config={data} />;
+}
+
+function AiForm({ config }: { config: AiKey }) {
+  const [key, setKey] = useState(config);
+  const queryClient = useQueryClient();
+
+  const save = useMutation({
+    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
+    mutationFn: async (next: AiKey) => {
+      const failure = await saveSection('ai', [next]);
+      if (failure) throw new Error(failure);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['config', 'ai'] });
+    },
+  });
+
+  // 要按按鈕才發生、而且得先填好 API key,所以是 mutation 不是 query
+  const models = useMutation({
+    mutationFn: (input: { provider: string; apiKey: string }) =>
+      listModels(input.provider, input.apiKey),
+  });
+
+  // 成功或失敗的提示顯示三秒,reset 會把 mutation 退回 idle
+  useEffect(() => {
+    if (save.isIdle || save.isPending) return;
+    const timer = setTimeout(() => save.reset(), 3000);
+    return () => clearTimeout(timer);
+  }, [save.isSuccess, save.isError, save.reset]);
+
+  function update(field: keyof AiKey, value: string) {
+    setKey({ ...key, [field]: value });
   }
 
   const canSubmit = key.name && key.provider && key.apiKey && key.model;
@@ -76,7 +75,7 @@ export function AiSettingsPage() {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void submit();
+            save.mutate(key);
           }}
         >
           <fieldset className="fieldset">
@@ -130,34 +129,42 @@ export function AiSettingsPage() {
               <button
                 type="button"
                 className="btn join-item"
-                onClick={() => void loadModels()}
-                disabled={loadingModels || !key.provider || !key.apiKey}
+                onClick={() => models.mutate({ provider: key.provider, apiKey: key.apiKey })}
+                disabled={models.isPending || !key.provider || !key.apiKey}
               >
-                {loadingModels && <span className="loading loading-spinner loading-xs" />}
+                {models.isPending && <span className="loading loading-spinner loading-xs" />}
                 載入
               </button>
             </div>
 
             <datalist id="model-options">
-              {models.map((model) => (
+              {models.data?.map((model) => (
                 <option key={model} value={model} />
               ))}
             </datalist>
 
-            {models.length > 0 && (
-              <p className="label">共 {models.length} 個模型，點輸入框可以選擇</p>
+            {models.isError && <p className="label text-error">{models.error.message}</p>}
+
+            {models.data && (
+              <p className="label">共 {models.data.length} 個模型，點輸入框可以選擇</p>
             )}
           </fieldset>
 
-          <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
-            {saving && <span className="loading loading-spinner" />}
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || !canSubmit}>
+            {save.isPending && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>
 
-        {message && (
+        {save.isSuccess && (
           <div className="toast toast-end">
-            <div className="alert">{message}</div>
+            <div className="alert alert-success">已儲存</div>
+          </div>
+        )}
+
+        {save.isError && (
+          <div className="toast toast-end">
+            <div className="alert alert-error">{save.error.message}</div>
           </div>
         )}
       </div>
