@@ -12,6 +12,12 @@ import {
   type ShopConfig,
 } from '../lib/admin.ts';
 import {
+  BROWSER_TIME_ZONE,
+  TIME_ZONES,
+  formatOffset,
+  isValidTimeZone,
+} from '../lib/time-zones.ts';
+import {
   EMPTY_HOURS,
   isOvernight,
   nextPeriod,
@@ -39,6 +45,7 @@ export function ShopSettingsPage() {
       const config = await getSection<ShopConfig>('shop');
       return {
         instructions: config?.instructions ?? '',
+        timeZone: config?.timeZone ?? BROWSER_TIME_ZONE,
         businessHours: { ...EMPTY_HOURS, ...(config?.businessHours ?? {}) },
         services: config?.services ?? [],
       } satisfies ShopConfig;
@@ -80,6 +87,7 @@ function ShopForm({
   labelsFailed: boolean;
 }) {
   const [instructions, setInstructions] = useState(config.instructions);
+  const [timeZone, setTimeZone] = useState(config.timeZone);
   const [hours, setHours] = useState(config.businessHours);
   const [services, setServices] = useState(config.services);
   const queryClient = useQueryClient();
@@ -136,7 +144,7 @@ function ShopForm({
   function submit() {
     const sorted = sortAll(hours);
     setHours(sorted);
-    save.mutate({ instructions, businessHours: sorted, services });
+    save.mutate({ instructions, timeZone, businessHours: sorted, services });
   }
 
   const errors = Object.fromEntries(
@@ -260,6 +268,46 @@ function ShopForm({
             沒有時段的日子視為公休。結束時間早於開始時間會自動視為次日。
           </p>
 
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">時區</legend>
+            <input
+              type="text"
+              className="input w-full max-w-xs"
+              value={timeZone}
+              onChange={(event) => setTimeZone(event.target.value)}
+              list="time-zone-options"
+              spellCheck={false}
+            />
+
+            <datalist id="time-zone-options">
+              {TIME_ZONES.map((zone) => (
+                <option key={zone} value={zone} />
+              ))}
+            </datalist>
+
+            {isValidTimeZone(timeZone) ? (
+              <p className="label">
+                目前 {formatOffset(timeZone)}。下方的營業時間、顧客說的時間都以這個時區為準
+              </p>
+            ) : (
+              <p className="label text-error">
+                不是有效的時區名稱。點輸入框可以搜尋，例如輸入「Taipei」
+              </p>
+            )}
+
+            {timeZone !== BROWSER_TIME_ZONE && (
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  onClick={() => setTimeZone(BROWSER_TIME_ZONE)}
+                >
+                  改用這台電腦的時區（{BROWSER_TIME_ZONE}）
+                </button>
+              </div>
+            )}
+          </fieldset>
+
           <div className="flex flex-col divide-y divide-base-200">
             {DAYS.map(({ key, label }) => {
               const periods = hours[key];
@@ -330,7 +378,11 @@ function ShopForm({
         </div>
       </div>
 
-      <button className="btn btn-primary" disabled={save.isPending || hasError} onClick={submit}>
+      <button
+        className="btn btn-primary"
+        disabled={save.isPending || hasError || !isValidTimeZone(timeZone)}
+        onClick={submit}
+      >
         {save.isPending && <span className="loading loading-spinner" />}
         儲存
       </button>

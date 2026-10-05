@@ -74,6 +74,7 @@ export interface Service {
 
 export interface ShopConfig {
   instructions: string;
+  timeZone: string;
   businessHours: BusinessHours;
   services: Service[];
 }
