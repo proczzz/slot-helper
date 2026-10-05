@@ -26,11 +26,13 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.56",
     "@ai-sdk/deepseek": "^3.0.47",
+    "@ai-sdk/google": "^4.0.87",
+    "@ai-sdk/openai": "^4.0.83",
     "@hono/node-server": "^2.1.1",
     "ai": "^7.0.105",
     "hono": "^4.13.8",
     "jose": "^6.2.12",
-    "llm-lister": "^0.1.0",
+    "llm-lister": "^0.2.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
