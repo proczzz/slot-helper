@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { NewCustomerModal } from '../components/NewCustomerModal.tsx';
 import {
-  createTestCustomer,
   customerDisplayName,
   listCustomers,
   listMessages,
   sendTestMessage,
-  type Customer,
   type Message,
 } from '../lib/admin.ts';
 
 const TEST_PREFIX = 'test:';
+
+// 後端 admin/routes.ts 寫死的每頁筆數。不足一頁就代表沒有下一頁了
+const CUSTOMERS_PAGE_SIZE = 20;
+const MESSAGES_PAGE_SIZE = 50;
 
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString('zh-TW', {
@@ -20,125 +24,84 @@ function formatTime(timestamp: number): string {
   });
 }
 
+// 捲到底就載下一批。只收真正需要的三個欄位
+interface Pageable {
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => unknown;
+}
+
+function onScrollNearBottom(event: React.UIEvent<HTMLDivElement>, query: Pageable) {
+  const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+  if (scrollHeight - scrollTop - clientHeight >= 80) return;
+  if (!query.hasNextPage || query.isFetchingNextPage) return;
+  query.fetchNextPage();
+}
+
 export function ConversationsPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customersDone, setCustomersDone] = useState(false);
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'line' | 'test'>('all');
-  const [showNewCustomer, setShowNewCustomer] = useState(false);
-
-  const [selected, setSelected] = useState<Customer | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [messagesDone, setMessagesDone] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const busy = useRef(false);
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    void loadCustomers(true);
-  }, []);
+  // 設定檔只有自己會改,對話紀錄顧客隨時會傳新訊息,所以不沿用全域的 staleTime: Infinity
+  const customers = useInfiniteQuery({
+    queryKey: ['customers'],
+    queryFn: ({ pageParam }) => listCustomers(pageParam),
+    initialPageParam: null as number | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.length < CUSTOMERS_PAGE_SIZE
+        ? undefined
+        : (lastPage[lastPage.length - 1]?.lastMessageAt ?? undefined),
+    staleTime: 0,
+  });
 
-  useEffect(() => {
-    if (!selected) return;
-    setMessages([]);
-    setMessagesDone(false);
+  const messages = useInfiniteQuery({
+    queryKey: ['messages', selectedId],
+    // enabled 擋住 null,這裡不會收到空的 selectedId
+    queryFn: ({ pageParam }) => listMessages(selectedId!, pageParam),
+    initialPageParam: null as number | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.length < MESSAGES_PAGE_SIZE
+        ? undefined
+        : (lastPage[lastPage.length - 1]?.id ?? undefined),
+    enabled: selectedId !== null,
+    staleTime: 0,
+  });
+
+  const send = useMutation({
+    mutationFn: (text: string) =>
+      sendTestMessage(selectedId!.slice(TEST_PREFIX.length), text),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['messages', selectedId] });
+      // 後端存完訊息會更新 last_message,左側清單要跟著重抓
+      void queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+
+  const customerList = customers.data?.pages.flat() ?? [];
+  const messageList = messages.data?.pages.flat() ?? [];
+  const selected = customerList.find((customer) => customer.id === selectedId) ?? null;
+  const loadError = customers.error ?? messages.error ?? send.error;
+
+  function select(customerId: string) {
+    setSelectedId(customerId);
     setInput('');
-    void loadMessages(selected.id, true);
-  }, [selected?.id]);
-
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(''), 3000);
-    return () => clearTimeout(timer);
-  }, [error]);
-
-  async function loadCustomers(reset: boolean) {
-    if (busy.current || (!reset && customersDone)) return;
-    busy.current = true;
-    setLoadingCustomers(true);
-
-    try {
-      const cursor = reset ? null : (customers[customers.length - 1]?.lastMessageAt ?? null);
-      const next = await listCustomers(cursor);
-      setCustomers((current) => (reset ? next : [...current, ...next]));
-      setCustomersDone(next.length === 0);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '載入失敗');
-    } finally {
-      busy.current = false;
-      setLoadingCustomers(false);
-    }
+    send.reset();
   }
 
-  async function loadMessages(customerId: string, reset: boolean) {
-    if (busy.current || (!reset && messagesDone)) return;
-    busy.current = true;
-    setLoadingMessages(true);
-
-    try {
-      // 訊息由新到舊載入，顯示時靠 flex-col-reverse 反轉
-      const cursor = reset ? null : (messages[messages.length - 1]?.id ?? null);
-      const next = await listMessages(customerId, cursor);
-      setMessages((current) => (reset ? next : [...current, ...next]));
-      setMessagesDone(next.length === 0);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : '載入失敗');
-    } finally {
-      busy.current = false;
-      setLoadingMessages(false);
-    }
-  }
-
-  async function send() {
-    if (!selected || !input.trim()) return;
-
+  function submitMessage() {
     const text = input.trim();
+    if (!text) return;
     setInput('');
-    setSending(true);
-
-    // 先顯示出去，等 AI 回覆後重新抓取真實資料
-    setMessages((current) => [
-      { id: Date.now(), role: 'user', content: text, timestamp: Date.now() },
-      ...current,
-    ]);
-
-    try {
-      await sendTestMessage(selected.id.slice(TEST_PREFIX.length), text);
-      await loadMessages(selected.id, true);
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : '傳送失敗');
-    } finally {
-      setSending(false);
-    }
+    send.mutate(text);
   }
-
-  // 捲到底就載入下一批
-  function onScroll(event: React.UIEvent<HTMLDivElement>, loadMore: () => void) {
-    const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 80) loadMore();
-  }
-
-  const visibleCustomers = customers.filter(
-    (customer) => filter === 'all' || customer.channel === filter,
-  );
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] gap-4">
       <aside className="flex w-72 shrink-0 flex-col overflow-hidden rounded-box bg-base-100 shadow-sm">
-        <div className="flex items-center gap-2 border-b border-base-200 p-3">
-          <select
-            className="select select-sm flex-1"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value as typeof filter)}
-          >
-            <option value="all">全部</option>
-            <option value="line">LINE</option>
-            <option value="test">測試</option>
-          </select>
-
+        <div className="flex items-center justify-between border-b border-base-200 p-3">
+          <span className="font-medium">顧客</span>
           <button
             type="button"
             className="btn btn-sm btn-square"
@@ -151,21 +114,21 @@ export function ConversationsPage() {
 
         <div
           className="flex-1 overflow-y-auto"
-          onScroll={(event) => onScroll(event, () => void loadCustomers(false))}
+          onScroll={(event) => onScrollNearBottom(event, customers)}
         >
-          {visibleCustomers.length === 0 && !loadingCustomers && (
+          {customerList.length === 0 && !customers.isPending && (
             <p className="p-4 text-sm text-base-content/50">目前沒有對話</p>
           )}
 
           <ul className="menu w-full gap-1 p-2">
-            {visibleCustomers.map((customer) => (
+            {customerList.map((customer) => (
               <li key={customer.id}>
                 <button
                   type="button"
                   className={`flex items-start gap-3 ${
-                    selected?.id === customer.id ? 'menu-active' : ''
+                    selectedId === customer.id ? 'menu-active' : ''
                   }`}
-                  onClick={() => setSelected(customer)}
+                  onClick={() => select(customer.id)}
                 >
                   <div className="avatar">
                     <div className="size-9 rounded-full bg-base-300">
@@ -186,7 +149,7 @@ export function ConversationsPage() {
             ))}
           </ul>
 
-          {loadingCustomers && (
+          {(customers.isPending || customers.isFetchingNextPage) && (
             <div className="flex justify-center p-4">
               <span className="loading loading-spinner loading-sm" />
             </div>
@@ -206,45 +169,45 @@ export function ConversationsPage() {
               <span className="badge badge-sm">{selected.channel}</span>
             </div>
 
+            {/* 訊息由新到舊載入，顯示時靠 flex-col-reverse 反轉，所以第一個子元素在最下面 */}
             <div
               className="flex flex-1 flex-col-reverse gap-3 overflow-y-auto p-4"
-              onScroll={(event) => onScroll(event, () => void loadMessages(selected.id, false))}
+              onScroll={(event) => onScrollNearBottom(event, messages)}
             >
-              {messages.map((message) => (
-                <div
+              {send.isPending && <Bubble role="user" content={send.variables ?? ''} pending />}
+
+              {messageList.map((message) => (
+                <Bubble
                   key={message.id}
-                  className={`chat ${message.role === 'user' ? 'chat-start' : 'chat-end'}`}
-                >
-                  <div className="chat-header text-xs opacity-60">
-                    {formatTime(message.timestamp)}
-                  </div>
-                  <div
-                    className={`chat-bubble whitespace-pre-wrap ${
-                      message.role === 'user' ? '' : 'chat-bubble-primary'
-                    }`}
-                  >
-                    {message.content}
-                  </div>
-                </div>
+                  role={message.role}
+                  content={message.content}
+                  at={message.timestamp}
+                />
               ))}
 
-              {loadingMessages && (
+              {(messages.isPending || messages.isFetchingNextPage) && (
                 <div className="flex justify-center p-4">
                   <span className="loading loading-spinner loading-sm" />
                 </div>
               )}
 
-              {messagesDone && messages.length > 0 && (
+              {!messages.hasNextPage && messageList.length > 0 && (
                 <p className="py-2 text-center text-xs text-base-content/40">沒有更早的訊息了</p>
               )}
             </div>
+
+            {send.isSuccess && send.data === '' && (
+              <div className="alert alert-warning mx-3 mb-0 w-auto">
+                AI 沒有回覆內容，這則訊息沒有被記錄。日曆可能已經被改動，請自行確認。
+              </div>
+            )}
 
             {selected.channel === 'test' && (
               <form
                 className="flex gap-2 border-t border-base-200 p-3"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  void send();
+                  submitMessage();
                 }}
               >
                 <input
@@ -253,14 +216,14 @@ export function ConversationsPage() {
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="以這位顧客的身分傳送訊息"
-                  disabled={sending}
+                  disabled={send.isPending}
                 />
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={sending || !input.trim()}
+                  disabled={send.isPending || !input.trim()}
                 >
-                  {sending && <span className="loading loading-spinner loading-xs" />}
+                  {send.isPending && <span className="loading loading-spinner loading-xs" />}
                   送出
                 </button>
               </form>
@@ -269,92 +232,40 @@ export function ConversationsPage() {
         )}
       </section>
 
-      {showNewCustomer && (
-        <NewCustomerModal
-          onClose={() => setShowNewCustomer(false)}
-          onCreated={() => {
-            setShowNewCustomer(false);
-            void loadCustomers(true);
-          }}
-        />
-      )}
+      {showNewCustomer && <NewCustomerModal onClose={() => setShowNewCustomer(false)} />}
 
-      {error && (
+      {loadError && (
         <div className="toast toast-end">
-          <div className="alert alert-error">{error}</div>
+          <div className="alert alert-error">{loadError.message}</div>
         </div>
       )}
     </div>
   );
 }
 
-function NewCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [id, setId] = useState('');
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  async function submit() {
-    setSaving(true);
-    try {
-      await createTestCustomer(id, name);
-      onCreated();
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : '建立失敗');
-      setSaving(false);
-    }
-  }
-
+function Bubble({
+  role,
+  content,
+  at,
+  pending,
+}: {
+  role: Message['role'];
+  content: string;
+  at?: number;
+  pending?: boolean;
+}) {
   return (
-    <div className="modal modal-open">
-      <div className="modal-box">
-        <h3 className="text-lg font-bold">新增測試顧客</h3>
-
-        <form
-          className="flex flex-col gap-4 py-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">識別碼</legend>
-            <input
-              type="text"
-              className="input w-full"
-              value={id}
-              onChange={(event) => setId(event.target.value)}
-              placeholder="alice"
-              autoFocus
-            />
-            <p className="label">用來區分不同測試身分，會存成 test:alice</p>
-          </fieldset>
-
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">名稱</legend>
-            <input
-              type="text"
-              className="input w-full"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="王小姐"
-            />
-          </fieldset>
-
-          {error && <div className="alert alert-error">{error}</div>}
-
-          <div className="modal-action">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
-              取消
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !id || !name}>
-              {saving && <span className="loading loading-spinner loading-xs" />}
-              建立
-            </button>
-          </div>
-        </form>
+    <div
+      className={`chat ${role === 'user' ? 'chat-start' : 'chat-end'} ${
+        pending ? 'opacity-50' : ''
+      }`}
+    >
+      {at !== undefined && <div className="chat-header text-xs opacity-60">{formatTime(at)}</div>}
+      <div
+        className={`chat-bubble whitespace-pre-wrap ${role === 'user' ? '' : 'chat-bubble-primary'}`}
+      >
+        {content}
       </div>
-      <div className="modal-backdrop" onClick={onClose} />
     </div>
   );
 }
