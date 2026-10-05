@@ -23,34 +23,37 @@ CREATE TABLE IF NOT EXISTS customers (
   },
 ];
 
+const COLUMNS = `id, channel, name, 
+display_name AS displayName, 
+picture_url AS pictureUrl, 
+last_message AS lastMessage, 
+last_message_at AS lastMessageAt`;
+
+const LIST = `SELECT ${COLUMNS} FROM customers 
+WHERE last_message_at < ? 
+ORDER BY last_message_at DESC LIMIT ?`;
+
+const LIST_BY_CHANNEL = `SELECT ${COLUMNS} FROM customers  
+WHERE channel = ? AND last_message_at < ? 
+ORDER BY last_message_at DESC LIMIT ?`;
+
 export function createCustomerRepository(database: Database): CustomerRepository {
   return {
     async findById(id) {
       const rows = await database.query<Customer>({
-        sql: `SELECT id, channel, name,
-                     display_name AS displayName,
-                     picture_url AS pictureUrl,
-                     last_message AS lastMessage,
-                     last_message_at AS lastMessageAt
-              FROM customers WHERE id = ?`,
+        sql: `SELECT ${COLUMNS} FROM customers WHERE id = ?`,
         params: [id],
       });
       return rows[0] ?? null;
     },
     // 依最後訊息時間由新到舊，before 是上一批最後一筆的時間
-    async list(before, limit) {
-      return database.query<Customer>({
-        sql: `SELECT id, channel, name,
-                     display_name AS displayName,
-                     picture_url AS pictureUrl,
-                     last_message AS lastMessage,
-                     last_message_at AS lastMessageAt
-              FROM customers
-              WHERE last_message_at IS NOT NULL AND last_message_at < ?
-              ORDER BY last_message_at DESC
-              LIMIT ?`,
-        params: [before ?? Number.MAX_SAFE_INTEGER, limit],
-      });
+    async list(limit, before, channel) {
+      const cursor = before ?? Number.MAX_SAFE_INTEGER;
+      return database.query<Customer>(
+        channel
+          ? { sql: LIST_BY_CHANNEL, params: [channel, cursor, limit] }
+          : { sql: LIST, params: [cursor, limit] },
+      );
     },
     // name 與 pictureUrl 傳 null 時保留原值，避免渠道暫時查不到資料就把舊的蓋掉
     async upsertProfile({ id, channel, name, pictureUrl }) {

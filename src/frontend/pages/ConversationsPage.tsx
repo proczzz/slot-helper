@@ -11,9 +11,17 @@ import {
 
 const TEST_PREFIX = 'test:';
 
-// 後端 admin/routes.ts 寫死的每頁筆數。不足一頁就代表沒有下一頁了
-const CUSTOMERS_PAGE_SIZE = 20;
-const MESSAGES_PAGE_SIZE = 50;
+// 每頁筆數。不足一頁就代表沒有下一頁了
+const CUSTOMERS_PAGE_SIZE = 20; // 送給後端,上限由 CustomerQuerySchema 夾住
+const MESSAGES_PAGE_SIZE = 50; // 後端 admin/routes.ts 寫死的,這裡要跟著它
+
+const CHANNELS = [
+  { value: 'all', label: '全部' },
+  { value: 'line', label: 'LINE' },
+  { value: 'test', label: '測試' },
+] as const;
+
+type ChannelFilter = (typeof CHANNELS)[number]['value'];
 
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString('zh-TW', {
@@ -40,14 +48,21 @@ function onScrollNearBottom(event: React.UIEvent<HTMLDivElement>, query: Pageabl
 
 export function ConversationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [channel, setChannel] = useState<ChannelFilter>('all');
   const [input, setInput] = useState('');
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const queryClient = useQueryClient();
 
+  // channel 進 queryKey,所以三個過濾選項各自是一份 query、各自保有自己的分頁
   // 設定檔只有自己會改,對話紀錄顧客隨時會傳新訊息,所以不沿用全域的 staleTime: Infinity
   const customers = useInfiniteQuery({
-    queryKey: ['customers'],
-    queryFn: ({ pageParam }) => listCustomers(pageParam),
+    queryKey: ['customers', channel],
+    queryFn: ({ pageParam }) =>
+      listCustomers(
+        CUSTOMERS_PAGE_SIZE,
+        pageParam ?? undefined,
+        channel === 'all' ? undefined : channel,
+      ),
     initialPageParam: null as number | null,
     getNextPageParam: (lastPage) =>
       lastPage.length < CUSTOMERS_PAGE_SIZE
@@ -70,8 +85,7 @@ export function ConversationsPage() {
   });
 
   const send = useMutation({
-    mutationFn: (text: string) =>
-      sendTestMessage(selectedId!.slice(TEST_PREFIX.length), text),
+    mutationFn: (text: string) => sendTestMessage(selectedId!.slice(TEST_PREFIX.length), text),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['messages', selectedId] });
       // 後端存完訊息會更新 last_message,左側清單要跟著重抓
@@ -90,6 +104,12 @@ export function ConversationsPage() {
     send.reset();
   }
 
+  function changeChannel(next: ChannelFilter) {
+    setChannel(next);
+    // 選中的顧客可能不在新的清單裡,直接清掉比讓右側莫名變空好
+    setSelectedId(null);
+  }
+
   function submitMessage() {
     const text = input.trim();
     if (!text) return;
@@ -100,8 +120,19 @@ export function ConversationsPage() {
   return (
     <div className="flex h-[calc(100dvh-8rem)] gap-4">
       <aside className="flex w-72 shrink-0 flex-col overflow-hidden rounded-box bg-base-100 shadow-sm">
-        <div className="flex items-center justify-between border-b border-base-200 p-3">
-          <span className="font-medium">顧客</span>
+        <div className="flex items-center gap-2 border-b border-base-200 p-3">
+          <select
+            className="select select-sm flex-1"
+            value={channel}
+            onChange={(event) => changeChannel(event.target.value as ChannelFilter)}
+          >
+            {CHANNELS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+
           <button
             type="button"
             className="btn btn-sm btn-square"

@@ -12,6 +12,7 @@ import { LoginSchema } from '../model/dto/login.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
+import { CustomerQuerySchema } from '../model/dto/customer.ts';
 
 const adminRoutes = new Hono<AppVariables>();
 
@@ -105,9 +106,9 @@ adminRoutes.get('/calendar/labels', async (c) => {
 
 adminRoutes.get('/customers', async (c) => {
   const { customerRepository } = c.var.services;
-  const before = c.req.query('before');
+  const { limit, before, channel } = CustomerQuerySchema.parse(c.req.query());
 
-  return c.json(jsend.success(await customerRepository.list(before ? Number(before) : null, 20)));
+  return c.json(jsend.success(await customerRepository.list(limit, before, channel)));
 });
 
 adminRoutes.get('/customers/:id/messages', async (c) => {

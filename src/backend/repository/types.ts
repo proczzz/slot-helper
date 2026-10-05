@@ -20,7 +20,7 @@ export interface UserRepository {
 
 export interface CustomerRepository {
   findById(id: string): Promise<Customer | null>;
-  list(before: number | null, limit: number): Promise<Customer[]>;
+  list(limit: number, before?: number, channel?: string): Promise<Customer[]>;
   upsertProfile(customer: {
     id: string;
     channel: string;

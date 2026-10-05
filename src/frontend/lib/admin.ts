@@ -92,10 +92,7 @@ export interface SchedulingConfig {
   };
 }
 
-export async function changePassword(
-  currentPassword: string,
-  newPassword: string,
-): Promise<void> {
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   const response = await request('/api/admin/password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -147,9 +144,17 @@ export interface Message {
   timestamp: number;
 }
 
-export async function listCustomers(before: number | null): Promise<Customer[]> {
-  const query = before === null ? '' : `?before=${before}`;
-  const response = await request(`/api/admin/customers${query}`);
+// 參數順序對齊後端的 CustomerRepository.list
+export async function listCustomers(
+  limit: number,
+  before?: number,
+  channel?: string,
+): Promise<Customer[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (before !== undefined) query.set('before', String(before));
+  if (channel) query.set('channel', channel);
+
+  const response = await request(`/api/admin/customers?${query}`);
   const body = (await response.json()) as JSendBody<Customer[]>;
   if (body.status !== 'success') throw new Error('讀取顧客清單失敗');
   return body.data ?? [];
