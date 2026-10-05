@@ -20,14 +20,16 @@ export function createSchedulingTools(
   customerId: string,
   services: Service[],
 ) {
-  // 取消與改期都必須確認這筆預約屬於當前顧客
+  // 取消與改期都必須確認這筆預約屬於當前顧客。
+  // 老闆在日曆上手動建立的事件沒有 ownerId,一樣會被擋下
   async function requireOwnEvent(eventId: string) {
     const event = await schedulingProvider.getEvent(eventId);
-    if (customerId && event.description !== customerId) {
+    if (event.ownerId !== customerId) {
       throw new Error('這筆預約不屬於這位顧客');
     }
     return event;
   }
+
   // AI 可能填不在清單裡的名稱,查不到就不上色
   function labelIdOf(service: string): string | undefined {
     return services.find((s) => s.name === service)?.labelId || undefined;
@@ -49,7 +51,7 @@ export function createSchedulingTools(
       execute: async ({ summary, service, ...range }) =>
         schedulingProvider.createEvent({
           summary,
-          description: customerId,
+          ownerId: customerId,
           labelId: labelIdOf(service),
           ...toAbsoluteRange(range),
         }),
@@ -62,13 +64,17 @@ export function createSchedulingTools(
       execute: async () => {
         const events = await schedulingProvider.getEvents({
           start: new Date().toISOString(),
-          keyword: customerId,
+          ownerId: customerId,
           limit: MAX_APPOINTMENTS,
         });
 
-        // 沒有顧客身分時(例如 /api/chat)不過濾，維持原本行為
-        if (!customerId) return events;
-        return events.filter((event) => event.description === customerId);
+        // 歸屬識別碼與老闆自己的備註不送給 AI
+        return events.map(({ eventId, summary, start, end }) => ({
+          eventId,
+          summary,
+          start,
+          end,
+        }));
       },
     }),
 
@@ -83,9 +89,11 @@ export function createSchedulingTools(
       execute: async ({ eventId, summary, service, ...range }) => {
         const event = await requireOwnEvent(eventId);
 
+        // PUT 是整筆取代,description 不送出去會被清空,所以把老闆的備註原樣帶回去
         await schedulingProvider.updateEvent(eventId, {
           summary: summary ?? event.summary,
           description: event.description,
+          ownerId: customerId,
           labelId: labelIdOf(service),
           ...toAbsoluteRange(range),
         });

@@ -15,6 +15,16 @@ const SettingsSchema = z.object({
   calendars: z.array(z.object({ id: z.string().min(1), name: z.string().min(1) })).min(1),
 });
 
+// Google 回傳的事件,只宣告我們會讀的欄位
+interface GoogleEvent {
+  id: string;
+  summary?: string;
+  description?: string;
+  extendedProperties?: { private?: Record<string, string> };
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+}
+
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FREEBUSY_URL = 'https://www.googleapis.com/calendar/v3/freeBusy';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
@@ -101,15 +111,17 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
       },
 
       // 查詢事件列表，包含 eventId，供取消與改期比對使用
-      async getEvents({ start, end, keyword, limit }: EventCriteria): Promise<Event[]> {
+      async getEvents({ start, end, ownerId, limit }: EventCriteria): Promise<Event[]> {
         const accessToken = await getAccessToken();
         const params = new URLSearchParams({
           timeMin: start,
           singleEvents: 'true',
           orderBy: 'startTime',
+          eventLabelVersion: '1',
         });
         if (end) params.set('timeMax', end);
-        if (keyword) params.set('q', keyword); // 全文搜尋，會比對標題、說明等欄位
+        // 精確比對,所以 maxResults 才是「這位顧客的前 N 筆」而不是「模糊結果的前 N 筆」
+        if (ownerId) params.set('privateExtendedProperty', `ownerId=${ownerId}`);
         if (limit) params.set('maxResults', String(limit));
 
         const response = await fetch(`${eventsUrl}?${params.toString()}`, {
@@ -118,15 +130,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
 
         await assertOk(response, 'list events');
 
-        const data = (await response.json()) as {
-          items: {
-            id: string;
-            summary?: string;
-            description?: string;
-            start: { dateTime?: string; date?: string };
-            end: { dateTime?: string; date?: string };
-          }[];
-        };
+        const data = (await response.json()) as { items: GoogleEvent[] };
 
         return (
           data.items
@@ -136,6 +140,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
               eventId: item.id,
               summary: item.summary ?? '(無標題)',
               description: item.description,
+              ownerId: item.extendedProperties?.private?.ownerId,
               start: item.start.dateTime!,
               end: item.end.dateTime!,
             }))
@@ -144,24 +149,20 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
 
       async getEvent(eventId: string): Promise<Event> {
         const accessToken = await getAccessToken();
-        const response = await fetch(`${eventsUrl}/${encodeURIComponent(eventId)}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await fetch(
+          `${eventsUrl}/${encodeURIComponent(eventId)}?eventLabelVersion=1`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
 
         await assertOk(response, 'get event');
 
-        const data = (await response.json()) as {
-          id: string;
-          summary?: string;
-          description?: string;
-          start: { dateTime?: string; date?: string };
-          end: { dateTime?: string; date?: string };
-        };
+        const data = (await response.json()) as GoogleEvent;
 
         return {
           eventId: data.id,
           summary: data.summary ?? '(無標題)',
           description: data.description,
+          ownerId: data.extendedProperties?.private?.ownerId,
           start: data.start.dateTime ?? data.start.date!,
           end: data.end.dateTime ?? data.end.date!,
         };
@@ -195,13 +196,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         const response = await fetch(`${eventsUrl}?eventLabelVersion=1`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            summary: event.summary,
-            description: event.description,
-            eventLabelId: event.labelId,
-            start: { dateTime: event.start },
-            end: { dateTime: event.end },
-          }),
+          body: JSON.stringify(toGoogleEventBody(event)),
         });
 
         await assertOk(response, 'create event');
@@ -218,13 +213,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
           {
             method: 'PUT',
             headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              summary: event.summary,
-              description: event.description,
-              eventLabelId: event.labelId,
-              start: { dateTime: event.start },
-              end: { dateTime: event.end },
-            }),
+            body: JSON.stringify(toGoogleEventBody(event)),
           },
         );
 
@@ -250,4 +239,16 @@ async function assertOk(response: Response, action: string): Promise<void> {
   if (response.ok) return;
   const body = (await response.text()).replace(/\s+/g, ' ').trim();
   throw new Error(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
+}
+
+// 建立與更新的 body 完全相同(更新是 PUT 整筆取代)
+function toGoogleEventBody(event: NewEvent) {
+  return {
+    summary: event.summary,
+    description: event.description,
+    eventLabelId: event.labelId,
+    start: { dateTime: event.start },
+    end: { dateTime: event.end },
+    extendedProperties: { private: { ownerId: event.ownerId } },
+  };
 }

@@ -10,6 +10,7 @@ export interface NewEvent extends TimePeriod {
   summary: string;
   description?: string;
   labelId?: string;
+  ownerId: string;
 }
 
 // 已存在日曆的
@@ -17,13 +18,14 @@ export interface Event extends TimePeriod {
   eventId: string;
   summary: string;
   description?: string;
+  ownerId?: string; // 老闆在日曆手動新增的活動不會有
 }
 
-// keyword 是模糊搜尋，各供應商自行決定搜哪些欄位
+// ownerId 是精確比對,各供應商自行決定存在哪裡
 export interface EventCriteria {
   start: string;
   end?: string;
-  keyword?: string;
+  ownerId?: string;
   limit?: number;
 }
 
