@@ -4,6 +4,7 @@ interface JSendBody<T> {
   message?: string;
 }
 
+// 帳號密碼錯誤是預期中的結果而非例外,所以回傳訊息而不拋錯
 export async function login(username: string, password: string): Promise<string | null> {
   const response = await fetch('/api/admin/login', {
     method: 'POST',
@@ -33,15 +34,14 @@ export async function getSection<T>(section: Section): Promise<T | null> {
   return body.data ?? null;
 }
 
-export async function saveSection<T>(section: Section, data: T): Promise<string | null> {
+export async function saveSection<T>(section: Section, data: T): Promise<void> {
   const response = await request(`/api/admin/config/${section}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
 
-  if (response.ok) return null;
-  return toErrorMessage(await response.json());
+  await assertOk(response);
 }
 
 export interface AiKey {
@@ -95,15 +95,14 @@ export interface SchedulingConfig {
 export async function changePassword(
   currentPassword: string,
   newPassword: string,
-): Promise<string | null> {
+): Promise<void> {
   const response = await request('/api/admin/password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ currentPassword, newPassword }),
   });
 
-  if (response.ok) return null;
-  return toErrorMessage(await response.json());
+  await assertOk(response);
 }
 
 export interface EventLabel {
@@ -176,7 +175,8 @@ export async function createTestCustomer(id: string, name: string): Promise<void
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, name }),
   });
-  if (!response.ok) throw new Error(toErrorMessage(await response.json()));
+
+  await assertOk(response);
 }
 
 export async function sendTestMessage(sessionId: string, message: string): Promise<string> {
@@ -197,6 +197,12 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
     window.location.href = '/login';
   }
   return response;
+}
+
+// 回應不是 2xx 就把 JSend 的訊息轉成例外。login 例外處理,見該函式
+async function assertOk(response: Response): Promise<void> {
+  if (response.ok) return;
+  throw new Error(toErrorMessage(await response.json()));
 }
 
 // fail 的 data 可能是字串或「欄位對應訊息」的物件,error 則是 message

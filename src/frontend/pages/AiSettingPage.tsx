@@ -38,11 +38,7 @@ function AiForm({ config }: { config: AiKey }) {
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
-    mutationFn: async (next: AiKey) => {
-      const failure = await saveSection('ai', [next]);
-      if (failure) throw new Error(failure);
-    },
+    mutationFn: (next: AiKey) => saveSection('ai', [next]),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config', 'ai'] });
     },

@@ -39,11 +39,7 @@ function LineForm({ config }: { config: LineConfig }) {
   const webhookUrl = `${window.location.origin}/line/webhook`;
 
   const save = useMutation({
-    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 onError
-    mutationFn: async (next: LineConfig) => {
-      const failure = await saveSection('line', next);
-      if (failure) throw new Error(failure);
-    },
+    mutationFn: (next: LineConfig) => saveSection('line', next),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config', 'line'] });
     },

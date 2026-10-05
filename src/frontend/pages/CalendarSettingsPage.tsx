@@ -53,11 +53,7 @@ function CalendarForm({ config }: { config: SchedulingConfig }) {
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
-    mutationFn: async (next: SchedulingConfig) => {
-      const failure = await saveSection('scheduling', next);
-      if (failure) throw new Error(failure);
-    },
+    mutationFn: (next: SchedulingConfig) => saveSection('scheduling', next),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config', 'scheduling'] });
       // 換了日曆,店家設定頁讀的標籤清單也跟著變

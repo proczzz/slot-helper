@@ -9,11 +9,8 @@ export function AccountPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const save = useMutation({
-    // changePassword 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
-    mutationFn: async (next: { currentPassword: string; newPassword: string }) => {
-      const failure = await changePassword(next.currentPassword, next.newPassword);
-      if (failure) throw new Error(failure);
-    },
+    mutationFn: (next: { currentPassword: string; newPassword: string }) =>
+      changePassword(next.currentPassword, next.newPassword),
     onSuccess: () => {
       setCurrentPassword('');
       setNewPassword('');

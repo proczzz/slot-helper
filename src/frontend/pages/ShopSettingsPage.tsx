@@ -85,11 +85,7 @@ function ShopForm({
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
-    mutationFn: async (next: ShopConfig) => {
-      const failure = await saveSection('shop', next);
-      if (failure) throw new Error(failure);
-    },
+    mutationFn: (next: ShopConfig) => saveSection('shop', next),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config', 'shop'] });
     },
