@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getCalendarLabels,
   getSection,
@@ -85,30 +87,71 @@ function sortAll(hours: BusinessHours): BusinessHours {
 }
 
 export function ShopSettingsPage() {
-  const [instructions, setInstructions] = useState('');
-  const [hours, setHours] = useState<BusinessHours>(EMPTY_HOURS);
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [labels, setLabels] = useState<EventLabel[]>([]);
+  const shop = useQuery({
+    queryKey: ['config', 'shop'],
+    queryFn: async () => {
+      const config = await getSection<ShopConfig>('shop');
+      return {
+        instructions: config?.instructions ?? '',
+        businessHours: { ...EMPTY_HOURS, ...(config?.businessHours ?? {}) },
+        services: config?.services ?? [],
+      } satisfies ShopConfig;
+    },
+  });
 
-  useEffect(() => {
-    Promise.all([getSection<ShopConfig>('shop'), getCalendarLabels()])
-      .then(([settings, labelList]) => {
-        setInstructions(settings?.instructions ?? '');
-        setHours({ ...EMPTY_HOURS, ...(settings?.businessHours ?? {}) });
-        setServices(settings?.services ?? []);
-        setLabels(labelList);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  // 標籤是選用的,讀不到只影響服務項目的下拉選單,不該擋住整頁設定
+  const labels = useQuery({
+    queryKey: ['calendar-labels'],
+    queryFn: getCalendarLabels,
+  });
 
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 3000);
-    return () => clearTimeout(timer);
-  }, [message]);
+  if (shop.isPending) {
+    return (
+      <div className="grid place-items-center p-12">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (shop.isError) {
+    return (
+      <div className="alert alert-error max-w-3xl">
+        <span>{shop.error.message}</span>
+      </div>
+    );
+  }
+
+  return (
+    <ShopForm config={shop.data} labels={labels.data ?? []} labelsFailed={labels.isError} />
+  );
+}
+
+function ShopForm({
+  config,
+  labels,
+  labelsFailed,
+}: {
+  config: ShopConfig;
+  labels: EventLabel[];
+  labelsFailed: boolean;
+}) {
+  const [instructions, setInstructions] = useState(config.instructions);
+  const [hours, setHours] = useState(config.businessHours);
+  const [services, setServices] = useState(config.services);
+  const queryClient = useQueryClient();
+
+  const save = useMutation({
+    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
+    mutationFn: async (next: ShopConfig) => {
+      const failure = await saveSection('shop', next);
+      if (failure) throw new Error(failure);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['config', 'shop'] });
+    },
+  });
+
+  useAutoReset(save);
 
   function update(dayKey: DayKey, periods: Period[]) {
     setHours({ ...hours, [dayKey]: periods });
@@ -153,30 +196,16 @@ export function ShopSettingsPage() {
     setServices(services.filter((_, i) => i !== index));
   }
 
-  async function submit() {
+  function submit() {
     const sorted = sortAll(hours);
     setHours(sorted);
-    setSaving(true);
-    const error = await saveSection('shop', {
-      instructions,
-      businessHours: sorted,
-      services,
-    });
-    setSaving(false);
-    setMessage(error ?? '已儲存');
+    save.mutate({ instructions, businessHours: sorted, services });
   }
 
-  if (loading) {
-    return (
-      <div className="grid place-items-center p-12">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
-  }
-
-  const errors = Object.fromEntries(
-    DAYS.map(({ key }) => [key, validateDay(hours[key])]),
-  ) as Record<DayKey, DayErrors>;
+  const errors = Object.fromEntries(DAYS.map(({ key }) => [key, validateDay(hours[key])])) as Record<
+    DayKey,
+    DayErrors
+  >;
 
   const hasError = DAYS.some(
     ({ key }) => errors[key].overlap || Object.keys(errors[key].periods).length > 0,
@@ -214,6 +243,12 @@ export function ShopSettingsPage() {
           <p className="text-sm text-base-content/60">
             AI 會依照所需時間判斷要預留多久，也會用這些價格回答顧客。
           </p>
+
+          {labelsFailed && (
+            <p className="label text-error">
+              讀不到日曆標籤，「日曆標籤」只能選「不指定」。請檢查 Google 日曆設定。
+            </p>
+          )}
 
           {services.length === 0 && (
             <span className="text-sm text-base-content/50">尚未新增任何服務</span>
@@ -359,18 +394,20 @@ export function ShopSettingsPage() {
         </div>
       </div>
 
-      <button
-        className="btn btn-primary"
-        disabled={saving || hasError}
-        onClick={() => void submit()}
-      >
-        {saving && <span className="loading loading-spinner" />}
+      <button className="btn btn-primary" disabled={save.isPending || hasError} onClick={submit}>
+        {save.isPending && <span className="loading loading-spinner" />}
         儲存
       </button>
 
-      {message && (
+      {save.isSuccess && (
         <div className="toast toast-end">
-          <div className="alert">{message}</div>
+          <div className="alert alert-success">已儲存</div>
+        </div>
+      )}
+
+      {save.isError && (
+        <div className="toast toast-end">
+          <div className="alert alert-error">{save.error.message}</div>
         </div>
       )}
     </div>

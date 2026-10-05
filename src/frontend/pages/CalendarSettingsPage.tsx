@@ -60,6 +60,8 @@ function CalendarForm({ config }: { config: SchedulingConfig }) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config', 'scheduling'] });
+      // 換了日曆,店家設定頁讀的標籤清單也跟著變
+      void queryClient.invalidateQueries({ queryKey: ['calendar-labels'] });
     },
   });
 
