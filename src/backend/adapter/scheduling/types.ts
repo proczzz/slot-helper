@@ -22,7 +22,7 @@ export interface Event extends TimePeriod {
 }
 
 // ownerId 是精確比對,各供應商自行決定存在哪裡
-export interface EventCriteria {
+export interface EventQuery {
   start: string;
   end?: string;
   ownerId?: string;
@@ -38,7 +38,7 @@ export interface EventLabel {
 
 export interface SchedulingProvider {
   getBusyPeriods(range: TimePeriod): Promise<TimePeriod[]>;
-  getEvents(criteria: EventCriteria): Promise<Event[]>;
+  getEvents(criteria: EventQuery): Promise<Event[]>;
   getEvent(eventId: string): Promise<Event>;
   getLabels(): Promise<EventLabel[]>;
   createEvent(event: NewEvent): Promise<{ eventId: string }>;

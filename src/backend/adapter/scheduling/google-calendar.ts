@@ -2,7 +2,7 @@ import { SignJWT, importPKCS8 } from 'jose';
 import z from 'zod';
 import type {
   Event,
-  EventCriteria,
+  EventQuery,
   EventLabel,
   NewEvent,
   SchedulingProviderDefinition,
@@ -111,7 +111,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
       },
 
       // 查詢事件列表，包含 eventId，供取消與改期比對使用
-      async getEvents({ start, end, ownerId, limit }: EventCriteria): Promise<Event[]> {
+      async getEvents({ start, end, ownerId, limit }: EventQuery): Promise<Event[]> {
         const accessToken = await getAccessToken();
         const params = new URLSearchParams({
           timeMin: start,
