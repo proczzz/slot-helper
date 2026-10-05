@@ -5,13 +5,22 @@ import {
   getCalendarLabels,
   getSection,
   saveSection,
-  type BusinessHours,
   type DayKey,
   type EventLabel,
   type Period,
   type Service,
   type ShopConfig,
 } from '../lib/admin.ts';
+import {
+  EMPTY_HOURS,
+  isOvernight,
+  nextPeriod,
+  normalizeEnd,
+  sortAll,
+  toInputValue,
+  validateDay,
+  type DayErrors,
+} from '../lib/business-hours.ts';
 
 const DAYS = [
   { key: 'mon', label: '週一' },
@@ -22,69 +31,6 @@ const DAYS = [
   { key: 'sat', label: '週六' },
   { key: 'sun', label: '週日' },
 ] as const;
-
-const DAY_MINUTES = 24 * 60;
-
-type DayErrors = { periods: Record<number, string>; overlap?: string };
-
-const EMPTY_HOURS: BusinessHours = {
-  mon: [],
-  tue: [],
-  wed: [],
-  thu: [],
-  fri: [],
-  sat: [],
-  sun: [],
-};
-
-function toMinutes(value: string): number {
-  const [hour, minute] = value.split(':');
-  return Number(hour) * 60 + Number(minute);
-}
-
-function toHHmm(minutes: number): string {
-  const hour = Math.floor(minutes / 60);
-  return `${String(hour).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-}
-
-const isOvernight = (period: Period) => toMinutes(period[1]) >= DAY_MINUTES;
-
-// 輸入框只認得 00:00-23:59，跨日的結束時間要先減掉一天才能顯示
-const toInputValue = (time: string) =>
-  toMinutes(time) >= DAY_MINUTES ? toHHmm(toMinutes(time) - DAY_MINUTES) : time;
-
-// 結束不晚於開始就視為跨日，存成超過 24:00 的形式
-function normalizeEnd(start: string, end: string): string {
-  return toMinutes(end) <= toMinutes(start) ? toHHmm(toMinutes(end) + DAY_MINUTES) : end;
-}
-
-function validateDay(periods: Period[]): DayErrors {
-  const result: DayErrors = { periods: {} };
-
-  periods.forEach((period, index) => {
-    if (isOvernight(period) && index !== periods.length - 1) {
-      result.periods[index] = '跨日時段要排在最後';
-    }
-  });
-
-  const sorted = [...periods].sort((a, b) => toMinutes(a[0]) - toMinutes(b[0]));
-  for (let i = 1; i < sorted.length; i++) {
-    if (toMinutes(sorted[i]![0]) < toMinutes(sorted[i - 1]![1])) {
-      result.overlap = '這一天的時段互相重疊';
-      break;
-    }
-  }
-
-  return result;
-}
-
-function sortAll(hours: BusinessHours): BusinessHours {
-  const sorted = { ...hours };
-  for (const { key } of DAYS) {
-    sorted[key] = [...hours[key]].sort((a, b) => toMinutes(a[0]) - toMinutes(b[0]));
-  }
-  return sorted;
-}
 
 export function ShopSettingsPage() {
   const shop = useQuery({
@@ -121,9 +67,7 @@ export function ShopSettingsPage() {
     );
   }
 
-  return (
-    <ShopForm config={shop.data} labels={labels.data ?? []} labelsFailed={labels.isError} />
-  );
+  return <ShopForm config={shop.data} labels={labels.data ?? []} labelsFailed={labels.isError} />;
 }
 
 function ShopForm({
@@ -158,10 +102,7 @@ function ShopForm({
   }
 
   function addPeriod(dayKey: DayKey) {
-    const existing = hours[dayKey];
-    const start = existing.length ? toInputValue(existing[existing.length - 1]![1]) : '10:00';
-    const oneHourLater = toHHmm((toMinutes(start) + 60) % DAY_MINUTES);
-    update(dayKey, [...existing, [start, normalizeEnd(start, oneHourLater)]]);
+    update(dayKey, [...hours[dayKey], nextPeriod(hours[dayKey])]);
   }
 
   // start 與 end 都是輸入框上看到的值，跨日的判斷統一在這裡做
@@ -202,10 +143,9 @@ function ShopForm({
     save.mutate({ instructions, businessHours: sorted, services });
   }
 
-  const errors = Object.fromEntries(DAYS.map(({ key }) => [key, validateDay(hours[key])])) as Record<
-    DayKey,
-    DayErrors
-  >;
+  const errors = Object.fromEntries(
+    DAYS.map(({ key }) => [key, validateDay(hours[key])]),
+  ) as Record<DayKey, DayErrors>;
 
   const hasError = DAYS.some(
     ({ key }) => errors[key].overlap || Object.keys(errors[key].periods).length > 0,
