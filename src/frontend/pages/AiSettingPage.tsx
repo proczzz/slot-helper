@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { getSection, listModels, saveSection, type AiKey } from '../lib/admin.ts';
 
-const PROVIDERS = ['deepseek', 'anthropic', 'google', 'openai'];
+// 寫死的清單,要和後端 adapter/ai/index.ts 的 providers 表保持一致
+const PROVIDERS = ['deepseek', 'anthropic', 'google', 'openai', 'nvidia'];
 
 const EMPTY: AiKey = { name: '', provider: '', apiKey: '', model: '' };
 

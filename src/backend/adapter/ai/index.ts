@@ -5,11 +5,13 @@ import { deepSeekProvider } from './deepseek.ts';
 import { googleProvider } from './google.ts';
 import { openAiProvider } from './openai.ts';
 import type { AiKey, LanguageModelProvider } from './types.ts';
+import { nvidiaProvider } from './nvidia.ts';
 
 const providers: Partial<Record<string, LanguageModelProvider>> = {
   anthropic: anthropicProvider,
   deepseek: deepSeekProvider,
   google: googleProvider,
+  nvidia: nvidiaProvider,
   openai: openAiProvider,
 };
 
