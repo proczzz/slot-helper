@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
 import { timeConfig } from './locale.ts';
 import type { Service } from './shop-config.ts';
+import { toLocalTime } from './time.ts';
 
 const MAX_APPOINTMENTS = 20;
 
@@ -39,7 +40,13 @@ export function createSchedulingTools(
     checkAvailability: tool({
       description: '查詢指定時間範圍內，日曆上已經被佔用(不能預約)的時段',
       inputSchema: TimeRangeSchema,
-      execute: async (range) => schedulingProvider.getBusyPeriods(toAbsoluteRange(range)),
+      execute: async (range) => {
+        const busy = await schedulingProvider.getBusyPeriods(toAbsoluteRange(range));
+        return busy.map((period) => ({
+          start: toLocalTime(period.start, timeConfig.timezone),
+          end: toLocalTime(period.end, timeConfig.timezone),
+        }));
+      },
     }),
 
     bookAppointment: tool({
@@ -69,11 +76,11 @@ export function createSchedulingTools(
         });
 
         // 歸屬識別碼與老闆自己的備註不送給 AI
-        return events.map(({ eventId, summary, start, end }) => ({
-          eventId,
-          summary,
-          start,
-          end,
+        return events.map((event) => ({
+          eventId: event.eventId,
+          summary: event.summary,
+          start: toLocalTime(event.start, timeConfig.timezone),
+          end: toLocalTime(event.end, timeConfig.timezone),
         }));
       },
     }),

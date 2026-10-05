@@ -1,5 +1,6 @@
 import { timeConfig } from './locale.ts';
 import type { BusinessHours, DayKey, Service, ShopConfig } from './shop-config.ts';
+import { toLocalTime, toLocalWeekday } from './time.ts';
 
 const DAY_LABELS: Record<DayKey, string> = {
   mon: '週一',
@@ -16,7 +17,9 @@ const DAY_KEYS = Object.keys(DAY_LABELS) as DayKey[];
 const DAY_MINUTES = 24 * 60;
 
 export function buildSystemPrompt(settings: ShopConfig, customerName?: string | null): string {
-  const now = new Date().toLocaleString('zh-TW', { timeZone: timeConfig.timezone });
+  const nowAbsolute = new Date().toISOString();
+  const now = toLocalTime(nowAbsolute, timeConfig.timezone);
+  const weekday = DAY_LABELS[toLocalWeekday(nowAbsolute, timeConfig.timezone)];
 
   const systemPrompt = `${settings.instructions}
 
@@ -25,9 +28,9 @@ ${formatServices(settings.services)}
 ${formatBusinessHours(settings.businessHours)}
 
 ${customerName ? '目前對話的顧客: ' + customerName : ''}
-目前時間: ${now}`;
+目前時間: ${now} (${weekday})`;
 
-  // console.log(systemPrompt);
+  console.log(systemPrompt);
   return systemPrompt;
 }
 
