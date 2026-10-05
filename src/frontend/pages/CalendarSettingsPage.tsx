@@ -1,54 +1,86 @@
-import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { getSection, saveSection, type SchedulingConfig } from '../lib/admin.ts';
 
 const PROVIDER = 'google-calendar';
 
 export function CalendarSettingsPage() {
-  const [enabled, setEnabled] = useState(false);
-  const [email, setEmail] = useState('');
-  const [privateKey, setPrivateKey] = useState('');
-  const [calendarId, setCalendarId] = useState('');
-  const [calendarName, setCalendarName] = useState('');
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ['config', 'scheduling'],
+    // 後端不驗證 settings 的內容(schema 藏在供應商裡面),所以缺的欄位在這裡補齊
+    queryFn: async () => {
+      const config = await getSection<SchedulingConfig>('scheduling');
+      return {
+        provider: config?.provider ?? 'none',
+        settings: {
+          serviceAccountEmail: config?.settings?.serviceAccountEmail ?? '',
+          privateKey: config?.settings?.privateKey ?? '',
+          calendars: config?.settings?.calendars ?? [],
+        },
+      } satisfies SchedulingConfig;
+    },
+  });
+
+  if (isPending) {
+    return (
+      <div className="grid place-items-center p-12">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="alert alert-error max-w-2xl">
+        <span>{error.message}</span>
+      </div>
+    );
+  }
+
+  return <CalendarForm config={data} />;
+}
+
+function CalendarForm({ config }: { config: SchedulingConfig }) {
+  const [enabled, setEnabled] = useState(config.provider === PROVIDER);
+  const [email, setEmail] = useState(config.settings.serviceAccountEmail);
+  const [privateKey, setPrivateKey] = useState(config.settings.privateKey);
+  const [calendarId, setCalendarId] = useState(config.settings.calendars[0]?.id ?? '');
+  const [calendarName, setCalendarName] = useState(config.settings.calendars[0]?.name ?? '');
   const [fileName, setFileName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
-  const [message, setMessage] = useState('');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    getSection<SchedulingConfig>('scheduling')
-      .then((config) => {
-        if (config?.provider === PROVIDER) setEnabled(true);
-        setEmail(config?.settings?.serviceAccountEmail ?? '');
-        setPrivateKey(config?.settings?.privateKey ?? '');
-        setCalendarId(config?.settings?.calendars?.[0]?.id ?? '');
-        setCalendarName(config?.settings?.calendars?.[0]?.name ?? '');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const save = useMutation({
+    // saveSection 把錯誤當成回傳值,這裡轉成 throw 才走得到 isError
+    mutationFn: async (next: SchedulingConfig) => {
+      const failure = await saveSection('scheduling', next);
+      if (failure) throw new Error(failure);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['config', 'scheduling'] });
+    },
+  });
 
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 3000);
-    return () => clearTimeout(timer);
-  }, [message]);
+  useAutoReset(save);
 
   async function importServiceAccountJson(file: File) {
-    setMessage('');
+    setFileError('');
     try {
       const data = JSON.parse(await file.text()) as {
         client_email?: string;
         private_key?: string;
       };
       if (!data.client_email || !data.private_key) {
-        setMessage('這個檔案缺少 client_email 或 private_key');
+        setFileError('這個檔案缺少 client_email 或 private_key');
         return;
       }
       setEmail(data.client_email);
       setPrivateKey(data.private_key);
       setFileName(file.name);
     } catch {
-      setMessage('檔案不是有效的 JSON');
+      setFileError('檔案不是有效的 JSON');
     }
   }
 
@@ -57,29 +89,7 @@ export function CalendarSettingsPage() {
     setFileName(null);
     setEmail('');
     setPrivateKey('');
-    setMessage('');
-  }
-
-  async function submit() {
-    setSaving(true);
-    const error = await saveSection('scheduling', {
-      provider: enabled ? PROVIDER : 'none',
-      settings: {
-        serviceAccountEmail: email,
-        privateKey,
-        calendars: [{ id: calendarId, name: calendarName }],
-      },
-    });
-    setSaving(false);
-    setMessage(error ?? '已儲存');
-  }
-
-  if (loading) {
-    return (
-      <div className="grid place-items-center p-12">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
+    setFileError('');
   }
 
   const fieldsLocked = fileName !== null;
@@ -104,7 +114,14 @@ export function CalendarSettingsPage() {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void submit();
+            save.mutate({
+              provider: enabled ? PROVIDER : 'none',
+              settings: {
+                serviceAccountEmail: email,
+                privateKey,
+                calendars: [{ id: calendarId, name: calendarName }],
+              },
+            });
           }}
         >
           <fieldset className="contents" disabled={!enabled}>
@@ -158,6 +175,8 @@ export function CalendarSettingsPage() {
               </label>
             )}
 
+            {fileError && <p className="label text-error">{fileError}</p>}
+
             <fieldset className="fieldset">
               <legend className="fieldset-legend">Service Account 電子郵件</legend>
               <input
@@ -206,15 +225,21 @@ export function CalendarSettingsPage() {
             </fieldset>
           </fieldset>
 
-          <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
-            {saving && <span className="loading loading-spinner" />}
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || !canSubmit}>
+            {save.isPending && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>
 
-        {message && (
+        {save.isSuccess && (
           <div className="toast toast-end">
-            <div className="alert">{message}</div>
+            <div className="alert alert-success">已儲存</div>
+          </div>
+        )}
+
+        {save.isError && (
+          <div className="toast toast-end">
+            <div className="alert alert-error">{save.error.message}</div>
           </div>
         )}
       </div>
