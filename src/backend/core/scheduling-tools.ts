@@ -1,9 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
-import { timeConfig } from './locale.ts';
-import type { Service } from './shop-config.ts';
-import { toLocalTime } from './time.ts';
+import type { ShopConfig } from './shop-config.ts';
+import { toAbsoluteTime, toLocalTime } from './time.ts';
 
 const MAX_APPOINTMENTS = 20;
 
@@ -19,8 +18,17 @@ const TimeRangeSchema = z.object({
 export function createSchedulingTools(
   schedulingProvider: SchedulingProvider,
   customerId: string,
-  services: Service[],
+  shopConfig: ShopConfig,
 ) {
+  const { services, timeZone } = shopConfig;
+  // AI 給的是沒有時區的局部時間,補上店家時區才是地球上確定的瞬間
+  function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {
+    return {
+      start: toAbsoluteTime(range.start, timeZone),
+      end: toAbsoluteTime(range.end, timeZone),
+    };
+  }
+
   // 取消與改期都必須確認這筆預約屬於當前顧客。
   // 老闆在日曆上手動建立的事件沒有 ownerId,一樣會被擋下
   async function requireOwnEvent(eventId: string) {
@@ -43,8 +51,8 @@ export function createSchedulingTools(
       execute: async (range) => {
         const busy = await schedulingProvider.getBusyPeriods(toAbsoluteRange(range));
         return busy.map((period) => ({
-          start: toLocalTime(period.start, timeConfig.timezone),
-          end: toLocalTime(period.end, timeConfig.timezone),
+          start: toLocalTime(period.start, timeZone),
+          end: toLocalTime(period.end, timeZone),
         }));
       },
     }),
@@ -79,8 +87,8 @@ export function createSchedulingTools(
         return events.map((event) => ({
           eventId: event.eventId,
           summary: event.summary,
-          start: toLocalTime(event.start, timeConfig.timezone),
-          end: toLocalTime(event.end, timeConfig.timezone),
+          start: toLocalTime(event.start, timeZone),
+          end: toLocalTime(event.end, timeZone),
         }));
       },
     }),
@@ -121,13 +129,4 @@ export function createSchedulingTools(
       },
     }),
   };
-}
-
-// AI 給的是沒有時區的局部時間，補上店家時區偏移才是地球上確定的瞬間
-function toAbsolute(localTime: string): string {
-  return `${localTime}:00${timeConfig.utcOffset}`;
-}
-
-function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {
-  return { start: toAbsolute(range.start), end: toAbsolute(range.end) };
 }

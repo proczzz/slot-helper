@@ -1,9 +1,14 @@
 import { z } from 'zod';
+import { isValidTimeZone } from './time';
 
 const PeriodSchema = z.tuple([z.string(), z.string()]);
 
 export const ShopConfigSchema = z.object({
   instructions: z.string().default(''),
+  timeZone: z
+    .string()
+    .refine(isValidTimeZone, '不是有效的時區名稱，例如 Asia/Taipei')
+    .default('Asia/Taipei'),
   businessHours: z
     .object({
       mon: z.array(PeriodSchema).default([]),
