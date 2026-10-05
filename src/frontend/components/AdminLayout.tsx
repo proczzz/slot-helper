@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 import { logout } from '../lib/admin.ts';
@@ -15,9 +16,13 @@ const MENU = [
 export function AdminLayout() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   async function handleLogout() {
-    await logout();
+    // 後端連不到時也要清掉本地狀態並離開,所以不讓這個錯誤中斷流程
+    await logout().catch((error) => console.error('登出請求失敗:', error));
+    // 不清的話換帳號登入後,五分鐘內會看到前一個人快取的設定
+    queryClient.clear();
     navigate('/login', { replace: true });
   }
 

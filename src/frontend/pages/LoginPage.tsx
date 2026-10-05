@@ -13,12 +13,18 @@ export function LoginPage() {
     setSubmitting(true);
     setError('');
 
-    const message = await login(username, password);
-    if (message) {
-      setError(message);
-      setSubmitting(false);
-    } else {
+    try {
+      const message = await login(username, password);
+      if (message) {
+        setError(message);
+        setSubmitting(false);
+        return;
+      }
       navigate('/', { replace: true });
+    } catch {
+      // fetch reject:連不到後端。沒接的話按鈕會永遠卡在轉圈
+      setError('連不到伺服器，請確認後端是否已啟動。');
+      setSubmitting(false);
     }
   }
 
