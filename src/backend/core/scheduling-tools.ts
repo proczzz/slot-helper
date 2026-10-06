@@ -1,10 +1,13 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { Event, SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
+import { freeSlots } from './availability.ts';
 import type { Service, ShopConfig } from './shop-config.ts';
 import { toAbsoluteTime, toLocalTime } from './time.ts';
 
 const MAX_APPOINTMENTS = 20;
+// 一次最多查 31 天 —— 範圍再大,回傳的區間會多到塞爆對話
+const MAX_RANGE_MS = 31 * 24 * 60 * 60_000;
 
 const LocalTimeSchema = z
   .string()
@@ -43,8 +46,11 @@ export function createSchedulingTools(
   customerId: string,
   shopConfig: ShopConfig,
 ) {
-  const { services, timeZone } = shopConfig;
+  const { services, businessHours, timeZone } = shopConfig;
   const ServiceSchema = buildServiceSchema(services);
+  const OptionalServiceSchema = ServiceSchema.optional().describe(
+    '要查哪個服務的空檔。給了就只回放得下這個服務的時段，不給就回全部空檔',
+  );
 
   // enum 已經擋住大部分情況,但服務清單為空時 schema 會退回 z.string(),所以還是要查
   function findService(name: string): Service | undefined {
@@ -101,11 +107,40 @@ export function createSchedulingTools(
   return {
     checkAvailability: tool({
       description:
-        '查詢一段範圍內已被佔用的時段。只在顧客要挑時間時使用；顧客已指定時間就直接預約或改期',
-      inputSchema: TimeRangeSchema,
-      execute: async (range) => {
-        const busy = await schedulingProvider.getBusyPeriods(toAbsoluteRange(range));
-        return busy.map((period) => toLocalRange(period));
+        '查詢一段範圍內「可以預約」的時段。只在顧客要挑時間時使用；顧客已指定時間就直接預約或改期',
+      inputSchema: z.object({
+        start: StartSchema,
+        end: LocalTimeSchema.describe('結束時間，格式 YYYY-MM-DDTHH:mm，例如 2026-09-29T20:00'),
+        service: OptionalServiceSchema,
+      }),
+      execute: async ({ start, end, service }) => {
+        const matched = service ? findService(service) : undefined;
+        if (service && !matched) {
+          return { slots: [], reason: '找不到這個服務項目，請老闆先在後台設定服務清單' };
+        }
+
+        const range = toAbsoluteRange({ start, end });
+        const length = Date.parse(range.end) - Date.parse(range.start);
+
+        if (length <= 0) return { slots: [], reason: '結束時間必須晚於開始時間' };
+        if (length > MAX_RANGE_MS) {
+          return { slots: [], reason: '一次最多查 31 天，請縮小查詢範圍' };
+        }
+
+        const busy = await schedulingProvider.getBusyPeriods(range);
+        const slots = freeSlots({
+          range,
+          busy,
+          businessHours,
+          timeZone,
+          minutes: matched?.minutes,
+        });
+
+        if (slots.length === 0) {
+          return { slots: [], reason: '這段期間沒有可以預約的時段' };
+        }
+
+        return { slots: slots.map(toLocalRange) };
       },
     }),
 

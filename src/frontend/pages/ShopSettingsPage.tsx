@@ -11,12 +11,7 @@ import {
   type Service,
   type ShopConfig,
 } from '../lib/admin.ts';
-import {
-  BROWSER_TIME_ZONE,
-  TIME_ZONES,
-  formatOffset,
-  isValidTimeZone,
-} from '../lib/time-zones.ts';
+import { BROWSER_TIME_ZONE, TIME_ZONES, formatOffset, isValidTimeZone } from '../lib/time-zones.ts';
 import {
   EMPTY_HOURS,
   isOvernight,
