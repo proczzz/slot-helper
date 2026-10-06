@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Event, SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
 import { freeSlots } from './availability.ts';
 import type { Service, ShopConfig } from './shop-config.ts';
-import { toAbsoluteTime, toLocalTime } from './time.ts';
+import { toAbsoluteTime, toLocalTime, toLocalWeekday } from './time.ts';
 
 const MAX_APPOINTMENTS = 20;
 // 一次最多查 31 天 —— 範圍再大,回傳的區間會多到塞爆對話
@@ -71,18 +71,32 @@ export function createSchedulingTools(
     }
 
     const range = { start: absoluteStart, end: absoluteEnd };
-    // isOpen 會把過去的時間截掉,所以必須排在上一道檢查之後,否則會誤報成不在營業時間內
-    if (!isOpen(range)) {
-      return '這個時段不在營業時間內';
-    }
+    // 必須排在「過去的時間」檢查之後 —— freeSlots 會把過去截掉,否則會誤報成不在營業時間內
+    const problem = openingProblem(range);
+    if (problem) return problem;
 
     return { range, labelId: matched.labelId || undefined };
   }
 
-  // 呼叫前必須先擋掉過去的時間 —— freeSlots 會把過去截掉,否則這裡會誤報成「不在營業時間內」
-  function isOpen(range: TimePeriod): boolean {
+  // 整段都落在營業時間內就回 undefined,否則回字串原因(給 AI 看)。
+  // busy 傳空的,因為「被佔用」要分開回報,訊息不一樣
+  function openingProblem(range: TimePeriod): string | undefined {
     const slots = freeSlots({ range, busy: [], businessHours, timeZone });
-    return slots.length === 1 && slots[0]!.start === range.start && slots[0]!.end === range.end;
+    if (slots.length === 1 && slots[0]!.start === range.start && slots[0]!.end === range.end) {
+      return undefined;
+    }
+
+    // 開始時間本身可以,只是整段放不完 —— 告訴 AI 能做到幾點,它才有辦法提替代方案
+    const fromStart = slots.find((slot) => slot.start === range.start);
+    if (fromStart) {
+      return `營業時間只到 ${toLocalTime(fromStart.end, timeZone)}，放不下這麼長的時段，請改用較短的服務或換一天`;
+    }
+
+    if (businessHours[toLocalWeekday(range.start, timeZone)].length === 0) {
+      return '這天公休';
+    }
+
+    return '這個時間不在當天的營業時間內';
   }
 
   // 回給 AI 的時間一律是局部時間,和它送進來的格式一致
@@ -196,13 +210,20 @@ export function createSchedulingTools(
         });
 
         // ownerId 是內部識別碼,AI 沒有用途,不送出去
-        return events.map((event) => ({
+        const appointments = events.map((event) => ({
           eventId: event.eventId,
           summary: event.summary,
           note: event.description,
           start: toLocalTime(event.start, timeZone),
           end: toLocalTime(event.end, timeZone),
         }));
+
+        // 剛好滿額時無法分辨「正好這麼多」還是「被截斷」,寧可提醒
+        if (appointments.length === MAX_APPOINTMENTS) {
+          return { appointments, note: `只列出最近的 ${MAX_APPOINTMENTS} 筆，可能還有更多` };
+        }
+
+        return { appointments };
       },
     }),
 
