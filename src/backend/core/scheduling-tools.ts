@@ -51,7 +51,8 @@ export function createSchedulingTools(
     return services.find((service) => service.name === name);
   }
 
-  // 把 AI 給的時間與服務項目解析成一個具體時段。回字串代表不能預約,內容是給 AI 看的原因
+  // 把 AI 給的時間與服務項目解析成一個具體時段,並做完所有不需要連外的檢查。
+  // 回字串代表不能預約,內容是給 AI 看的原因
   function resolveSlot(start: string, end: string | undefined, service: string): Slot | string {
     const matched = findService(service);
     if (!matched) return '找不到這個服務項目，請老闆先在後台設定服務清單';
@@ -65,26 +66,23 @@ export function createSchedulingTools(
     if (Date.parse(absoluteEnd) <= Date.parse(absoluteStart)) {
       return '結束時間必須晚於開始時間';
     }
+    if (Date.parse(absoluteStart) < Date.now()) {
+      return '不能安排到已經過去的時間';
+    }
 
-    return {
-      range: { start: absoluteStart, end: absoluteEnd },
-      labelId: matched.labelId || undefined,
-    };
+    const range = { start: absoluteStart, end: absoluteEnd };
+    // isOpen 會把過去的時間截掉,所以必須排在上一道檢查之後,否則會誤報成不在營業時間內
+    if (!isOpen(range)) {
+      return '這個時段不在營業時間內';
+    }
+
+    return { range, labelId: matched.labelId || undefined };
   }
 
-  // 整個時段都落在營業時間內才算可以預約。busy 傳空的,因為「被佔用」要分開回報。
   // 呼叫前必須先擋掉過去的時間 —— freeSlots 會把過去截掉,否則這裡會誤報成「不在營業時間內」
   function isOpen(range: TimePeriod): boolean {
     const slots = freeSlots({ range, busy: [], businessHours, timeZone });
     return slots.length === 1 && slots[0]!.start === range.start && slots[0]!.end === range.end;
-  }
-
-  // AI 給的是沒有時區的局部時間,補上店家時區才是地球上確定的瞬間
-  function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {
-    return {
-      start: toAbsoluteTime(range.start, timeZone),
-      end: toAbsoluteTime(range.end, timeZone),
-    };
   }
 
   // 回給 AI 的時間一律是局部時間,和它送進來的格式一致
@@ -120,9 +118,11 @@ export function createSchedulingTools(
           return { slots: [], reason: '找不到這個服務項目，請老闆先在後台設定服務清單' };
         }
 
-        const range = toAbsoluteRange({ start, end });
+        const range = {
+          start: toAbsoluteTime(start, timeZone),
+          end: toAbsoluteTime(end, timeZone),
+        };
         const length = Date.parse(range.end) - Date.parse(range.start);
-
         if (length <= 0) return { slots: [], reason: '結束時間必須晚於開始時間' };
         if (length > MAX_RANGE_MS) {
           return { slots: [], reason: '一次最多查 31 天，請縮小查詢範圍' };
@@ -158,14 +158,6 @@ export function createSchedulingTools(
       execute: async ({ start, end, service, summary, note }) => {
         const slot = resolveSlot(start, end, service);
         if (typeof slot === 'string') return { booked: false, reason: slot };
-
-        if (Date.parse(slot.range.start) < Date.now()) {
-          return { booked: false, reason: '不能預約已經過去的時間' };
-        }
-
-        if (!isOpen(slot.range)) {
-          return { booked: false, reason: '這個時段不在營業時間內' };
-        }
 
         if (!reserve(slot.range)) {
           return { booked: false, reason: '這個時段剛被其他顧客預約，請換一個時間' };
@@ -232,14 +224,6 @@ export function createSchedulingTools(
 
         const slot = resolveSlot(start, end, service);
         if (typeof slot === 'string') return { rescheduled: false, reason: slot };
-
-        if (Date.parse(slot.range.start) < Date.now()) {
-          return { rescheduled: false, reason: '不能改到已經過去的時間' };
-        }
-
-        if (!isOpen(slot.range)) {
-          return { rescheduled: false, reason: '這個時段不在營業時間內' };
-        }
 
         if (!reserve(slot.range)) {
           return { rescheduled: false, reason: '這個時段剛被其他顧客預約，請換一個時間' };
