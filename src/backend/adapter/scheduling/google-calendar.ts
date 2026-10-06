@@ -1,9 +1,10 @@
 import { SignJWT, importPKCS8 } from 'jose';
 import z from 'zod';
+import { toAbsoluteTime } from '../../core/time.ts';
 import type {
   Event,
-  EventQuery,
   EventLabel,
+  EventQuery,
   NewEvent,
   SchedulingProviderDefinition,
   TimePeriod,
@@ -44,6 +45,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
     const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
 
     let cachedToken: { accessToken: string; expiresAt: number } | null = null;
+    let cachedTimeZone: string | null = null;
 
     // 用 Service Account 私鑰簽 JWT 換取 access token,快取到過期前 60 秒
     async function getAccessToken(): Promise<string> {
@@ -79,6 +81,23 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
       console.log('Google Calendar: 已更新快取token');
       return cachedToken.accessToken;
     }
+
+    // 全天事件的邊界要用日曆自己的時區換算。時區幾乎不會變,和 token 一樣快取
+    async function getCalendarTimeZone(): Promise<string> {
+      if (cachedTimeZone) return cachedTimeZone;
+
+      const accessToken = await getAccessToken();
+      const response = await fetch(calendarUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      await assertOk(response, 'get calendar');
+
+      const data = (await response.json()) as { timeZone: string };
+      cachedTimeZone = data.timeZone;
+      return cachedTimeZone;
+    }
+
     return {
       // 查詢指定時間範圍內已被佔用的時段,直接回傳 Google 的結果,不做任何計算
       async getBusyPeriods({ start, end }: TimePeriod): Promise<TimePeriod[]> {
@@ -130,21 +149,15 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
 
         await assertOk(response, 'list events');
 
-        const data = (await response.json()) as { items: GoogleEvent[] };
+        const data = (await response.json()) as { items: GoogleEvent[]; timeZone: string };
 
-        return (
-          data.items
-            // 全天事件(公休、休假)只有 date 沒有 dateTime,不是預約,略過
-            .filter((item) => item.start.dateTime && item.end.dateTime)
-            .map((item) => ({
-              eventId: item.id,
-              summary: item.summary ?? '(無標題)',
-              description: item.description,
-              ownerId: item.extendedProperties?.private?.ownerId,
-              start: item.start.dateTime!,
-              end: item.end.dateTime!,
-            }))
-        );
+        return data.items.map((item) => ({
+          eventId: item.id,
+          summary: item.summary ?? '(無標題)',
+          description: item.description,
+          ownerId: item.extendedProperties?.private?.ownerId,
+          ...toPeriod(item, data.timeZone),
+        }));
       },
 
       async getEvent(eventId: string): Promise<Event> {
@@ -163,8 +176,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
           summary: data.summary ?? '(無標題)',
           description: data.description,
           ownerId: data.extendedProperties?.private?.ownerId,
-          start: data.start.dateTime ?? data.start.date!,
-          end: data.end.dateTime ?? data.end.date!,
+          ...toPeriod(data, await getCalendarTimeZone()),
         };
       },
 
@@ -250,5 +262,14 @@ function toGoogleEventBody(event: NewEvent) {
     start: { dateTime: event.start },
     end: { dateTime: event.end },
     extendedProperties: { private: { ownerId: event.ownerId } },
+  };
+}
+
+// 全天事件(公休、休假)只有 date 沒有 dateTime,而且 Google 的 end.date 是隔天,
+// 所以當天 00:00 到隔天 00:00 正好是整天。邊界用日曆自己的時區換算成絕對時間
+function toPeriod(item: GoogleEvent, calendarTimeZone: string): TimePeriod {
+  return {
+    start: item.start.dateTime ?? toAbsoluteTime(`${item.start.date!}T00:00`, calendarTimeZone),
+    end: item.end.dateTime ?? toAbsoluteTime(`${item.end.date!}T00:00`, calendarTimeZone),
   };
 }
