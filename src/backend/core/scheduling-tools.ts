@@ -78,6 +78,13 @@ export function createSchedulingTools(
     };
   }
 
+  // 整個時段都落在營業時間內才算可以預約。busy 傳空的,因為「被佔用」要分開回報。
+  // 呼叫前必須先擋掉過去的時間 —— freeSlots 會把過去截掉,否則這裡會誤報成「不在營業時間內」
+  function isOpen(range: TimePeriod): boolean {
+    const slots = freeSlots({ range, busy: [], businessHours, timeZone });
+    return slots.length === 1 && slots[0]!.start === range.start && slots[0]!.end === range.end;
+  }
+
   // AI 給的是沒有時區的局部時間,補上店家時區才是地球上確定的瞬間
   function toAbsoluteRange(range: { start: string; end: string }): TimePeriod {
     return {
@@ -158,6 +165,14 @@ export function createSchedulingTools(
         const slot = resolveSlot(start, end, service);
         if (typeof slot === 'string') return { booked: false, reason: slot };
 
+        if (Date.parse(slot.range.start) < Date.now()) {
+          return { booked: false, reason: '不能預約已經過去的時間' };
+        }
+
+        if (!isOpen(slot.range)) {
+          return { booked: false, reason: '這個時段不在營業時間內' };
+        }
+
         const busy = await schedulingProvider.getBusyPeriods(slot.range);
         if (busy.length > 0) {
           return { booked: false, reason: '這個時段已經被佔用，請換一個時間' };
@@ -215,6 +230,14 @@ export function createSchedulingTools(
 
         const slot = resolveSlot(start, end, service);
         if (typeof slot === 'string') return { rescheduled: false, reason: slot };
+
+        if (Date.parse(slot.range.start) < Date.now()) {
+          return { rescheduled: false, reason: '不能改到已經過去的時間' };
+        }
+
+        if (!isOpen(slot.range)) {
+          return { rescheduled: false, reason: '這個時段不在營業時間內' };
+        }
 
         // 用 getEvents 而不是 getBusyPeriods,因為要把「自己這筆」排除掉
         const overlapping = await schedulingProvider.getEvents(slot.range);
