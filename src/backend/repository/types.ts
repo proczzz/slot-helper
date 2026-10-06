@@ -1,6 +1,6 @@
-import type { Customer } from '../model/entity/customer';
-import type { Message } from '../model/entity/message';
-import type { User } from '../model/entity/user';
+import type { Customer } from '../model/entity/customer.ts';
+import type { Message } from '../model/entity/message.ts';
+import type { User } from '../model/entity/user.ts';
 
 // config 表中的 key
 export type ConfigKey = 'system' | 'ai' | 'shop' | 'line' | 'scheduling';
