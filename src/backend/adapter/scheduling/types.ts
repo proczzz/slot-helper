@@ -39,7 +39,7 @@ export interface EventLabel {
 export interface SchedulingProvider {
   getBusyPeriods(range: TimePeriod): Promise<TimePeriod[]>;
   getEvents(criteria: EventQuery): Promise<Event[]>;
-  getEvent(eventId: string): Promise<Event>;
+  getEvent(eventId: string): Promise<Event | null>;
   getLabels(): Promise<EventLabel[]>;
   createEvent(event: NewEvent): Promise<{ eventId: string }>;
   updateEvent(eventId: string, event: NewEvent): Promise<void>;

@@ -99,7 +99,7 @@ export function createSchedulingTools(
   // 老闆在日曆上手動建立的事件沒有 ownerId,一樣會被擋下
   async function findOwnEvent(eventId: string): Promise<Event | string> {
     const event = await schedulingProvider.getEvent(eventId);
-    if (event.ownerId !== customerId) {
+    if (!event || event.ownerId !== customerId) {
       return '找不到這筆預約，請先用 findMyAppointments 確認識別碼';
     }
     return event;

@@ -160,13 +160,14 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         }));
       },
 
-      async getEvent(eventId: string): Promise<Event> {
+      async getEvent(eventId: string): Promise<Event | null> {
         const accessToken = await getAccessToken();
         const response = await fetch(
           `${eventsUrl}/${encodeURIComponent(eventId)}?eventLabelVersion=1`,
           { headers: { Authorization: `Bearer ${accessToken}` } },
         );
-
+        // 410是已刪除Event、404是不存在Event
+        if (response.status === 404 || response.status === 410) return null;
         await assertOk(response, 'get event');
 
         const data = (await response.json()) as GoogleEvent;
