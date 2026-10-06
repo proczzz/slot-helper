@@ -29,12 +29,6 @@ const NoteSchema = z
   .optional()
   .describe('顧客提到的備註，例如「會帶小孩」。老闆在日曆上看得到，不更改時可以省略');
 
-// checkAvailability 是範圍查詢,兩端都必填
-const TimeRangeSchema = z.object({
-  start: StartSchema,
-  end: LocalTimeSchema.describe('結束時間，格式 YYYY-MM-DDTHH:mm，例如 2026-09-22T16:00'),
-});
-
 // resolveSlot 成功時的結果
 interface Slot {
   range: TimePeriod;
@@ -173,20 +167,28 @@ export function createSchedulingTools(
           return { booked: false, reason: '這個時段不在營業時間內' };
         }
 
-        const busy = await schedulingProvider.getBusyPeriods(slot.range);
-        if (busy.length > 0) {
-          return { booked: false, reason: '這個時段已經被佔用，請換一個時間' };
+        if (!reserve(slot.range)) {
+          return { booked: false, reason: '這個時段剛被其他顧客預約，請換一個時間' };
         }
 
-        const { eventId } = await schedulingProvider.createEvent({
-          summary,
-          description: note,
-          ownerId: customerId,
-          labelId: slot.labelId,
-          ...slot.range,
-        });
+        try {
+          const busy = await schedulingProvider.getBusyPeriods(slot.range);
+          if (busy.length > 0) {
+            return { booked: false, reason: '這個時段已經被佔用，請換一個時間' };
+          }
 
-        return { booked: true, eventId, ...toLocalRange(slot.range) };
+          const { eventId } = await schedulingProvider.createEvent({
+            summary,
+            description: note,
+            ownerId: customerId,
+            labelId: slot.labelId,
+            ...slot.range,
+          });
+
+          return { booked: true, eventId, ...toLocalRange(slot.range) };
+        } finally {
+          release(slot.range);
+        }
       },
     }),
 
@@ -239,21 +241,29 @@ export function createSchedulingTools(
           return { rescheduled: false, reason: '這個時段不在營業時間內' };
         }
 
-        // 用 getEvents 而不是 getBusyPeriods,因為要把「自己這筆」排除掉
-        const overlapping = await schedulingProvider.getEvents(slot.range);
-        if (overlapping.some((other) => other.eventId !== eventId)) {
-          return { rescheduled: false, reason: '這個時段已經被佔用，請換一個時間' };
+        if (!reserve(slot.range)) {
+          return { rescheduled: false, reason: '這個時段剛被其他顧客預約，請換一個時間' };
         }
 
-        await schedulingProvider.updateEvent(eventId, {
-          summary: summary ?? event.summary,
-          description: note ?? event.description,
-          ownerId: customerId,
-          labelId: slot.labelId,
-          ...slot.range,
-        });
+        try {
+          // 用 getEvents 而不是 getBusyPeriods,因為要把「自己這筆」排除掉
+          const overlapping = await schedulingProvider.getEvents(slot.range);
+          if (overlapping.some((other) => other.eventId !== eventId)) {
+            return { rescheduled: false, reason: '這個時段已經被佔用，請換一個時間' };
+          }
 
-        return { rescheduled: true, ...toLocalRange(slot.range) };
+          await schedulingProvider.updateEvent(eventId, {
+            summary: summary ?? event.summary,
+            description: note ?? event.description,
+            ownerId: customerId,
+            labelId: slot.labelId,
+            ...slot.range,
+          });
+
+          return { rescheduled: true, ...toLocalRange(slot.range) };
+        } finally {
+          release(slot.range);
+        }
       },
     }),
 
@@ -281,4 +291,28 @@ function buildServiceSchema(services: Service[]): z.ZodType<string> {
   if (names.length === 0) return z.string().describe('服務項目名稱');
 
   return z.enum(names as [string, ...string[]]).describe('服務項目名稱，必須是服務清單裡的一個');
+}
+
+// Race Condition: 正在處理中的預約時段。
+// 「檢查 + 加入」之間沒有 await，JS 單執行緒保證不會有兩個請求同時通過
+const pending: TimePeriod[] = [];
+
+function reserve(range: TimePeriod): boolean {
+  const start = Date.parse(range.start);
+  const end = Date.parse(range.end);
+
+  for (const other of pending) {
+    // 我開始早於對方結束 且 對方開始早於我的結束 = 時間有衝突
+    if (start < Date.parse(other.end) && Date.parse(other.start) < end) {
+      return false;
+    }
+  }
+
+  pending.push(range);
+  return true;
+}
+
+function release(range: TimePeriod): void {
+  const index = pending.indexOf(range);
+  if (index !== -1) pending.splice(index, 1);
 }
