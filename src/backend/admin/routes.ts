@@ -7,12 +7,12 @@ import { clearCachedProviders } from '../app/services.ts';
 import { handleChat } from '../core/chat-service.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
+import { CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
-import { CustomerQuerySchema } from '../model/dto/customer.ts';
 
 const adminRoutes = new Hono<AppVariables>();
 
@@ -154,8 +154,14 @@ adminRoutes.post('/test-customers', async (c) => {
 });
 
 adminRoutes.post('/test-chat', async (c) => {
-  const { model, shopConfig, conversationRepository, customerRepository, schedulingProvider } =
-    c.var.services;
+  const {
+    model,
+    shopConfig,
+    conversationRepository,
+    customerRepository,
+    schedulingProvider,
+    telegramClient,
+  } = c.var.services;
   if (!model) return c.json(jsend.error('AI 尚未設定'), 503);
 
   const { sessionId, message } = ChatRequestSchema.parse(await c.req.json());
@@ -172,6 +178,7 @@ adminRoutes.post('/test-chat', async (c) => {
     shopConfig,
     conversationRepository,
     schedulingProvider,
+    telegramClient,
   );
 
   await customerRepository.updateLastMessage(id, message, Date.now());

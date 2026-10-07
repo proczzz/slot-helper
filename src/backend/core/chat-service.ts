@@ -6,6 +6,8 @@ import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
+import type { TelegramClient } from '../adapter/telegram/types.ts';
+import { createSupportTools } from './support-tools.ts';
 
 const HISTORY_LIMIT = 40;
 
@@ -17,6 +19,7 @@ export async function handleChat(
   shopConfig: ShopConfig,
   conversationRepository: ConversationRepository,
   schedulingProvider: SchedulingProvider | null,
+  telegramClient: TelegramClient | null,
 ): Promise<ChatResponse> {
   // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
   const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
@@ -25,14 +28,20 @@ export async function handleChat(
     { role: 'user' as const, content: message },
   ];
 
+  // 兩組工具合併。全空時要傳 undefined 而不是 {},避免送出空的 tools 欄位
+  const tools = {
+    ...(schedulingProvider
+      ? createSchedulingTools(schedulingProvider, customerId, shopConfig)
+      : {}),
+    ...(telegramClient ? createSupportTools(telegramClient, customerName) : {}),
+  };
+
   // 實際呼叫 llm
   const result = await generateText({
     model,
     system: buildSystemPrompt(shopConfig, customerName),
     messages,
-    tools: schedulingProvider
-      ? createSchedulingTools(schedulingProvider, customerId, shopConfig)
-      : undefined,
+    tools: Object.keys(tools).length > 0 ? tools : undefined,
     stopWhen: stepCountIs(8),
   });
 

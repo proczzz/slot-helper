@@ -1,12 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
-import {
-  getSection,
-  saveSection,
-  sendTelegramTest,
-  type TelegramConfig,
-} from '../lib/admin.ts';
+import { getSection, saveSection, sendTelegramTest, type TelegramConfig } from '../lib/admin.ts';
 
 const EMPTY: TelegramConfig = { botToken: '', chatId: '' };
 

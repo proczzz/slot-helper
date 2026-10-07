@@ -17,6 +17,7 @@ lineRoutes.post('/webhook', async (c) => {
     conversationRepository,
     customerRepository,
     schedulingProvider,
+    telegramClient,
   } = c.var.services;
   // 檢查: 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!lineClient) return c.text('LINE is not configured', 404);
@@ -68,6 +69,7 @@ lineRoutes.post('/webhook', async (c) => {
         shopConfig,
         conversationRepository,
         schedulingProvider,
+        telegramClient,
       );
 
       await customerRepository.updateLastMessage(id, event.message!.text!, Date.now());
