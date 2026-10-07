@@ -14,6 +14,7 @@ import { ChangePasswordSchema } from '../model/dto/password.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
+import { WebhookSchema } from '../model/dto/telegram.ts';
 
 const adminRoutes = new Hono<AppVariables>();
 
@@ -147,29 +148,33 @@ adminRoutes.get('/telegram/webhook', async (c) => {
 
 adminRoutes.post('/telegram/webhook', async (c) => {
   const { telegramClient, configRepository } = c.var.services;
-  if (!telegramClient) return c.json(jsend.fail('Telegram 尚未設定，請先儲存設定'), 400);
-
   const config = await loadTelegramConfig(configRepository);
-  if (!config?.webhookSecret) return c.json(jsend.fail('請先產生 Webhook 驗證碼並儲存'), 400);
+  if (!telegramClient || !config) {
+    return c.json(jsend.fail('Telegram 尚未設定，請先儲存設定'), 400);
+  }
 
-  // 網址從這個請求本身推出來,老闆不必知道自己的網域。
-  // 反向代理(ngrok、Cloudflare Tunnel)會在它那端終止 TLS 再用 http 轉進來,
-  // 所以協議與主機要優先採信 X-Forwarded-*,否則推出來的是 http,Telegram 會拒收
-  const requestUrl = new URL(c.req.url);
-  const protocol =
-    c.req.header('x-forwarded-proto')?.split(',')[0]?.trim() ||
-    requestUrl.protocol.replace(':', '');
-  const host = c.req.header('x-forwarded-host')?.split(',')[0]?.trim() || requestUrl.host;
-  const url = `${protocol}://${host}/telegram/webhook`;
+  // 網址由前端給。後端自己推導的話,反向代理會終止 TLS、內網後台的網域也不是對外網域,
+  // 都推不出正確的值;瀏覽器本來就知道自己連的是哪裡。
+  // 已登入者能把 webhook 指到任意網址,但他本來就能直接改密碼,不構成新的權限提升
+  const { url } = WebhookSchema.parse(await c.req.json());
 
-  // 註冊失敗幾乎都是網址不符合 Telegram 的要求,屬於可預期的失敗
+  // 純機器對機器的驗證碼,老闆不需要看到也不需要輸入,每次註冊都換新的
+  const webhookSecret = crypto.randomUUID();
+
+  // 先向 Telegram 註冊、成功才寫回設定。
+  // 反過來的話註冊失敗就會留下一個 Telegram 不知道的驗證碼,原本還能用的 webhook 會跟著壞掉
   try {
-    await telegramClient.setWebhook(url, config.webhookSecret);
-    // 失敗不影響 webhook 本身,但清單沒送出老闆就看不到「/」選單
-    await telegramClient.setCommands(TELEGRAM_COMMANDS);
+    await telegramClient.setWebhook(url, webhookSecret);
   } catch (error) {
     return c.json(jsend.fail(error instanceof Error ? error.message : '註冊失敗'), 400);
   }
+
+  await configRepository.set('telegram', JSON.stringify({ ...config, webhookSecret }));
+
+  // 指令清單只影響「/」選單,失敗不該讓整個註冊算失敗
+  await telegramClient.setCommands(TELEGRAM_COMMANDS).catch((error) => {
+    console.error('設定 Telegram 指令清單失敗:', error);
+  });
 
   return c.json(jsend.success(await telegramClient.getWebhookInfo()));
 });

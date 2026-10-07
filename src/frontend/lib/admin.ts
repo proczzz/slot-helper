@@ -139,9 +139,13 @@ export async function getTelegramWebhook(): Promise<WebhookInfo | null> {
   return body.data ?? null;
 }
 
-// 把 webhook 網址註冊給 Telegram,網址由後端從請求推出來
-export async function registerTelegramWebhook(): Promise<WebhookInfo> {
-  const response = await request('/api/admin/telegram/webhook', { method: 'POST' });
+// 把 webhook 網址註冊給 Telegram。網址由前端給 —— 後端在反向代理或內網後台底下推不出正確的值
+export async function registerTelegramWebhook(url: string): Promise<WebhookInfo> {
+  const response = await request('/api/admin/telegram/webhook', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
   const body = (await response.json()) as JSendBody<WebhookInfo>;
   if (body.status !== 'success') throw new Error(toErrorMessage(body));
   return body.data!;

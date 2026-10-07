@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getSection,
@@ -8,6 +8,7 @@ import {
   saveSection,
   sendTelegramTest,
   type TelegramConfig,
+  type WebhookInfo,
 } from '../lib/admin.ts';
 
 const EMPTY: TelegramConfig = { botToken: '', chatId: '', webhookSecret: '' };
@@ -42,10 +43,7 @@ export function TelegramSettingsPage() {
 function TelegramForm({ config }: { config: TelegramConfig }) {
   const [botToken, setBotToken] = useState(config.botToken);
   const [chatId, setChatId] = useState(config.chatId);
-  const [webhookSecret, setWebhookSecret] = useState(config.webhookSecret);
   const queryClient = useQueryClient();
-
-  const webhookUrl = `${window.location.origin}/telegram/webhook`;
 
   const save = useMutation({
     mutationFn: (next: TelegramConfig) => saveSection('telegram', next),
@@ -85,7 +83,9 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({ botToken, chatId, webhookSecret });
+            // 驗證碼是伺服器狀態、老闆不編輯,所以直接沿用目前設定裡的值。
+            // 放進 useState 的話,註冊 webhook 之後會停在舊值、按儲存就把新的洗掉
+            save.mutate({ botToken, chatId, webhookSecret: config.webhookSecret });
           }}
         >
           <fieldset className="fieldset">
@@ -116,27 +116,6 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             )}
           </fieldset>
 
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">Webhook 驗證碼</legend>
-            <div className="join w-full">
-              <input
-                type="text"
-                className="input join-item w-full font-mono text-xs"
-                value={webhookSecret}
-                onChange={(event) => setWebhookSecret(event.target.value)}
-                spellCheck={false}
-              />
-              <button
-                type="button"
-                className="btn join-item"
-                onClick={() => setWebhookSecret(crypto.randomUUID())}
-              >
-                產生
-              </button>
-            </div>
-            <p className="label">留空代表不啟用 Telegram 指令，只用來接收通知</p>
-          </fieldset>
-
           <div className="flex gap-2">
             <button
               type="submit"
@@ -155,8 +134,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
                 test.isPending ||
                 save.isPending ||
                 botToken !== config.botToken ||
-                chatId !== config.chatId ||
-                webhookSecret !== config.webhookSecret
+                chatId !== config.chatId
               }
               onClick={() => test.mutate()}
             >
@@ -166,7 +144,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
           </div>
         </form>
 
-        <WebhookSection url={webhookUrl} enabled={config.webhookSecret.length > 0} />
+        <WebhookSection enabled={config.botToken.length > 0 && config.chatId.length > 0} />
 
         {test.isError && (
           <div className="alert alert-error">
@@ -196,58 +174,115 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
   );
 }
 
-function WebhookSection({ url, enabled }: { url: string; enabled: boolean }) {
-  const queryClient = useQueryClient();
-
-  const { data: info, isPending } = useQuery({
+function WebhookSection({ enabled }: { enabled: boolean }) {
+  const { data, isPending, isError, error } = useQuery({
     queryKey: ['telegram-webhook'],
     queryFn: getTelegramWebhook,
     enabled,
   });
 
+  if (!enabled) {
+    return (
+      <Section>
+        <p className="label">先填好上面的設定並儲存，才能註冊 Webhook</p>
+      </Section>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <Section>
+        <span className="loading loading-spinner loading-sm" />
+      </Section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Section>
+        <div className="alert alert-error">
+          <span className="text-sm">{error.message}</span>
+        </div>
+      </Section>
+    );
+  }
+
+  // 資料到齊才掛載,輸入框的初始值才拿得到 Telegram 目前註冊的網址
+  return <WebhookForm info={data} />;
+}
+
+function Section({ children }: { children: ReactNode }) {
+  return (
+    <fieldset className="fieldset border-t border-base-300 pt-4">
+      <legend className="fieldset-legend">Telegram 指令</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+function WebhookForm({ info }: { info: WebhookInfo | null }) {
+  const queryClient = useQueryClient();
+
+  // 後台所在的網域。大多數部署這就是對外網域,但內網後台或反向代理底下不是
+  const localUrl = `${window.location.origin}/telegram/webhook`;
+  // 已經註冊過就沿用 Telegram 記著的值,否則按一次註冊就會把原本能用的網址換掉
+  const [url, setUrl] = useState(info?.url || localUrl);
+  const custom = url !== localUrl;
+
   const register = useMutation({
-    mutationFn: registerTelegramWebhook,
+    mutationFn: () => registerTelegramWebhook(url),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['telegram-webhook'] });
     },
   });
 
-  if (!enabled) {
-    return (
-      <fieldset className="fieldset border-t border-base-300 pt-4">
-        <legend className="fieldset-legend">Telegram 指令</legend>
-        <p className="label">產生 Webhook 驗證碼並儲存之後，才能啟用對機器人下指令的功能</p>
-      </fieldset>
-    );
-  }
-
   return (
-    <fieldset className="fieldset border-t border-base-300 pt-4">
-      <legend className="fieldset-legend">Telegram 指令</legend>
+    <Section>
+      <div className="join w-full">
+        <input
+          type="url"
+          className={`input join-item w-full font-mono text-xs ${custom ? 'input-warning' : ''}`}
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          spellCheck={false}
+        />
+        <button
+          type="button"
+          className="btn join-item"
+          disabled={!custom}
+          onClick={() => setUrl(localUrl)}
+        >
+          還原
+        </button>
+      </div>
 
-      <div className="flex items-center gap-2">
+      {custom ? (
+        <p className="label text-warning">
+          這不是你現在瀏覽後台的網域。內網後台或反向代理底下這是正常的；不是故意改的話按「還原」
+        </p>
+      ) : (
+        <p className="label">Telegram 必須連得到這個網址，所以要是公開的 HTTPS</p>
+      )}
+
+      <div className="mt-2 flex items-center gap-2">
         <button
           type="button"
           className="btn"
-          disabled={register.isPending}
+          disabled={register.isPending || !url}
           onClick={() => register.mutate()}
         >
           {register.isPending && <span className="loading loading-spinner" />}
           註冊 Webhook
         </button>
 
-        {isPending ? (
-          <span className="loading loading-spinner loading-sm" />
-        ) : info?.url ? (
+        {info?.url ? (
           <span className="badge badge-success badge-soft">已註冊</span>
         ) : (
           <span className="badge badge-ghost">未註冊</span>
         )}
       </div>
 
-      <p className="label">
-        會把 {url} 註冊給 Telegram。網址必須是公開的 HTTPS，所以本機開發無法註冊
-      </p>
+      {info?.url && <p className="label font-mono text-xs break-all">目前註冊：{info.url}</p>}
 
       {register.isError && (
         <div className="alert alert-error mt-2">
@@ -268,6 +303,6 @@ function WebhookSection({ url, enabled }: { url: string; enabled: boolean }) {
       {info && info.pendingUpdateCount > 0 && (
         <p className="label text-warning">有 {info.pendingUpdateCount} 筆更新還沒被處理</p>
       )}
-    </fieldset>
+    </Section>
   );
 }
