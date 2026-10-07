@@ -1,16 +1,22 @@
 import { Hono } from 'hono';
-import type { TelegramUpdate } from '../adapter/telegram/types.ts';
+import type { BotCommand, TelegramUpdate } from '../adapter/telegram/types.ts';
 import { loadTelegramConfig } from './config.ts';
+import { ADMIN_USERNAME } from './initialize.ts';
 import type { AppVariables } from './services.ts';
 
 const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 const RESET_COMMAND = '/reset';
 
+// 會顯示在 Telegram 的「/」選單裡,註冊 webhook 時一併送給 Telegram
+export const TELEGRAM_COMMANDS: BotCommand[] = [
+  { command: 'reset', description: '重設後台登入密碼' },
+];
+
 const telegramRoutes = new Hono<AppVariables>();
 
 telegramRoutes.post('/webhook', async (c) => {
-  const { telegramClient, configRepository } = c.var.services;
-  // 檢查: 如果沒有設定 Telegram 還是會開啟 /webhook 接口，但不會執行實際工作
+  const { telegramClient, configRepository, adminAuth } = c.var.services;
+  // 沒設定 Telegram 時接口還是開著,但不做任何事
   if (!telegramClient) return c.text('Telegram is not configured', 404);
 
   // chatId 與 secret 都只有這裡要用,不值得把它們塞進 client 的介面
@@ -28,10 +34,24 @@ telegramRoutes.post('/webhook', async (c) => {
   if (!message?.text || String(message.chat.id) !== config.chatId) return c.text('OK');
 
   if (message.text.trim() === RESET_COMMAND) {
-    await telegramClient.sendText('收到，密碼重設功能還在施工中。');
+    await resetPassword();
   }
 
   return c.text('OK');
+
+  async function resetPassword() {
+    const password = await adminAuth.resetPassword(ADMIN_USERNAME);
+    if (!password) {
+      await telegramClient!.sendText('找不到管理帳號，無法重設密碼。');
+      return;
+    }
+    console.log('已透過 Telegram 重設管理密碼');
+
+    await telegramClient!.sendText(
+      `後台登入資訊\n\n帳號：${ADMIN_USERNAME}\n新密碼：${password}\n\n` +
+        '請登入後立刻修改密碼，並刪除這則訊息。',
+    );
+  }
 });
 
 export { telegramRoutes };

@@ -17,9 +17,15 @@ export interface WebhookInfo {
   lastErrorAt?: string;
 }
 
+export interface BotCommand {
+  command: string; // 不帶斜線
+  description: string;
+}
+
 export interface TelegramClient {
   sendText(text: string): Promise<void>;
   setWebhook(url: string, secretToken: string): Promise<void>;
+  setCommands(commands: BotCommand[]): Promise<void>;
   getWebhookInfo(): Promise<WebhookInfo>;
 }
 

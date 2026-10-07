@@ -13,6 +13,7 @@ import { LoginSchema } from '../model/dto/login.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
+import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 
 const adminRoutes = new Hono<AppVariables>();
 
@@ -164,6 +165,8 @@ adminRoutes.post('/telegram/webhook', async (c) => {
   // 註冊失敗幾乎都是網址不符合 Telegram 的要求,屬於可預期的失敗
   try {
     await telegramClient.setWebhook(url, config.webhookSecret);
+    // 失敗不影響 webhook 本身,但清單沒送出老闆就看不到「/」選單
+    await telegramClient.setCommands(TELEGRAM_COMMANDS);
   } catch (error) {
     return c.json(jsend.fail(error instanceof Error ? error.message : '註冊失敗'), 400);
   }

@@ -1,7 +1,7 @@
 import { hashPassword } from '../admin/password.ts';
 import type { ConfigRepository, UserRepository } from '../repository/types.ts';
 
-const DEFAULT_USERNAME = 'admin';
+export const ADMIN_USERNAME = 'admin';
 
 export async function ensureInitialized(
   configRepository: ConfigRepository,
@@ -18,7 +18,7 @@ async function initialize(
   // 先建'管理帳號'，後建'jwtSecret'，避免jwtSecret成功、管理帳號失敗(沒帳號登入)
   const password = crypto.randomUUID();
   await userRepository.insert({
-    username: DEFAULT_USERNAME,
+    username: ADMIN_USERNAME,
     password: await hashPassword(password),
     enabled: true,
   });
@@ -32,7 +32,7 @@ async function initialize(
   );
 
   console.log('─'.repeat(50));
-  console.log(`SlotHelper 已初始化，管理帳號: ${DEFAULT_USERNAME}`);
+  console.log(`SlotHelper 已初始化，管理帳號: ${ADMIN_USERNAME}`);
   console.log(`初始密碼: ${password}`);
   console.log('請登入後台後立即修改密碼');
   console.log('─'.repeat(50));

@@ -10,6 +10,7 @@ export const ADMIN_COOKIE_NAME = 'admin_token';
 export interface AdminAuth {
   authenticate(username: string, password: string): Promise<boolean>;
   changePassword(username: string, currentPassword: string, newPassword: string): Promise<boolean>;
+  resetPassword(username: string): Promise<string | null>;
   issueToken(username: string): Promise<string>;
   verifyToken(token: string): Promise<string | null>;
 }
@@ -29,6 +30,16 @@ export function createAdminAuth(userRepository: UserRepository, jwtSecret: strin
       if (!(await this.authenticate(username, currentPassword))) return false;
       await userRepository.updatePassword(username, await hashPassword(newPassword));
       return true;
+    },
+    // 忘記密碼:直接產生新密碼並回傳明文,由呼叫端負責交到本人手上。
+    // 帳號不存在或已停用時回 null
+    async resetPassword(username) {
+      const user = await userRepository.findByUsername(username);
+      if (!user || !user.enabled) return null;
+
+      const password = generatePassword();
+      await userRepository.updatePassword(username, await hashPassword(password));
+      return password;
     },
     // 發 jwt
     issueToken(username) {
@@ -50,4 +61,13 @@ export function createAdminAuth(userRepository: UserRepository, jwtSecret: strin
       }
     },
   };
+}
+
+// 去掉 0O1lI 這類看錯機率高的字,老闆要在手機上看、在電腦上打
+const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+const PASSWORD_LENGTH = 8;
+
+function generatePassword(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(PASSWORD_LENGTH));
+  return Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]).join('');
 }

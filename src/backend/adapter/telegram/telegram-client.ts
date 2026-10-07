@@ -1,4 +1,4 @@
-import type { TelegramClient, TelegramConfig, WebhookInfo } from './types.ts';
+import type { BotCommand, TelegramClient, TelegramConfig, WebhookInfo } from './types.ts';
 
 const API_BASE = 'https://api.telegram.org';
 
@@ -31,6 +31,11 @@ export function createTelegramClient(config: TelegramConfig | null): TelegramCli
     // allowed_updates 只留 message,其他類型(編輯訊息、按鈕回呼)我們沒有在處理
     async setWebhook(url: string, secretToken: string) {
       await call('setWebhook', { url, secret_token: secretToken, allowed_updates: ['message'] });
+    },
+
+    // 設定「/」選單裡顯示的指令清單。只是提示,不代表權限
+    async setCommands(commands: BotCommand[]) {
+      await call('setMyCommands', { commands });
     },
 
     async getWebhookInfo(): Promise<WebhookInfo> {
