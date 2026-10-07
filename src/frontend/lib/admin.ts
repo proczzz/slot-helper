@@ -88,6 +88,8 @@ export interface TelegramConfig {
   botToken: string;
   // 存字串而不是數字,它只會被原樣轉交給 Telegram
   chatId: string;
+  // 驗證 webhook 請求真的來自 Telegram,空的代表還沒啟用
+  webhookSecret: string;
 }
 
 export interface SchedulingConfig {
@@ -120,6 +122,29 @@ export async function getCalendarLabels(): Promise<EventLabel[]> {
   const body = (await response.json()) as JSendBody<EventLabel[]>;
   if (body.status !== 'success') throw new Error('讀取日曆標籤失敗');
   return body.data ?? [];
+}
+
+export interface WebhookInfo {
+  url: string;
+  pendingUpdateCount: number;
+  lastErrorMessage?: string;
+  lastErrorAt?: string;
+}
+
+// 尚未設定 Telegram 時回 null
+export async function getTelegramWebhook(): Promise<WebhookInfo | null> {
+  const response = await request('/api/admin/telegram/webhook');
+  const body = (await response.json()) as JSendBody<WebhookInfo | null>;
+  if (body.status !== 'success') throw new Error('讀取 Webhook 狀態失敗');
+  return body.data ?? null;
+}
+
+// 把 webhook 網址註冊給 Telegram,網址由後端從請求推出來
+export async function registerTelegramWebhook(): Promise<WebhookInfo> {
+  const response = await request('/api/admin/telegram/webhook', { method: 'POST' });
+  const body = (await response.json()) as JSendBody<WebhookInfo>;
+  if (body.status !== 'success') throw new Error(toErrorMessage(body));
+  return body.data!;
 }
 
 // 老闆設定 Telegram 後確認真的收得到。失敗時後端回 fail,訊息是 Telegram 的原文

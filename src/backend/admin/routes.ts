@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { listAvailableModels } from '../adapter/ai/index.ts';
-import { SECTION_SCHEMAS } from '../app/config.ts';
+import { loadTelegramConfig, SECTION_SCHEMAS } from '../app/config.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { handleChat } from '../core/chat-service.ts';
@@ -135,6 +135,40 @@ adminRoutes.post('/telegram/test', async (c) => {
   }
 
   return c.json(jsend.success(null));
+});
+
+adminRoutes.get('/telegram/webhook', async (c) => {
+  const { telegramClient } = c.var.services;
+  if (!telegramClient) return c.json(jsend.success(null));
+
+  return c.json(jsend.success(await telegramClient.getWebhookInfo()));
+});
+
+adminRoutes.post('/telegram/webhook', async (c) => {
+  const { telegramClient, configRepository } = c.var.services;
+  if (!telegramClient) return c.json(jsend.fail('Telegram 尚未設定，請先儲存設定'), 400);
+
+  const config = await loadTelegramConfig(configRepository);
+  if (!config?.webhookSecret) return c.json(jsend.fail('請先產生 Webhook 驗證碼並儲存'), 400);
+
+  // 網址從這個請求本身推出來,老闆不必知道自己的網域。
+  // 反向代理(ngrok、Cloudflare Tunnel)會在它那端終止 TLS 再用 http 轉進來,
+  // 所以協議與主機要優先採信 X-Forwarded-*,否則推出來的是 http,Telegram 會拒收
+  const requestUrl = new URL(c.req.url);
+  const protocol =
+    c.req.header('x-forwarded-proto')?.split(',')[0]?.trim() ||
+    requestUrl.protocol.replace(':', '');
+  const host = c.req.header('x-forwarded-host')?.split(',')[0]?.trim() || requestUrl.host;
+  const url = `${protocol}://${host}/telegram/webhook`;
+
+  // 註冊失敗幾乎都是網址不符合 Telegram 的要求,屬於可預期的失敗
+  try {
+    await telegramClient.setWebhook(url, config.webhookSecret);
+  } catch (error) {
+    return c.json(jsend.fail(error instanceof Error ? error.message : '註冊失敗'), 400);
+  }
+
+  return c.json(jsend.success(await telegramClient.getWebhookInfo()));
 });
 
 const TEST_CHANNEL = 'test';
