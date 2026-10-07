@@ -29,14 +29,16 @@ telegramRoutes.post('/webhook', async (c) => {
     return c.text('Invalid secret token', 401);
   }
 
-  // Step2. 只理老闆說的文字訊息。其餘一律忽略但仍回 200,否則 Telegram 會一直重送
+  // 只處理管理員的文字訊息。其餘一律忽略但仍回 200，否則 Telegram 會一直重送
   const { message } = (await c.req.json()) as TelegramUpdate;
   if (!message?.text || String(message.chat.id) !== config.chatId) return c.text('OK');
 
+  // Step2. 處理訊息(非阻塞)
   if (message.text.trim() === RESET_COMMAND) {
-    await resetPassword();
+    c.var.runInBackground(resetPassword());
   }
 
+  // Step3. 回應給 Telegram 平台 (step2 還在其他線程執行)
   return c.text('OK');
 
   async function resetPassword() {

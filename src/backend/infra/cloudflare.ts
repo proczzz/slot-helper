@@ -11,7 +11,9 @@ app.use(async (c, next) => {
   // [llm、資料庫、日曆]
   c.set('services', await createServices(createD1Database(c.env.DB)));
   // 回應送出後 Workers 會中止未完成的工作, waitUntil 方法會讓平台等它做完
-  c.set('runInBackground', (task) => c.executionCtx.waitUntil(task));
+  c.set('runInBackground', (task) => {
+    c.executionCtx.waitUntil(task.catch((error) => console.error('背景工作失敗:', error)));
+  });
   await next();
 });
 

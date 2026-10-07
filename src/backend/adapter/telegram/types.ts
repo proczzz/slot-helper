@@ -2,9 +2,8 @@ import { z } from 'zod';
 
 export const TelegramConfigSchema = z.object({
   botToken: z.string().min(1, '請輸入 Bot token'),
-  // 私聊的 chat ID 就是使用者 ID,群組是負數,所以允許開頭的減號
+  // 私聊的 chat ID 就是使用者 ID，群組是負數，所以開頭允許減號
   chatId: z.string().regex(/^-?\d+$/, 'Chat ID 必須是數字'),
-  // 驗證 webhook 請求真的來自 Telegram,空的代表還沒啟用 webhook
   webhookSecret: z.string().default(''),
 });
 
