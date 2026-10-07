@@ -3,7 +3,7 @@ import type { Message } from '../model/entity/message.ts';
 import type { User } from '../model/entity/user.ts';
 
 // config 表中的 key
-export type ConfigKey = 'system' | 'ai' | 'shop' | 'line' | 'scheduling';
+export type ConfigKey = 'system' | 'ai' | 'shop' | 'line' | 'scheduling' | 'telegram';
 
 export interface ConfigRepository {
   get(key: ConfigKey): Promise<string | null>;

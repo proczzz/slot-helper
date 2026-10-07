@@ -4,6 +4,8 @@ import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
+import { createTelegramClient } from '../adapter/telegram/telegram-client.ts';
+import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
@@ -24,6 +26,7 @@ import {
   loadSchedulingConfig,
   loadShopSettings,
   loadSystemConfig,
+  loadTelegramConfig,
 } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
 
@@ -46,6 +49,7 @@ export interface Services {
   customerRepository: CustomerRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
+  telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
   adminAuth: AdminAuth; // 身分驗證模組
 }
 
@@ -87,6 +91,7 @@ async function getSharedProviders(
     shopConfig: await loadShopSettings(configRepository),
     schedulingProvider: createSchedulingProvider(await loadSchedulingConfig(configRepository)),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
+    telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),
     adminAuth: createAdminAuth(userRepository, system!.jwtSecret),
   };
   return cachedProviders;

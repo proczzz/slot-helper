@@ -25,7 +25,7 @@ export async function logout(): Promise<void> {
   await request('/api/admin/logout', { method: 'POST' });
 }
 
-export type Section = 'ai' | 'shop' | 'line' | 'scheduling';
+export type Section = 'ai' | 'shop' | 'line' | 'scheduling' | 'telegram';
 
 export async function getSection<T>(section: Section): Promise<T | null> {
   const response = await request(`/api/admin/config/${section}`);
@@ -82,6 +82,12 @@ export interface ShopConfig {
 export interface LineConfig {
   channelSecret: string;
   accessToken: string;
+}
+
+export interface TelegramConfig {
+  botToken: string;
+  // 存字串而不是數字,它只會被原樣轉交給 Telegram
+  chatId: string;
 }
 
 export interface SchedulingConfig {

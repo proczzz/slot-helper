@@ -4,6 +4,7 @@ import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
+import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
@@ -11,6 +12,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
   line: LineConfigSchema,
   scheduling: SchedulingConfigSchema,
   shop: ShopConfigSchema,
+  telegram: TelegramConfigSchema,
 };
 
 const SystemConfigSchema = z.object({
@@ -32,6 +34,12 @@ export function loadSchedulingConfig(
   configRepository: ConfigRepository,
 ): Promise<SchedulingConfig | null> {
   return loadSection(configRepository, 'scheduling', SchedulingConfigSchema, null);
+}
+
+export function loadTelegramConfig(
+  configRepository: ConfigRepository,
+): Promise<TelegramConfig | null> {
+  return loadSection(configRepository, 'telegram', TelegramConfigSchema, null);
 }
 
 export function loadShopSettings(configRepository: ConfigRepository): Promise<ShopConfig> {

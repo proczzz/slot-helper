@@ -10,6 +10,7 @@ const MENU = [
   { to: '/settings/ai', label: 'AI 模型' },
   { to: '/settings/calendar', label: 'Google 日曆' },
   { to: '/settings/line', label: 'LINE' },
+  { to: '/settings/telegram', label: 'Telegram' },
   { to: '/settings/account', label: '帳號' },
 ];
 
