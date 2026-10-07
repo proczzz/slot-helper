@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
-import { getSection, saveSection, type TelegramConfig } from '../lib/admin.ts';
+import {
+  getSection,
+  saveSection,
+  sendTelegramTest,
+  type TelegramConfig,
+} from '../lib/admin.ts';
 
 const EMPTY: TelegramConfig = { botToken: '', chatId: '' };
 
@@ -43,7 +48,10 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
     },
   });
 
+  const test = useMutation({ mutationFn: sendTelegramTest });
+
   useAutoReset(save);
+  useAutoReset(test);
 
   // 後端的 schema 也是這條規則,先在前端擋住可以少一次往返
   const chatIdInvalid = chatId.length > 0 && !/^-?\d+$/.test(chatId);
@@ -102,19 +110,49 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             )}
           </fieldset>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={save.isPending || !botToken || !chatId || chatIdInvalid}
-          >
-            {save.isPending && <span className="loading loading-spinner" />}
-            儲存
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={save.isPending || !botToken || !chatId || chatIdInvalid}
+            >
+              {save.isPending && <span className="loading loading-spinner" />}
+              儲存
+            </button>
+
+            {/* 測試用的是後端已儲存的設定,所以改過還沒存時先擋住,免得以為在測新的值 */}
+            <button
+              type="button"
+              className="btn"
+              disabled={
+                test.isPending ||
+                save.isPending ||
+                botToken !== config.botToken ||
+                chatId !== config.chatId
+              }
+              onClick={() => test.mutate()}
+            >
+              {test.isPending && <span className="loading loading-spinner" />}
+              發送測試訊息
+            </button>
+          </div>
         </form>
+
+        {test.isError && (
+          <div className="alert alert-error">
+            <span className="whitespace-pre-wrap text-sm">{test.error.message}</span>
+          </div>
+        )}
 
         {save.isSuccess && (
           <div className="toast toast-end">
             <div className="alert alert-success">已儲存</div>
+          </div>
+        )}
+
+        {test.isSuccess && (
+          <div className="toast toast-end">
+            <div className="alert alert-success">已發送，請看 Telegram</div>
           </div>
         )}
 

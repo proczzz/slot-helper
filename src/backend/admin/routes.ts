@@ -123,6 +123,20 @@ adminRoutes.get('/customers/:id/messages', async (c) => {
   );
 });
 
+adminRoutes.post('/telegram/test', async (c) => {
+  const { telegramClient } = c.var.services;
+  if (!telegramClient) return c.json(jsend.fail('Telegram 尚未設定，請先儲存設定'), 400);
+
+  // 這支端點的用途就是診斷,所以把 Telegram 的錯誤原文交給老闆,而不是丟給 error-handler 變成 500
+  try {
+    await telegramClient.sendText('SlotHelper 測試訊息。\n\n恭喜你成功接通 Telegram !!');
+  } catch (error) {
+    return c.json(jsend.fail(error instanceof Error ? error.message : '發送失敗'), 400);
+  }
+
+  return c.json(jsend.success(null));
+});
+
 const TEST_CHANNEL = 'test';
 // 建立或更新測試用的顧客
 adminRoutes.post('/test-customers', async (c) => {

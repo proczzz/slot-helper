@@ -122,6 +122,12 @@ export async function getCalendarLabels(): Promise<EventLabel[]> {
   return body.data ?? [];
 }
 
+// 老闆設定 Telegram 後確認真的收得到。失敗時後端回 fail,訊息是 Telegram 的原文
+export async function sendTelegramTest(): Promise<void> {
+  const response = await request('/api/admin/telegram/test', { method: 'POST' });
+  await assertOk(response);
+}
+
 export async function listModels(provider: string, apiKey: string): Promise<string[]> {
   const response = await request('/api/admin/ai/models', {
     method: 'POST',
