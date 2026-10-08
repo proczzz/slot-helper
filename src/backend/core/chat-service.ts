@@ -21,6 +21,7 @@ export async function handleChat(
   schedulingProvider: SchedulingProvider | null,
   telegramClient: TelegramClient | null,
 ): Promise<ChatResponse> {
+  const receivedAt = Date.now(); // 用戶發訊息時間
   // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
   const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
   const messages = [
@@ -57,7 +58,7 @@ export async function handleChat(
 
   if (result.text) {
     await conversationRepository.appendMessages(customerId, [
-      { role: 'user', content: message, timestamp: Date.now() },
+      { role: 'user', content: message, timestamp: receivedAt },
       { role: 'assistant', content: result.text, timestamp: Date.now() },
     ]);
   }
