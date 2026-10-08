@@ -27,8 +27,11 @@ import {
   loadShopSettings,
   loadSystemConfig,
   loadTelegramConfig,
+  loadWhatsappConfig,
 } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
+import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
+import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {
@@ -49,6 +52,7 @@ export interface Services {
   customerRepository: CustomerRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
+  whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
   adminAuth: AdminAuth; // 身分驗證模組
 }
@@ -91,6 +95,7 @@ async function getSharedProviders(
     shopConfig: await loadShopSettings(configRepository),
     schedulingProvider: createSchedulingProvider(await loadSchedulingConfig(configRepository)),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
+    whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
     telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),
     adminAuth: createAdminAuth(userRepository, system!.jwtSecret),
   };

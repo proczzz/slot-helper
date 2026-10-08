@@ -25,7 +25,7 @@ export async function logout(): Promise<void> {
   await request('/api/admin/logout', { method: 'POST' });
 }
 
-export type Section = 'ai' | 'shop' | 'line' | 'scheduling' | 'telegram';
+export type Section = 'ai' | 'shop' | 'line' | 'scheduling' | 'telegram' | 'whatsapp';
 
 export async function getSection<T>(section: Section): Promise<T | null> {
   const response = await request(`/api/admin/config/${section}`);
@@ -82,6 +82,13 @@ export interface ShopConfig {
 export interface LineConfig {
   channelSecret: string;
   accessToken: string;
+}
+
+export interface WhatsappConfig {
+  phoneNumberId: string;
+  accessToken: string;
+  appSecret: string;
+  verifyToken: string;
 }
 
 export interface TelegramConfig {

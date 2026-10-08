@@ -2,9 +2,10 @@ import z from 'zod';
 import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
+import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
+import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
-import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
@@ -13,6 +14,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
   scheduling: SchedulingConfigSchema,
   shop: ShopConfigSchema,
   telegram: TelegramConfigSchema,
+  whatsapp: WhatsappConfigSchema,
 };
 
 const SystemConfigSchema = z.object({
@@ -28,6 +30,12 @@ export function loadAiKeys(configRepository: ConfigRepository): Promise<AiKey[]>
 
 export function loadLineConfig(configRepository: ConfigRepository): Promise<LineConfig | null> {
   return loadSection(configRepository, 'line', LineConfigSchema, null);
+}
+
+export function loadWhatsappConfig(
+  configRepository: ConfigRepository,
+): Promise<WhatsappConfig | null> {
+  return loadSection(configRepository, 'whatsapp', WhatsappConfigSchema, null);
 }
 
 export function loadSchedulingConfig(

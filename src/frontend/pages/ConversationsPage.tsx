@@ -18,6 +18,7 @@ const MESSAGES_PAGE_SIZE = 50; // 後端 admin/routes.ts 寫死的,這裡要跟�
 const CHANNELS = [
   { value: 'all', label: '全部' },
   { value: 'line', label: 'LINE' },
+  { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'test', label: '測試' },
 ] as const;
 
@@ -53,7 +54,7 @@ export function ConversationsPage() {
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const queryClient = useQueryClient();
 
-  // channel 進 queryKey,所以三個過濾選項各自是一份 query、各自保有自己的分頁
+  // channel 進 queryKey,所以每個過濾選項各自是一份 query、各自保有自己的分頁
   // 設定檔只有自己會改,對話紀錄顧客隨時會傳新訊息,所以不沿用全域的 staleTime: Infinity
   const customers = useInfiniteQuery({
     queryKey: ['customers', channel],
