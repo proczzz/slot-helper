@@ -11,7 +11,7 @@ import {
   type WebhookInfo,
 } from '../lib/admin.ts';
 
-const EMPTY: TelegramConfig = { botToken: '', chatId: '', webhookSecret: '' };
+const EMPTY: TelegramConfig = { accessToken: '', chatId: '', webhookSecret: '' };
 
 export function TelegramSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
@@ -41,7 +41,7 @@ export function TelegramSettingsPage() {
 }
 
 function TelegramForm({ config }: { config: TelegramConfig }) {
-  const [botToken, setBotToken] = useState(config.botToken);
+  const [accessToken, setAccessToken] = useState(config.accessToken);
   const [chatId, setChatId] = useState(config.chatId);
   const queryClient = useQueryClient();
 
@@ -85,7 +85,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             event.preventDefault();
             // 驗證碼是伺服器狀態、老闆不編輯,所以直接沿用目前設定裡的值。
             // 放進 useState 的話,註冊 webhook 之後會停在舊值、按儲存就把新的洗掉
-            save.mutate({ botToken, chatId, webhookSecret: config.webhookSecret });
+            save.mutate({ accessToken, chatId, webhookSecret: config.webhookSecret });
           }}
         >
           <fieldset className="fieldset">
@@ -93,8 +93,8 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             <input
               type="password"
               className="input w-full"
-              value={botToken}
-              onChange={(event) => setBotToken(event.target.value)}
+              value={accessToken}
+              onChange={(event) => setAccessToken(event.target.value)}
               spellCheck={false}
             />
             <p className="label">BotFather 給的那一串，格式像 123456789:AAH...</p>
@@ -120,7 +120,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={save.isPending || !botToken || !chatId || chatIdInvalid}
+              disabled={save.isPending || !accessToken || !chatId || chatIdInvalid}
             >
               {save.isPending && <span className="loading loading-spinner" />}
               儲存
@@ -133,7 +133,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
               disabled={
                 test.isPending ||
                 save.isPending ||
-                botToken !== config.botToken ||
+                accessToken !== config.accessToken ||
                 chatId !== config.chatId
               }
               onClick={() => test.mutate()}
@@ -144,7 +144,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
           </div>
         </form>
 
-        <WebhookSection enabled={config.botToken.length > 0 && config.chatId.length > 0} />
+        <WebhookSection enabled={config.accessToken.length > 0 && config.chatId.length > 0} />
 
         {test.isError && (
           <div className="alert alert-error">

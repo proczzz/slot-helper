@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { getSection, saveSection, type LineConfig } from '../lib/admin.ts';
 
-const EMPTY: LineConfig = { channelSecret: '', accessToken: '' };
+const EMPTY: LineConfig = { accessToken: '', webhookSecret: '' };
 
 export function LineSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
@@ -32,7 +32,7 @@ export function LineSettingsPage() {
 }
 
 function LineForm({ config }: { config: LineConfig }) {
-  const [channelSecret, setChannelSecret] = useState(config.channelSecret);
+  const [webhookSecret, setWebhookSecret] = useState(config.webhookSecret);
   const [accessToken, setAccessToken] = useState(config.accessToken);
   const queryClient = useQueryClient();
 
@@ -71,7 +71,7 @@ function LineForm({ config }: { config: LineConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({ channelSecret, accessToken });
+            save.mutate({ accessToken, webhookSecret });
           }}
         >
           <fieldset className="fieldset">
@@ -79,8 +79,8 @@ function LineForm({ config }: { config: LineConfig }) {
             <input
               type="password"
               className="input w-full"
-              value={channelSecret}
-              onChange={(event) => setChannelSecret(event.target.value)}
+              value={webhookSecret}
+              onChange={(event) => setWebhookSecret(event.target.value)}
             />
           </fieldset>
 
@@ -98,7 +98,7 @@ function LineForm({ config }: { config: LineConfig }) {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={save.isPending || !channelSecret || !accessToken}
+            disabled={save.isPending || !webhookSecret || !accessToken}
           >
             {save.isPending && <span className="loading loading-spinner" />}
             儲存

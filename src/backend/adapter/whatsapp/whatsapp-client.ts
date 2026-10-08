@@ -5,14 +5,14 @@ const API_BASE = 'https://graph.facebook.com';
 
 export function createWhatsappClient(config: WhatsappConfig | null): WhatsappClient | null {
   if (!config) return null; // 老闆沒要用 WhatsApp
-  const { phoneNumberId, accessToken, appSecret, verifyToken } = config;
+  const { phoneNumberId, accessToken, webhookSecret, challengeToken } = config;
   const encoder = new TextEncoder();
   const messagesUrl = `${API_BASE}/${API_VERSION}/${phoneNumberId}/messages`;
 
   return {
     // 只用於 Meta 設定 webhook 時
     verifyToken(token: string) {
-      return token === verifyToken;
+      return token === challengeToken;
     },
     async verifySignature(body: string, signature: string) {
       // Meta 送的是 'sha256=' 加十六進位,和 LINE 的 base64 不同
@@ -23,7 +23,7 @@ export function createWhatsappClient(config: WhatsappConfig | null): WhatsappCli
 
       const key = await crypto.subtle.importKey(
         'raw', // 金鑰格式=bytes
-        encoder.encode(appSecret),
+        encoder.encode(webhookSecret),
         { name: 'HMAC', hash: 'SHA-256' }, // HMAC-SHA256 可以理解成:需要金鑰的單向雜湊算法
         false, // key 物件無法再讀取出 channelSecret
         ['verify'], // 此 key 僅能驗證不能簽章

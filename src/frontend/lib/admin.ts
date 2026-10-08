@@ -79,24 +79,24 @@ export interface ShopConfig {
   services: Service[];
 }
 
-export interface LineConfig {
-  channelSecret: string;
+// 三個通訊渠道共用的兩個欄位:accessToken(我們對外的識別證)、
+// webhookSecret(平台來找我們時的通關密語)。各自再擴充自己需要的欄位
+export interface MessagingConfig {
   accessToken: string;
+  webhookSecret: string;
 }
 
-export interface WhatsappConfig {
+export type LineConfig = MessagingConfig;
+
+export interface WhatsappConfig extends MessagingConfig {
   phoneNumberId: string;
-  accessToken: string;
-  appSecret: string;
-  verifyToken: string;
+  // Meta 設定 webhook 時的一次性握手字串,老闆要讀回來貼進表單,所以不列為機密
+  challengeToken: string;
 }
 
-export interface TelegramConfig {
-  botToken: string;
+export interface TelegramConfig extends MessagingConfig {
   // 存字串而不是數字,它只會被原樣轉交給 Telegram
   chatId: string;
-  // 驗證 webhook 請求真的來自 Telegram,空的代表還沒啟用
-  webhookSecret: string;
 }
 
 export interface SchedulingConfig {

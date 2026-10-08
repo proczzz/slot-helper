@@ -1,12 +1,10 @@
 import { z } from 'zod';
+import { MessagingConfigSchema } from '../types';
 
-export const TelegramConfigSchema = z.object({
-  botToken: z.string().min(1, '請輸入 Bot token'),
+export const TelegramConfigSchema = MessagingConfigSchema.extend({
   // 私聊的 chat ID 就是使用者 ID，群組是負數，所以開頭允許減號
   chatId: z.string().regex(/^-?\d+$/, 'Chat ID 必須是數字'),
-  webhookSecret: z.string().default(''),
 });
-
 export type TelegramConfig = z.infer<typeof TelegramConfigSchema>;
 
 export interface WebhookInfo {

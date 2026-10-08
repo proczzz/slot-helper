@@ -6,8 +6,8 @@ import { getSection, saveSection, type WhatsappConfig } from '../lib/admin.ts';
 const EMPTY: WhatsappConfig = {
   phoneNumberId: '',
   accessToken: '',
-  appSecret: '',
-  verifyToken: '',
+  webhookSecret: '',
+  challengeToken: '',
 };
 
 export function WhatsappSettingsPage() {
@@ -39,8 +39,8 @@ export function WhatsappSettingsPage() {
 function WhatsappForm({ config }: { config: WhatsappConfig }) {
   const [phoneNumberId, setPhoneNumberId] = useState(config.phoneNumberId);
   const [accessToken, setAccessToken] = useState(config.accessToken);
-  const [appSecret, setAppSecret] = useState(config.appSecret);
-  const [verifyToken, setVerifyToken] = useState(config.verifyToken);
+  const [webhookSecret, setWebhookSecret] = useState(config.webhookSecret);
+  const [challengeToken, setChallengeToken] = useState(config.challengeToken);
   const queryClient = useQueryClient();
 
   const webhookUrl = `${window.location.origin}/whatsapp/webhook`;
@@ -54,7 +54,7 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
 
   useAutoReset(save);
 
-  const complete = !!phoneNumberId && !!accessToken && !!appSecret && !!verifyToken;
+  const complete = !!phoneNumberId && !!accessToken && !!webhookSecret && !!challengeToken;
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -77,7 +77,7 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({ phoneNumberId, accessToken, appSecret, verifyToken });
+            save.mutate({ phoneNumberId, accessToken, webhookSecret, challengeToken });
           }}
         >
           <fieldset className="fieldset">
@@ -108,8 +108,8 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
             <input
               type="password"
               className="input w-full"
-              value={appSecret}
-              onChange={(event) => setAppSecret(event.target.value)}
+              value={webhookSecret}
+              onChange={(event) => setWebhookSecret(event.target.value)}
               spellCheck={false}
             />
             <p className="label">用來驗證 webhook 真的來自 Meta</p>
@@ -121,14 +121,14 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
               <input
                 type="text"
                 className="input join-item w-full font-mono text-xs"
-                value={verifyToken}
-                onChange={(event) => setVerifyToken(event.target.value)}
+                value={challengeToken}
+                onChange={(event) => setChallengeToken(event.target.value)}
                 spellCheck={false}
               />
               <button
                 type="button"
                 className="btn join-item"
-                onClick={() => setVerifyToken(crypto.randomUUID())}
+                onClick={() => setChallengeToken(crypto.randomUUID())}
               >
                 產生
               </button>

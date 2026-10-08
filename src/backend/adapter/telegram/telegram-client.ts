@@ -4,11 +4,11 @@ const API_BASE = 'https://api.telegram.org';
 
 export function createTelegramClient(config: TelegramConfig | null): TelegramClient | null {
   if (!config) return null; // 老闆沒要用 Telegram
-  const { botToken, chatId } = config;
+  const { accessToken, chatId } = config;
 
   // Telegram 把失敗原因寫在 description,比 HTTP 狀態碼有用得多,所以統一在這裡取出來
   async function call<T>(method: string, body: unknown): Promise<T> {
-    const response = await fetch(`${API_BASE}/bot${botToken}/${method}`, {
+    const response = await fetch(`${API_BASE}/bot${accessToken}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

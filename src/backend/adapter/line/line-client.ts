@@ -5,7 +5,7 @@ const PROFILE_URL = 'https://api.line.me/v2/bot/profile';
 
 export function createLineClient(config: LineConfig | null): LineClient | null {
   if (!config) return null; // 老闆沒要用line
-  const { channelSecret, accessToken } = config;
+  const { webhookSecret, accessToken } = config;
   const encoder = new TextEncoder();
 
   return {
@@ -19,9 +19,9 @@ export function createLineClient(config: LineConfig | null): LineClient | null {
 
       const key = await crypto.subtle.importKey(
         'raw', // 金鑰格式=bytes
-        encoder.encode(channelSecret),
+        encoder.encode(webhookSecret),
         { name: 'HMAC', hash: 'SHA-256' }, // HMAC-SHA256 可以理解成:需要金鑰的單向雜湊算法
-        false, // key 物件無法再讀取出 channelSecret
+        false, // key 物件無法再讀取出 webhookSecret
         ['verify'], // 此 key 僅能驗證不能簽章
       );
       // 用 subtle.verify 而非自己用===比對字串,避免計時攻擊

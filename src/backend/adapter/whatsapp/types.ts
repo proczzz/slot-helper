@@ -1,13 +1,11 @@
 import { z } from 'zod';
+import { MessagingConfigSchema } from '../types';
 
-export const WhatsappConfigSchema = z.object({
+export const WhatsappConfigSchema = MessagingConfigSchema.extend({
   phoneNumberId: z.string().min(1, '請輸入 Phone number ID'),
-  accessToken: z.string().min(1, '請輸入存取權杖'),
-  appSecret: z.string().min(1, '請輸入 App secret'),
   // Meta 設定 webhook 時會把這個字串原樣送回來比對,由老闆自訂
-  verifyToken: z.string().min(1, '請輸入驗證字串'),
+  challengeToken: z.string().min(1, '請輸入驗證字串'),
 });
-
 export type WhatsappConfig = z.infer<typeof WhatsappConfigSchema>;
 
 export interface WhatsappClient {

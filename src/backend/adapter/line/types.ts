@@ -1,10 +1,7 @@
 import { z } from 'zod';
+import { MessagingConfigSchema } from '../types';
 
-export const LineConfigSchema = z.object({
-  channelSecret: z.string().min(1, '請輸入 Channel secret'),
-  accessToken: z.string().min(1, '請輸入 Channel access token'),
-});
-
+export const LineConfigSchema = MessagingConfigSchema;
 export type LineConfig = z.infer<typeof LineConfigSchema>;
 
 export interface LineProfile {
