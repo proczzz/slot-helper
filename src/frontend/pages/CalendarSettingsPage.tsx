@@ -4,21 +4,31 @@ import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getSection,
   saveSection,
-  type SchedulingConfigRequest,
-  type SchedulingConfigVo,
+  type GoogleCalendarRequest,
+  type GoogleCalendarVo,
+  type SchedulingSelection,
 } from '../lib/admin.ts';
 
 const PROVIDER = 'google-calendar';
 
-const EMPTY: SchedulingConfigVo = {
-  provider: 'none',
-  settings: { serviceAccountEmail: '', hasPrivateKey: false, calendars: [] },
+const EMPTY: GoogleCalendarVo = {
+  serviceAccountEmail: '',
+  hasPrivateKey: false,
+  calendarId: '',
 };
 
 export function CalendarSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ['config', 'scheduling'],
-    queryFn: () => getSection<SchedulingConfigVo>('scheduling'),
+    queryKey: ['config', 'calendar'],
+    // 指標與設定分成兩列,要一起拿回來才知道「啟用中」該不該打勾
+    queryFn: async () => {
+      const [selection, google] = await Promise.all([
+        getSection<SchedulingSelection>('scheduling'),
+        getSection<GoogleCalendarVo>(PROVIDER),
+      ]);
+
+      return { enabled: selection?.provider === PROVIDER, google: { ...EMPTY, ...google } };
+    },
   });
 
   if (isPending) {
@@ -37,29 +47,38 @@ export function CalendarSettingsPage() {
     );
   }
 
-  return <CalendarForm config={{ ...EMPTY, ...data }} />;
+  return <CalendarForm initialEnabled={data.enabled} config={data.google} />;
 }
 
-function CalendarForm({ config }: { config: SchedulingConfigVo }) {
-  const [enabled, setEnabled] = useState(config.provider === PROVIDER);
-  const [email, setEmail] = useState(config.settings.serviceAccountEmail);
+function CalendarForm({
+  initialEnabled,
+  config,
+}: {
+  initialEnabled: boolean;
+  config: GoogleCalendarVo;
+}) {
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [email, setEmail] = useState(config.serviceAccountEmail);
   // undefined 代表「不變更」,不會放進送出的 payload
   const [privateKey, setPrivateKey] = useState<string | undefined>(
-    config.settings.hasPrivateKey ? undefined : '',
+    config.hasPrivateKey ? undefined : '',
   );
-  const [calendarId, setCalendarId] = useState(config.settings.calendars[0]?.id ?? '');
-  const [calendarName, setCalendarName] = useState(config.settings.calendars[0]?.name ?? '');
+  const [calendarId, setCalendarId] = useState(config.calendarId);
   const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    mutationFn: (next: SchedulingConfigRequest) => saveSection('scheduling', next),
+    mutationFn: async (next: { enabled: boolean; settings: GoogleCalendarRequest }) => {
+      // 先存設定再切指標。順序反過來的話,中間失敗會讓系統指向一組還沒更新的設定
+      await saveSection(PROVIDER, next.settings);
+      await saveSection('scheduling', { provider: next.enabled ? PROVIDER : null });
+    },
     onSuccess: () => {
       // 存完就回到唯讀狀態,不然畫面還停在剛剛編輯的樣子
       setPrivateKey(undefined);
       setFileError('');
-      void queryClient.invalidateQueries({ queryKey: ['config', 'scheduling'] });
+      void queryClient.invalidateQueries({ queryKey: ['config', 'calendar'] });
       // 換了日曆,店家設定頁讀的標籤清單也跟著變
       void queryClient.invalidateQueries({ queryKey: ['calendar-labels'] });
     },
@@ -88,13 +107,13 @@ function CalendarForm({ config }: { config: SchedulingConfigVo }) {
   // 取消變更:金鑰與電子郵件都回到後端現有的那一組
   function cancelEdit() {
     setPrivateKey(undefined);
-    setEmail(config.settings.serviceAccountEmail);
+    setEmail(config.serviceAccountEmail);
     setFileError('');
   }
 
   const editing = privateKey !== undefined;
-  const hasKey = editing ? !!email && privateKey !== '' : config.settings.hasPrivateKey;
-  const canSubmit = !enabled || (hasKey && !!calendarId && !!calendarName);
+  const hasKey = editing ? !!email && privateKey !== '' : config.hasPrivateKey;
+  const canSubmit = !enabled || (hasKey && !!calendarId);
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -115,12 +134,12 @@ function CalendarForm({ config }: { config: SchedulingConfigVo }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            const settings: SchedulingConfigRequest['settings'] = {
+            const settings: GoogleCalendarRequest = {
               serviceAccountEmail: email,
-              calendars: [{ id: calendarId, name: calendarName }],
+              calendarId,
             };
             if (privateKey !== undefined) settings.privateKey = privateKey;
-            save.mutate({ provider: enabled ? PROVIDER : 'none', settings });
+            save.mutate({ enabled, settings });
           }}
         >
           <fieldset className="contents" disabled={!enabled}>
@@ -128,7 +147,7 @@ function CalendarForm({ config }: { config: SchedulingConfigVo }) {
               <div className="flex items-center justify-between">
                 <span className="font-medium">服務帳號金鑰</span>
                 {editing ? (
-                  config.settings.hasPrivateKey && (
+                  config.hasPrivateKey && (
                     <button
                       type="button"
                       className="btn btn-sm btn-error btn-soft"
@@ -214,17 +233,6 @@ function CalendarForm({ config }: { config: SchedulingConfigVo }) {
                 />
               </fieldset>
             </div>
-
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">日曆名稱</legend>
-              <input
-                type="text"
-                className="input w-full"
-                value={calendarName}
-                onChange={(event) => setCalendarName(event.target.value)}
-                placeholder="自己辨識用，例如「台北店」"
-              />
-            </fieldset>
 
             <fieldset className="fieldset">
               <legend className="fieldset-legend">日曆 ID</legend>

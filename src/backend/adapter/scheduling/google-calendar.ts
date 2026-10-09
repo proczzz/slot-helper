@@ -10,10 +10,10 @@ import type {
   TimePeriod,
 } from './types.ts';
 
-const SettingsSchema = z.object({
+export const GoogleCalendarSettingsSchema = z.object({
   serviceAccountEmail: z.string().min(1),
   privateKey: z.string().min(1),
-  calendars: z.array(z.object({ id: z.string().min(1), name: z.string().min(1) })).min(1),
+  calendarId: z.string().min(1),
 });
 
 // Google 回傳的事件,只宣告我們會讀的欄位
@@ -34,13 +34,11 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
   name: 'google-calendar',
 
   create(settings) {
-    const parsed = SettingsSchema.safeParse(settings);
+    const parsed = GoogleCalendarSettingsSchema.safeParse(settings);
     if (!parsed.success) return null;
 
-    const { serviceAccountEmail, calendars } = parsed.data;
+    const { serviceAccountEmail, calendarId } = parsed.data;
     const privateKey = parsed.data.privateKey.replace(/\\n/g, '\n');
-    // 目前只用第一本日曆,多本之後再做
-    const calendarId = calendars[0]!.id;
     const calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`;
     const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
 

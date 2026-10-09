@@ -25,7 +25,14 @@ export async function logout(): Promise<void> {
   await request('/api/admin/logout', { method: 'POST' });
 }
 
-export type Section = 'ai' | 'shop' | 'line' | 'scheduling' | 'telegram' | 'whatsapp';
+export type Section =
+  | 'ai'
+  | 'shop'
+  | 'line'
+  | 'scheduling'
+  | 'google-calendar'
+  | 'telegram'
+  | 'whatsapp';
 
 export async function getSection<T>(section: Section): Promise<T | null> {
   const response = await request(`/api/admin/config/${section}`);
@@ -120,30 +127,25 @@ export interface TelegramConfigRequest {
   chatId: string;
 }
 
-export interface Calendar {
-  id: string;
-  name: string;
+// 'scheduling' 這一列只記現在用哪個供應商,null 代表停用;
+// 各供應商的設定在自己那一列,所以切換供應商不會蓋掉另一邊
+export interface SchedulingSelection {
+  provider: string | null;
 }
 
 // GET 回來的。私鑰是一整塊 PEM,尾碼沒有意義,所以只回「有沒有」——
 // 「這是哪一組憑證」看 serviceAccountEmail 就知道,而那個本身不是機密
-export interface SchedulingConfigVo {
-  provider: string;
-  settings: {
-    serviceAccountEmail: string;
-    hasPrivateKey: boolean;
-    calendars: Calendar[];
-  };
+export interface GoogleCalendarVo {
+  serviceAccountEmail: string;
+  hasPrivateKey: boolean;
+  calendarId: string;
 }
 
 // PUT 送出的:privateKey 只在老闆重新上傳金鑰檔時才放進來
-export interface SchedulingConfigRequest {
-  provider: string;
-  settings: {
-    serviceAccountEmail: string;
-    privateKey?: string;
-    calendars: Calendar[];
-  };
+export interface GoogleCalendarRequest {
+  serviceAccountEmail: string;
+  privateKey?: string;
+  calendarId: string;
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

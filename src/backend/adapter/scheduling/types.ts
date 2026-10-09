@@ -53,9 +53,13 @@ export interface SchedulingProviderDefinition {
 }
 
 // settings 的形狀由各供應商自己決定,中央不介入
-export const SchedulingConfigSchema = z.object({
-  provider: z.string(),
-  settings: z.unknown(),
+export const SchedulingSelectionSchema = z.object({
+  provider: z.string().nullable(),
 });
 
-export type SchedulingConfig = z.infer<typeof SchedulingConfigSchema>;
+export type SchedulingSelection = z.infer<typeof SchedulingSelectionSchema>;
+
+export interface SchedulingConfig {
+  provider: string;
+  settings: unknown;
+}

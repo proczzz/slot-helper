@@ -1,12 +1,14 @@
 import z from 'zod';
 import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
-import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
+import { GoogleCalendarSettingsSchema } from '../adapter/scheduling/google-calendar.ts';
+import { providers } from '../adapter/scheduling/index.ts';
+import { SchedulingSelectionSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
 import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
+import { googleCalendarConfigMapper } from '../model/dto/google-calendar.ts';
 import { lineConfigMapper } from '../model/dto/line.ts';
-import { schedulingConfigMapper } from '../model/dto/scheduling.ts';
 import { telegramConfigMapper } from '../model/dto/telegram.ts';
 import type { ConfigMapper } from '../model/dto/types.ts';
 import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
@@ -14,20 +16,21 @@ import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
-  ai: AiConfigSchema,
-  line: LineConfigSchema,
-  scheduling: SchedulingConfigSchema,
   shop: ShopConfigSchema,
+  ai: AiConfigSchema,
+  scheduling: SchedulingSelectionSchema,
+  'google-calendar': GoogleCalendarSettingsSchema,
+  line: LineConfigSchema,
   telegram: TelegramConfigSchema,
   whatsapp: WhatsappConfigSchema,
 };
 
 // 有 mapper 的區塊由它決定怎麼綁與怎麼顯示;沒有的原樣存取
 export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
+  'google-calendar': googleCalendarConfigMapper,
   line: lineConfigMapper,
   telegram: telegramConfigMapper,
   whatsapp: whatsappConfigMapper,
-  scheduling: schedulingConfigMapper,
 };
 
 const SystemConfigSchema = z.object({
@@ -51,10 +54,27 @@ export function loadWhatsappConfig(
   return loadSection(configRepository, 'whatsapp', WhatsappConfigSchema, null);
 }
 
-export function loadSchedulingConfig(
+export async function loadSchedulingConfig(
   configRepository: ConfigRepository,
 ): Promise<SchedulingConfig | null> {
-  return loadSection(configRepository, 'scheduling', SchedulingConfigSchema, null);
+  const selection = await loadSection(
+    configRepository,
+    'scheduling',
+    SchedulingSelectionSchema,
+    null,
+  );
+  if (!selection?.provider) return null;
+
+  // 指標指到不存在的供應商就當沒設定
+  if (!providers[selection.provider]) {
+    console.error(`未知的日曆供應商: ${selection.provider}`);
+    return null;
+  }
+
+  const raw = await configRepository.get(selection.provider as ConfigKey);
+  if (!raw) return null;
+
+  return { provider: selection.provider, settings: JSON.parse(raw) };
 }
 
 export function loadTelegramConfig(
