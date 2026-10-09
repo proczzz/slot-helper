@@ -120,12 +120,29 @@ export interface TelegramConfigRequest {
   chatId: string;
 }
 
-export interface SchedulingConfig {
+export interface Calendar {
+  id: string;
+  name: string;
+}
+
+// GET 回來的。私鑰是一整塊 PEM,尾碼沒有意義,所以只回「有沒有」——
+// 「這是哪一組憑證」看 serviceAccountEmail 就知道,而那個本身不是機密
+export interface SchedulingConfigVo {
   provider: string;
   settings: {
     serviceAccountEmail: string;
-    privateKey: string;
-    calendars: { id: string; name: string }[];
+    hasPrivateKey: boolean;
+    calendars: Calendar[];
+  };
+}
+
+// PUT 送出的:privateKey 只在老闆重新上傳金鑰檔時才放進來
+export interface SchedulingConfigRequest {
+  provider: string;
+  settings: {
+    serviceAccountEmail: string;
+    privateKey?: string;
+    calendars: Calendar[];
   };
 }
 

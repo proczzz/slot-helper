@@ -1,25 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
-import { getSection, saveSection, type SchedulingConfig } from '../lib/admin.ts';
+import {
+  getSection,
+  saveSection,
+  type SchedulingConfigRequest,
+  type SchedulingConfigVo,
+} from '../lib/admin.ts';
 
 const PROVIDER = 'google-calendar';
+
+const EMPTY: SchedulingConfigVo = {
+  provider: 'none',
+  settings: { serviceAccountEmail: '', hasPrivateKey: false, calendars: [] },
+};
 
 export function CalendarSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'scheduling'],
-    // 後端不驗證 settings 的內容(schema 藏在供應商裡面),所以缺的欄位在這裡補齊
-    queryFn: async () => {
-      const config = await getSection<SchedulingConfig>('scheduling');
-      return {
-        provider: config?.provider ?? 'none',
-        settings: {
-          serviceAccountEmail: config?.settings?.serviceAccountEmail ?? '',
-          privateKey: config?.settings?.privateKey ?? '',
-          calendars: config?.settings?.calendars ?? [],
-        },
-      } satisfies SchedulingConfig;
-    },
+    queryFn: () => getSection<SchedulingConfigVo>('scheduling'),
   });
 
   if (isPending) {
@@ -38,23 +37,28 @@ export function CalendarSettingsPage() {
     );
   }
 
-  return <CalendarForm config={data} />;
+  return <CalendarForm config={{ ...EMPTY, ...data }} />;
 }
 
-function CalendarForm({ config }: { config: SchedulingConfig }) {
+function CalendarForm({ config }: { config: SchedulingConfigVo }) {
   const [enabled, setEnabled] = useState(config.provider === PROVIDER);
   const [email, setEmail] = useState(config.settings.serviceAccountEmail);
-  const [privateKey, setPrivateKey] = useState(config.settings.privateKey);
+  // undefined 代表「不變更」,不會放進送出的 payload
+  const [privateKey, setPrivateKey] = useState<string | undefined>(
+    config.settings.hasPrivateKey ? undefined : '',
+  );
   const [calendarId, setCalendarId] = useState(config.settings.calendars[0]?.id ?? '');
   const [calendarName, setCalendarName] = useState(config.settings.calendars[0]?.name ?? '');
-  const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    mutationFn: (next: SchedulingConfig) => saveSection('scheduling', next),
+    mutationFn: (next: SchedulingConfigRequest) => saveSection('scheduling', next),
     onSuccess: () => {
+      // 存完就回到唯讀狀態,不然畫面還停在剛剛編輯的樣子
+      setPrivateKey(undefined);
+      setFileError('');
       void queryClient.invalidateQueries({ queryKey: ['config', 'scheduling'] });
       // 換了日曆,店家設定頁讀的標籤清單也跟著變
       void queryClient.invalidateQueries({ queryKey: ['calendar-labels'] });
@@ -76,22 +80,21 @@ function CalendarForm({ config }: { config: SchedulingConfig }) {
       }
       setEmail(data.client_email);
       setPrivateKey(data.private_key);
-      setFileName(file.name);
     } catch {
       setFileError('檔案不是有效的 JSON');
     }
   }
 
-  // 移除檔案時一併清空，避免留下與檔案不一致的內容
-  function removeFile() {
-    setFileName(null);
-    setEmail('');
-    setPrivateKey('');
+  // 取消變更:金鑰與電子郵件都回到後端現有的那一組
+  function cancelEdit() {
+    setPrivateKey(undefined);
+    setEmail(config.settings.serviceAccountEmail);
     setFileError('');
   }
 
-  const fieldsLocked = fileName !== null;
-  const canSubmit = !enabled || (!!email && !!privateKey && !!calendarId && !!calendarName);
+  const editing = privateKey !== undefined;
+  const hasKey = editing ? !!email && privateKey !== '' : config.settings.hasPrivateKey;
+  const canSubmit = !enabled || (hasKey && !!calendarId && !!calendarName);
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -112,93 +115,105 @@ function CalendarForm({ config }: { config: SchedulingConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({
-              provider: enabled ? PROVIDER : 'none',
-              settings: {
-                serviceAccountEmail: email,
-                privateKey,
-                calendars: [{ id: calendarId, name: calendarName }],
-              },
-            });
+            const settings: SchedulingConfigRequest['settings'] = {
+              serviceAccountEmail: email,
+              calendars: [{ id: calendarId, name: calendarName }],
+            };
+            if (privateKey !== undefined) settings.privateKey = privateKey;
+            save.mutate({ provider: enabled ? PROVIDER : 'none', settings });
           }}
         >
           <fieldset className="contents" disabled={!enabled}>
-            {fileName ? (
-              <div className="flex items-center justify-between rounded-box border border-base-300 p-4">
-                <div className="flex flex-col">
-                  <span className="font-medium">{fileName}</span>
-                  <span className="text-xs text-base-content/60">已帶入下面兩欄</span>
-                </div>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={removeFile}>
-                  移除
-                </button>
+            <div className="flex flex-col gap-3 rounded-box border border-base-300 p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">服務帳號金鑰</span>
+                {editing ? (
+                  config.settings.hasPrivateKey && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-error btn-soft"
+                      onClick={cancelEdit}
+                    >
+                      取消
+                    </button>
+                  )
+                ) : (
+                  <button type="button" className="btn btn-sm" onClick={() => setPrivateKey('')}>
+                    變更
+                  </button>
+                )}
               </div>
-            ) : (
-              <label
-                className={`flex flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed p-8 transition-colors ${
-                  enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-                } ${
-                  dragging
-                    ? 'border-primary bg-primary/5'
-                    : 'border-base-300 hover:border-base-content/30'
-                }`}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setDragging(false);
-                  if (!enabled) return;
-                  const file = event.dataTransfer.files[0];
-                  if (file) void importServiceAccountJson(file);
-                }}
-              >
-                <span className="font-medium">拖曳金鑰檔到這裡</span>
-                <span className="text-sm text-base-content/60">或點擊選擇檔案</span>
-                <span className="text-xs text-base-content/50">
-                  Google 下載的 Service Account JSON，會自動填入下面兩欄
-                </span>
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void importServiceAccountJson(file);
-                    event.target.value = '';
+
+              {editing && (
+                <label
+                  className={`flex flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed p-6 transition-colors ${
+                    enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                  } ${
+                    dragging
+                      ? 'border-primary bg-primary/5'
+                      : 'border-base-300 hover:border-base-content/30'
+                  }`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragging(true);
                   }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setDragging(false);
+                    if (!enabled) return;
+                    const file = event.dataTransfer.files[0];
+                    if (file) void importServiceAccountJson(file);
+                  }}
+                >
+                  <span className="font-medium">拖曳金鑰檔到這裡</span>
+                  <span className="text-sm text-base-content/60">或點擊選擇檔案</span>
+                  <span className="text-xs text-base-content/50">
+                    Google 下載的 Service Account JSON，會自動填入下面兩欄；也可以手動貼上
+                  </span>
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void importServiceAccountJson(file);
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+              )}
+
+              {fileError && <p className="label text-error">{fileError}</p>}
+
+              <fieldset className="fieldset">
+                <legend className="fieldset-legend">Service Account 電子郵件</legend>
+                <input
+                  type="text"
+                  className="input w-full"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  disabled={!editing}
+                  spellCheck={false}
+                  placeholder="xxx@專案名.iam.gserviceaccount.com"
                 />
-              </label>
-            )}
+              </fieldset>
 
-            {fileError && <p className="label text-error">{fileError}</p>}
-
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Service Account 電子郵件</legend>
-              <input
-                type="text"
-                className="input w-full"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                disabled={fieldsLocked}
-                placeholder="xxx@專案名.iam.gserviceaccount.com"
-              />
-            </fieldset>
-
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">私鑰</legend>
-              <textarea
-                className="textarea textarea-bordered w-full font-mono text-xs"
-                rows={8}
-                value={privateKey}
-                onChange={(event) => setPrivateKey(event.target.value)}
-                disabled={fieldsLocked}
-                spellCheck={false}
-                placeholder="-----BEGIN PRIVATE KEY-----"
-              />
-            </fieldset>
+              <fieldset className="fieldset">
+                <legend className="fieldset-legend">私鑰</legend>
+                <textarea
+                  className="textarea w-full resize-none font-mono text-xs"
+                  rows={editing ? 8 : 2}
+                  value={privateKey ?? ''}
+                  onChange={(event) => setPrivateKey(event.target.value)}
+                  disabled={!editing}
+                  spellCheck={false}
+                  placeholder={
+                    editing ? '-----BEGIN PRIVATE KEY-----' : '已儲存，為安全起見不顯示內容'
+                  }
+                />
+              </fieldset>
+            </div>
 
             <fieldset className="fieldset">
               <legend className="fieldset-legend">日曆名稱</legend>
