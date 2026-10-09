@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { listAvailableModels } from '../adapter/ai/index.ts';
-import { loadTelegramConfig, SECTION_SCHEMAS } from '../app/config.ts';
+import { loadTelegramConfig, SECTION_MAPPERS, SECTION_SCHEMAS } from '../app/config.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { handleChat } from '../core/chat-service.ts';
@@ -77,7 +77,12 @@ adminRoutes.get('/config/:section', async (c) => {
   if (!SECTION_SCHEMAS[section]) return c.json(jsend.fail('未知的設定區塊'), 400);
 
   const raw = await configRepository.get(section);
-  return c.json(jsend.success(raw ? JSON.parse(raw) : null));
+  if (!raw) return c.json(jsend.success(null));
+
+  const stored = JSON.parse(raw) as unknown;
+  const mapper = SECTION_MAPPERS[section];
+
+  return c.json(jsend.success(mapper ? mapper.toVo(stored) : stored));
 });
 
 adminRoutes.put('/config/:section', async (c) => {
@@ -87,7 +92,17 @@ adminRoutes.put('/config/:section', async (c) => {
   const schema = SECTION_SCHEMAS[section];
   if (!schema) return c.json(jsend.fail('未知的設定區塊'), 400);
 
-  const value = schema.parse(await c.req.json());
+  const body = (await c.req.json()) as unknown;
+  const mapper = SECTION_MAPPERS[section];
+
+  let value: unknown;
+  if (mapper) {
+    const raw = await configRepository.get(section);
+    value = mapper.toConfig(body, raw ? JSON.parse(raw) : null);
+  } else {
+    value = schema.parse(body);
+  }
+
   await configRepository.set(section, JSON.stringify(value));
   clearCachedProviders();
 

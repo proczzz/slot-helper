@@ -5,6 +5,8 @@ import { SchedulingConfigSchema, type SchedulingConfig } from '../adapter/schedu
 import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
+import { lineConfigMapper } from '../model/dto/line.ts';
+import type { ConfigMapper } from '../model/dto/types.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
@@ -15,6 +17,11 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
   shop: ShopConfigSchema,
   telegram: TelegramConfigSchema,
   whatsapp: WhatsappConfigSchema,
+};
+
+// 有 mapper 的區塊由它決定怎麼綁與怎麼顯示;沒有的原樣存取
+export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
+  line: lineConfigMapper,
 };
 
 const SystemConfigSchema = z.object({

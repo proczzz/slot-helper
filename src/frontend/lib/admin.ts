@@ -86,7 +86,17 @@ export interface MessagingConfig {
   webhookSecret: string;
 }
 
-export type LineConfig = MessagingConfig;
+// GET 回來的:機密欄位只有尾碼,空字串代表尚未設定
+export interface LineConfigVo {
+  accessTokenMask: string;
+  webhookSecretMask: string;
+}
+
+// PUT 送出的:只放老闆真的改過的欄位,沒放的後端會沿用舊值
+export interface LineConfigRequest {
+  accessToken?: string;
+  webhookSecret?: string;
+}
 
 export interface WhatsappConfig extends MessagingConfig {
   phoneNumberId: string;
