@@ -31,6 +31,7 @@ export type Section =
   | 'line'
   | 'scheduling'
   | 'google-calendar'
+  | 'outlook'
   | 'telegram'
   | 'whatsapp';
 
@@ -145,6 +146,24 @@ export interface GoogleCalendarVo {
 export interface GoogleCalendarRequest {
   serviceAccountEmail: string;
   privateKey?: string;
+  calendarId: string;
+}
+
+// GET 回來的。clientSecret 是一串亂碼,但老闆可能有多組,露尾碼讓他確認貼對了哪一組;
+// 空字串代表尚未設定(SecretField 的協定)
+export interface OutlookVo {
+  clientId: string;
+  clientSecretMask: string;
+  redirectUri: string;
+  calendarId: string;
+}
+
+// PUT 送出的:clientSecret 只在老闆重新輸入時才放進來。
+// calendarId 要等授權完才拿得到,所以允許空字串
+export interface OutlookRequest {
+  clientId: string;
+  clientSecret?: string;
+  redirectUri: string;
   calendarId: string;
 }
 

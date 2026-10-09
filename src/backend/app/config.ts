@@ -3,12 +3,18 @@ import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { GoogleCalendarSettingsSchema } from '../adapter/scheduling/google-calendar.ts';
 import { providers } from '../adapter/scheduling/index.ts';
-import { SchedulingSelectionSchema, type SchedulingConfig, type TokenStore } from '../adapter/scheduling/types.ts';
+import { OutlookSettingsSchema } from '../adapter/scheduling/outlook.ts';
+import {
+  SchedulingSelectionSchema,
+  type SchedulingConfig,
+  type TokenStore,
+} from '../adapter/scheduling/types.ts';
 import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
 import { googleCalendarConfigMapper } from '../model/dto/google-calendar.ts';
 import { lineConfigMapper } from '../model/dto/line.ts';
+import { outlookConfigMapper } from '../model/dto/outlook.ts';
 import { telegramConfigMapper } from '../model/dto/telegram.ts';
 import type { ConfigMapper } from '../model/dto/types.ts';
 import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
@@ -20,6 +26,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
   ai: AiConfigSchema,
   scheduling: SchedulingSelectionSchema,
   'google-calendar': GoogleCalendarSettingsSchema,
+  outlook: OutlookSettingsSchema,
   line: LineConfigSchema,
   telegram: TelegramConfigSchema,
   whatsapp: WhatsappConfigSchema,
@@ -28,6 +35,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
 // 有 mapper 的區塊由它決定怎麼綁與怎麼顯示;沒有的原樣存取
 export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
   'google-calendar': googleCalendarConfigMapper,
+  outlook: outlookConfigMapper,
   line: lineConfigMapper,
   telegram: telegramConfigMapper,
   whatsapp: whatsappConfigMapper,

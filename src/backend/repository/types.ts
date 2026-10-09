@@ -12,7 +12,8 @@ export type ConfigKey =
   | 'whatsapp'
   | 'scheduling'
   | 'scheduling-state'
-  | 'google-calendar';
+  | 'google-calendar'
+  | 'outlook';
 
 export interface ConfigRepository {
   get(key: ConfigKey): Promise<string | null>;
