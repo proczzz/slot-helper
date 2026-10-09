@@ -9,7 +9,7 @@ export interface TimePeriod {
 export interface NewEvent extends TimePeriod {
   summary: string;
   description?: string;
-  labelId?: string;
+  labelId?: string; // 從 getLabels 拿到就原樣傳回,不保證是穩定 id
   ownerId: string;
 }
 
@@ -26,14 +26,14 @@ export interface EventQuery {
   start: string;
   end: string;
   ownerId?: string;
-  limit?: number;
+  limit?: number; // 最多回幾筆。不保證省流量，有的供應商是全部拿回來再過濾
 }
 
 // 事件的標籤
 export interface EventLabel {
   id: string;
   name: string;
-  color?: string;
+  color?: string; // CSS 色值。有的供應商用自己的編碼表示顏色，給不出來就省略
 }
 
 export interface SchedulingProvider {

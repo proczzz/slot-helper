@@ -30,6 +30,11 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FREEBUSY_URL = 'https://www.googleapis.com/calendar/v3/freeBusy';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 
+// 放模組層級而不是 create 的 closure,因為 provider 之後會每個 request 重建。
+// 連身分一起記 —— 老闆換了憑證或日曆之後不能繼續用舊的
+let cachedToken: { email: string; accessToken: string; expiresAt: number } | null = null;
+let cachedTimeZone: { calendarId: string; timeZone: string } | null = null;
+
 export const googleCalendarProvider: SchedulingProviderDefinition = {
   name: 'google-calendar',
 
@@ -42,12 +47,13 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
     const calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`;
     const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
 
-    let cachedToken: { accessToken: string; expiresAt: number } | null = null;
-    let cachedTimeZone: string | null = null;
-
     // 用 Service Account 私鑰簽 JWT 換取 access token,快取到過期前 60 秒
     async function getAccessToken(): Promise<string> {
-      if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
+      if (
+        cachedToken &&
+        cachedToken.email === serviceAccountEmail &&
+        cachedToken.expiresAt > Date.now() + 60_000
+      ) {
         return cachedToken.accessToken;
       }
 
@@ -72,6 +78,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
 
       const data = (await response.json()) as { access_token: string; expires_in: number };
       cachedToken = {
+        email: serviceAccountEmail,
         accessToken: data.access_token,
         expiresAt: Date.now() + data.expires_in * 1000,
       };
@@ -82,7 +89,9 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
 
     // 全天事件的邊界要用日曆自己的時區換算。時區幾乎不會變,和 token 一樣快取
     async function getCalendarTimeZone(): Promise<string> {
-      if (cachedTimeZone) return cachedTimeZone;
+      if (cachedTimeZone && cachedTimeZone.calendarId === calendarId) {
+        return cachedTimeZone.timeZone;
+      }
 
       const accessToken = await getAccessToken();
       const response = await fetch(calendarUrl, {
@@ -92,8 +101,8 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
       await assertOk(response, 'get calendar');
 
       const data = (await response.json()) as { timeZone: string };
-      cachedTimeZone = data.timeZone;
-      return cachedTimeZone;
+      cachedTimeZone = { calendarId, timeZone: data.timeZone };
+      return cachedTimeZone.timeZone;
     }
 
     return {
