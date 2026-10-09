@@ -122,7 +122,8 @@ function LineForm({ config }: { config: LineConfigVo }) {
             </button>
           </div>
           <p className="mt-1 text-xs opacity-60">
-            貼到 LINE Developers 的 Webhook URL，並開啟 Use webhook
+            貼到 LINE Developers 的 Webhook URL 並開啟 Use webhook。如果你的後台和對外網域不同，
+            請自行替換網域
           </p>
         </div>
 

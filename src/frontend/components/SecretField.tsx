@@ -56,7 +56,11 @@ export function SecretField({ label, mask, value, onChange, multiline, hint }: S
           </button>
         )}
         {editing && configured && (
-          <button type="button" className="btn btn-sm" onClick={() => onChange(undefined)}>
+          <button
+            type="button"
+            className="btn btn-sm btn-error btn-soft"
+            onClick={() => onChange(undefined)}
+          >
             取消
           </button>
         )}
