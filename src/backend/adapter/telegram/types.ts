@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { MessagingConfigSchema } from '../types';
 
 export const TelegramConfigSchema = MessagingConfigSchema.extend({
+  // 通關密語是後端在註冊 webhook 時產生的，老闆不填 —— 所以還沒註冊之前是空字串
+  webhookSecret: z.string().default(''),
   // 私聊的 chat ID 就是使用者 ID，群組是負數，所以開頭允許減號
   chatId: z.string().regex(/^-?\d+$/, 'Chat ID 必須是數字'),
 });

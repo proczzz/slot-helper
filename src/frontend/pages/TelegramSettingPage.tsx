@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { SecretField } from '../components/SecretField.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getSection,
@@ -7,16 +8,17 @@ import {
   registerTelegramWebhook,
   saveSection,
   sendTelegramTest,
-  type TelegramConfig,
+  type TelegramConfigRequest,
+  type TelegramConfigVo,
   type WebhookInfo,
 } from '../lib/admin.ts';
 
-const EMPTY: TelegramConfig = { accessToken: '', chatId: '', webhookSecret: '' };
+const EMPTY: TelegramConfigVo = { accessTokenMask: '', chatId: '' };
 
 export function TelegramSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'telegram'],
-    queryFn: () => getSection<TelegramConfig>('telegram'),
+    queryFn: () => getSection<TelegramConfigVo>('telegram'),
   });
 
   if (isPending) {
@@ -35,19 +37,23 @@ export function TelegramSettingsPage() {
     );
   }
 
-  // 資料到齊才掛載表單,初始值直接交給 useState,不需要再用 useEffect 同步。
-  // 後端的 GET 回的是原樣存進去的 JSON、不套 schema,所以舊資料可能缺欄位,用 EMPTY 補齊
+  // 資料到齊才掛載表單,初始值直接交給 useState,不需要再用 useEffect 同步
   return <TelegramForm config={{ ...EMPTY, ...data }} />;
 }
 
-function TelegramForm({ config }: { config: TelegramConfig }) {
-  const [accessToken, setAccessToken] = useState(config.accessToken);
+function TelegramForm({ config }: { config: TelegramConfigVo }) {
+  // undefined 代表「沒在編輯這個欄位」,送出時就不會放進 payload
+  const [accessToken, setAccessToken] = useState<string | undefined>(
+    config.accessTokenMask ? undefined : '',
+  );
   const [chatId, setChatId] = useState(config.chatId);
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    mutationFn: (next: TelegramConfig) => saveSection('telegram', next),
+    mutationFn: (next: TelegramConfigRequest) => saveSection('telegram', next),
     onSuccess: () => {
+      // 存完就回到遮罩狀態。這是事件而不是同步,所以不需要 useEffect
+      setAccessToken(undefined);
       void queryClient.invalidateQueries({ queryKey: ['config', 'telegram'] });
     },
   });
@@ -59,6 +65,8 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
 
   // 後端的 schema 也是這條規則,先在前端擋住可以少一次往返
   const chatIdInvalid = chatId.length > 0 && !/^-?\d+$/.test(chatId);
+  const changed = accessToken !== undefined || chatId !== config.chatId;
+  const incomplete = accessToken === '' || !chatId;
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -83,28 +91,26 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            // 驗證碼是伺服器狀態、老闆不編輯,所以直接沿用目前設定裡的值。
-            // 放進 useState 的話,註冊 webhook 之後會停在舊值、按儲存就把新的洗掉
-            save.mutate({ accessToken, chatId, webhookSecret: config.webhookSecret });
+
+            // chatId 不是機密,每次都送;accessToken 只在改過時才放進來
+            const next: TelegramConfigRequest = { chatId };
+            if (accessToken !== undefined) next.accessToken = accessToken;
+            save.mutate(next);
           }}
         >
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">Bot token</legend>
-            <input
-              type="password"
-              className="input w-full"
-              value={accessToken}
-              onChange={(event) => setAccessToken(event.target.value)}
-              spellCheck={false}
-            />
-            <p className="label">BotFather 給的那一串，格式像 123456789:AAH...</p>
-          </fieldset>
+          <SecretField
+            label="Bot token"
+            mask={config.accessTokenMask}
+            value={accessToken}
+            onChange={setAccessToken}
+            hint="BotFather 給的那一串，格式像 123456789:AAH..."
+          />
 
           <fieldset className="fieldset">
             <legend className="fieldset-legend">Chat ID</legend>
             <input
               type="text"
-              className={`input w-full ${chatIdInvalid ? 'input-error' : ''}`}
+              className={`input w-full font-mono text-xs ${chatIdInvalid ? 'input-error' : ''}`}
               value={chatId}
               onChange={(event) => setChatId(event.target.value)}
               spellCheck={false}
@@ -120,7 +126,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={save.isPending || !accessToken || !chatId || chatIdInvalid}
+              disabled={save.isPending || !changed || incomplete || chatIdInvalid}
             >
               {save.isPending && <span className="loading loading-spinner" />}
               儲存
@@ -130,12 +136,7 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
             <button
               type="button"
               className="btn"
-              disabled={
-                test.isPending ||
-                save.isPending ||
-                accessToken !== config.accessToken ||
-                chatId !== config.chatId
-              }
+              disabled={test.isPending || save.isPending || changed}
               onClick={() => test.mutate()}
             >
               {test.isPending && <span className="loading loading-spinner" />}
@@ -144,13 +145,13 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
           </div>
         </form>
 
-        <WebhookSection enabled={config.accessToken.length > 0 && config.chatId.length > 0} />
-
         {test.isError && (
           <div className="alert alert-error">
             <span className="whitespace-pre-wrap text-sm">{test.error.message}</span>
           </div>
         )}
+
+        <WebhookSection enabled={!!config.accessTokenMask && !!config.chatId} />
 
         {save.isSuccess && (
           <div className="toast toast-end">
@@ -158,15 +159,15 @@ function TelegramForm({ config }: { config: TelegramConfig }) {
           </div>
         )}
 
-        {test.isSuccess && (
-          <div className="toast toast-end">
-            <div className="alert alert-success">已發送，請看 Telegram</div>
-          </div>
-        )}
-
         {save.isError && (
           <div className="toast toast-end">
             <div className="alert alert-error">{save.error.message}</div>
+          </div>
+        )}
+
+        {test.isSuccess && (
+          <div className="toast toast-end">
+            <div className="alert alert-success">已發送，請看 Telegram</div>
           </div>
         )}
       </div>

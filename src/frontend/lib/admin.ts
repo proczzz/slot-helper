@@ -104,8 +104,16 @@ export interface WhatsappConfig extends MessagingConfig {
   challengeToken: string;
 }
 
-export interface TelegramConfig extends MessagingConfig {
+// GET 回來的。通關密語是後端註冊 webhook 時自己產生的,老闆不會看到也不會填
+export interface TelegramConfigVo {
+  accessTokenMask: string;
   // 存字串而不是數字,它只會被原樣轉交給 Telegram
+  chatId: string;
+}
+
+// PUT 送出的:accessToken 只在老闆按了變更時才放進來
+export interface TelegramConfigRequest {
+  accessToken?: string;
   chatId: string;
 }
 
