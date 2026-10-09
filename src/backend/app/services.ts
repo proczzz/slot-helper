@@ -27,7 +27,6 @@ import {
   loadLineConfig,
   loadSchedulingConfig,
   loadShopSettings,
-  loadSystemConfig,
   loadTelegramConfig,
   loadWhatsappConfig,
 } from './config.ts';
@@ -40,21 +39,23 @@ export type AppVariables = {
     // line 需要即時回應 200，工作要放給另一個thread，而不同平台寫法不同
     // node 不 await 就好，cloudflare worker 回應後會殺
     runInBackground: (task: Promise<unknown>) => void;
-    username: string; // 身分驗證後的
   };
 };
 
 export interface Services {
+  // 包含 Database ，不可放進快取跨請求共用
+  configRepository: ConfigRepository;
+  conversationRepository: ConversationRepository;
+  customerRepository: CustomerRepository;
+  adminAuth: AdminAuth; // 身分驗證模組
+
+  // 從設定字串建立，可跨請求共用
   model: LanguageModel | null; // AI
   shopConfig: ShopConfig; // 營業時間、部分提示詞
-  conversationRepository: ConversationRepository;
-  configRepository: ConfigRepository;
-  customerRepository: CustomerRepository;
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
-  adminAuth: AdminAuth; // 身分驗證模組
 }
 
 export async function createServices(database: Database): Promise<Services> {
@@ -64,7 +65,6 @@ export async function createServices(database: Database): Promise<Services> {
   const conversationRepository = createConversationRepository(database);
 
   const { jwtSecret, ...providers } = await getSharedProviders(configRepository, userRepository);
-
   return {
     ...providers,
     adminAuth: createAdminAuth(userRepository, jwtSecret),
@@ -94,9 +94,7 @@ async function getSharedProviders(
 ): Promise<SharedProviders> {
   if (cachedProviders) return cachedProviders;
 
-  await ensureInitialized(configRepository, userRepository);
-
-  const system = await loadSystemConfig(configRepository);
+  const system = await ensureInitialized(configRepository, userRepository);
 
   cachedProviders = {
     model: createLanguageModel(await loadAiKeys(configRepository)),
@@ -105,7 +103,7 @@ async function getSharedProviders(
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
     telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),
-    jwtSecret: system!.jwtSecret,
+    jwtSecret: system.jwtSecret,
   };
   return cachedProviders;
 }

@@ -33,13 +33,6 @@ export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
   whatsapp: whatsappConfigMapper,
 };
 
-const SystemConfigSchema = z.object({
-  jwtSecret: z.string(),
-  initializedAt: z.string(),
-});
-
-export type SystemConfig = z.infer<typeof SystemConfigSchema>;
-
 export function loadAiKeys(configRepository: ConfigRepository): Promise<AiKey[]> {
   return loadSection(configRepository, 'ai', AiConfigSchema, []);
 }
@@ -85,10 +78,6 @@ export function loadTelegramConfig(
 
 export function loadShopSettings(configRepository: ConfigRepository): Promise<ShopConfig> {
   return loadSection(configRepository, 'shop', ShopConfigSchema, ShopConfigSchema.parse({}));
-}
-
-export function loadSystemConfig(configRepository: ConfigRepository): Promise<SystemConfig | null> {
-  return loadSection(configRepository, 'system', SystemConfigSchema, null);
 }
 
 // 沒設定或格式錯誤都回 fallback，系統要能在設定不全時啟動

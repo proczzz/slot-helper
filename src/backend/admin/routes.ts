@@ -16,7 +16,11 @@ import { ADMIN_COOKIE_NAME } from './auth.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { WebhookSchema } from '../model/dto/telegram.ts';
 
-const adminRoutes = new Hono<AppVariables>();
+type AdminVariables = {
+  Variables: AppVariables['Variables'] & { username: string };
+};
+
+const adminRoutes = new Hono<AdminVariables>();
 
 adminRoutes.post('/login', async (c) => {
   // Step1. 檢查:環境配置&驗證密碼
