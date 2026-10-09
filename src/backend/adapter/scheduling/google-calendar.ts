@@ -132,11 +132,11 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         const accessToken = await getAccessToken();
         const params = new URLSearchParams({
           timeMin: start,
+          timeMax: end,
           singleEvents: 'true',
           orderBy: 'startTime',
           eventLabelVersion: '1',
         });
-        if (end) params.set('timeMax', end);
         // 精確比對,所以 maxResults 才是「這位顧客的前 N 筆」而不是「模糊結果的前 N 筆」
         if (ownerId) params.set('privateExtendedProperty', `ownerId=${ownerId}`);
         if (limit) params.set('maxResults', String(limit));

@@ -8,6 +8,8 @@ import { toAbsoluteTime, toLocalTime, toLocalWeekday } from './time.ts';
 const MAX_APPOINTMENTS = 20;
 // 一次最多查 31 天 —— 範圍再大,回傳的區間會多到塞爆對話
 const MAX_RANGE_MS = 31 * 24 * 60 * 60_000;
+// findMyAppointments 往後查多遠。供應商層不該自己決定這個,所以範圍由這裡給
+const APPOINTMENTS_RANGE_MS = 180 * 24 * 60 * 60_000;
 
 const LocalTimeSchema = z
   .string()
@@ -200,11 +202,13 @@ export function createSchedulingTools(
 
     findMyAppointments: tool({
       description:
-        '查詢這位顧客目前所有尚未開始的預約(含每筆的識別碼)。要取消或改期時先用這個找出正確的預約',
+        '查詢這位顧客半年內尚未開始的預約(含每筆的識別碼)。要取消或改期時先用這個找出正確的預約',
       inputSchema: z.object({}),
       execute: async () => {
+        const now = Date.now();
         const events = await schedulingProvider.getEvents({
-          start: new Date().toISOString(),
+          start: new Date(now).toISOString(),
+          end: new Date(now + APPOINTMENTS_RANGE_MS).toISOString(),
           ownerId: customerId,
           limit: MAX_APPOINTMENTS,
         });

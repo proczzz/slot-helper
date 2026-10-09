@@ -24,7 +24,7 @@ export interface Event extends TimePeriod {
 // ownerId 是精確比對,各供應商自行決定存在哪裡
 export interface EventQuery {
   start: string;
-  end?: string;
+  end: string;
   ownerId?: string;
   limit?: number;
 }
