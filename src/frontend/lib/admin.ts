@@ -161,7 +161,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export interface EventLabel {
   id: string;
   name: string;
-  color: string;
+  color?: string; // 色碼。供應商給不出來時會省略
 }
 
 export async function getCalendarLabels(): Promise<EventLabel[]> {

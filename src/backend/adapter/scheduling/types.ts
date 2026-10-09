@@ -33,7 +33,7 @@ export interface EventQuery {
 export interface EventLabel {
   id: string;
   name: string;
-  color: string;
+  color?: string;
 }
 
 export interface SchedulingProvider {

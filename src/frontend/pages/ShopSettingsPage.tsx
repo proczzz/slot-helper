@@ -439,8 +439,8 @@ function LabelOption({ label }: { label: EventLabel }) {
   return (
     <>
       <span
-        className="inline-block size-3 shrink-0 rounded-full"
-        style={{ backgroundColor: label.color }}
+        className="inline-block size-3 shrink-0 rounded-full bg-base-300"
+        style={label.color ? { backgroundColor: label.color } : undefined}
       />
       <span className="truncate">{label.name}</span>
     </>
