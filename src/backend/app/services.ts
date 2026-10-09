@@ -6,6 +6,8 @@ import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
 import { createTelegramClient } from '../adapter/telegram/telegram-client.ts';
 import type { TelegramClient } from '../adapter/telegram/types.ts';
+import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
+import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
@@ -30,8 +32,6 @@ import {
   loadWhatsappConfig,
 } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
-import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
-import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {
@@ -63,19 +63,27 @@ export async function createServices(database: Database): Promise<Services> {
   const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
+  const { jwtSecret, ...providers } = await getSharedProviders(configRepository, userRepository);
+
   return {
-    ...(await getSharedProviders(configRepository, userRepository)),
+    ...providers,
+    adminAuth: createAdminAuth(userRepository, jwtSecret),
     configRepository,
     customerRepository,
     conversationRepository,
   };
 }
 
-// 扣掉綁 request 的兩個 repository，其餘只由設定字串建出來，可以跨 request 重用
-type SharedProviders = Omit<
-  Services,
-  'configRepository' | 'conversationRepository' | 'customerRepository'
->;
+// 快取不能包含資料庫
+interface SharedProviders {
+  jwtSecret: string;
+  model: LanguageModel | null;
+  shopConfig: ShopConfig;
+  schedulingProvider: SchedulingProvider | null;
+  lineClient: LineClient | null;
+  whatsappClient: WhatsappClient | null;
+  telegramClient: TelegramClient | null;
+}
 
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
 let cachedProviders: SharedProviders | undefined;
@@ -97,7 +105,7 @@ async function getSharedProviders(
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
     telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),
-    adminAuth: createAdminAuth(userRepository, system!.jwtSecret),
+    jwtSecret: system!.jwtSecret,
   };
   return cachedProviders;
 }
