@@ -1,19 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { SecretField } from '../components/SecretField.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
-import { getSection, saveSection, type WhatsappConfig } from '../lib/admin.ts';
+import {
+  getSection,
+  saveSection,
+  type WhatsappConfigRequest,
+  type WhatsappConfigVo,
+} from '../lib/admin.ts';
 
-const EMPTY: WhatsappConfig = {
+const EMPTY: WhatsappConfigVo = {
+  accessTokenMask: '',
+  webhookSecretMask: '',
   phoneNumberId: '',
-  accessToken: '',
-  webhookSecret: '',
   challengeToken: '',
 };
 
 export function WhatsappSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'whatsapp'],
-    queryFn: () => getSection<WhatsappConfig>('whatsapp'),
+    queryFn: () => getSection<WhatsappConfigVo>('whatsapp'),
   });
 
   if (isPending) {
@@ -32,29 +38,44 @@ export function WhatsappSettingsPage() {
     );
   }
 
-  // 後端的 GET 回的是原樣存進去的 JSON、不套 schema,所以舊資料可能缺欄位,用 EMPTY 補齊
+  // 資料到齊才掛載表單,初始值直接交給 useState,不需要再用 useEffect 同步
   return <WhatsappForm config={{ ...EMPTY, ...data }} />;
 }
 
-function WhatsappForm({ config }: { config: WhatsappConfig }) {
+function WhatsappForm({ config }: { config: WhatsappConfigVo }) {
+  // undefined 代表「沒在編輯這個欄位」,送出時就不會放進 payload
+  const [accessToken, setAccessToken] = useState<string | undefined>(
+    config.accessTokenMask ? undefined : '',
+  );
+  const [webhookSecret, setWebhookSecret] = useState<string | undefined>(
+    config.webhookSecretMask ? undefined : '',
+  );
   const [phoneNumberId, setPhoneNumberId] = useState(config.phoneNumberId);
-  const [accessToken, setAccessToken] = useState(config.accessToken);
-  const [webhookSecret, setWebhookSecret] = useState(config.webhookSecret);
   const [challengeToken, setChallengeToken] = useState(config.challengeToken);
   const queryClient = useQueryClient();
 
   const webhookUrl = `${window.location.origin}/whatsapp/webhook`;
 
   const save = useMutation({
-    mutationFn: (next: WhatsappConfig) => saveSection('whatsapp', next),
+    mutationFn: (next: WhatsappConfigRequest) => saveSection('whatsapp', next),
     onSuccess: () => {
+      // 存完就回到遮罩狀態。這是事件而不是同步,所以不需要 useEffect
+      setAccessToken(undefined);
+      setWebhookSecret(undefined);
       void queryClient.invalidateQueries({ queryKey: ['config', 'whatsapp'] });
     },
   });
 
   useAutoReset(save);
 
-  const complete = !!phoneNumberId && !!accessToken && !!webhookSecret && !!challengeToken;
+  const changed =
+    accessToken !== undefined ||
+    webhookSecret !== undefined ||
+    phoneNumberId !== config.phoneNumberId ||
+    challengeToken !== config.challengeToken;
+
+  const incomplete =
+    accessToken === '' || webhookSecret === '' || !phoneNumberId || !challengeToken;
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
@@ -68,7 +89,7 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
           <ol className="list-decimal space-y-1 pl-4">
             <li>在 Meta 開發者平台建立應用程式，加入 WhatsApp 產品並綁定電話號碼</li>
             <li>權杖請用「系統使用者」產生的永久權杖 —— 開發面板上那組只有 24 小時</li>
-            <li>App secret 在「應用程式設定 → 基本資料 → 應用程式密鑰」</li>
+            <li>App secret 在應用程式的「設定 → 基本資料」，和存取權杖是不同的東西</li>
             <li>最後把下面的 Webhook 網址與驗證字串填進 Meta，並訂閱 messages 欄位</li>
           </ol>
         </div>
@@ -77,7 +98,12 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({ phoneNumberId, accessToken, webhookSecret, challengeToken });
+
+            // 非機密欄位每次都送;兩個機密欄位只在改過時才放進來
+            const next: WhatsappConfigRequest = { phoneNumberId, challengeToken };
+            if (accessToken !== undefined) next.accessToken = accessToken;
+            if (webhookSecret !== undefined) next.webhookSecret = webhookSecret;
+            save.mutate(next);
           }}
         >
           <fieldset className="fieldset">
@@ -92,42 +118,36 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
             <p className="label">是一串數字，不是電話號碼本身</p>
           </fieldset>
 
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">存取權杖</legend>
-            <textarea
-              className="textarea textarea-bordered w-full font-mono text-xs"
-              rows={4}
-              value={accessToken}
-              onChange={(event) => setAccessToken(event.target.value)}
-              spellCheck={false}
-            />
-          </fieldset>
+          <SecretField
+            label="存取權杖"
+            mask={config.accessTokenMask}
+            value={accessToken}
+            onChange={setAccessToken}
+            multiline
+            hint="系統使用者產生的永久權杖"
+          />
 
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">App secret</legend>
-            <input
-              type="password"
-              className="input w-full"
-              value={webhookSecret}
-              onChange={(event) => setWebhookSecret(event.target.value)}
-              spellCheck={false}
-            />
-            <p className="label">用來驗證 webhook 真的來自 Meta</p>
-          </fieldset>
+          <SecretField
+            label="App secret"
+            mask={config.webhookSecretMask}
+            value={webhookSecret}
+            onChange={setWebhookSecret}
+            hint="用來驗證 webhook 真的來自 Meta"
+          />
 
           <fieldset className="fieldset">
             <legend className="fieldset-legend">驗證字串</legend>
-            <div className="join w-full">
+            <div className="flex items-center gap-2">
               <input
                 type="text"
-                className="input join-item w-full font-mono text-xs"
+                className="input flex-1 font-mono text-xs"
                 value={challengeToken}
                 onChange={(event) => setChallengeToken(event.target.value)}
                 spellCheck={false}
               />
               <button
                 type="button"
-                className="btn join-item"
+                className="btn btn-sm"
                 onClick={() => setChallengeToken(crypto.randomUUID())}
               >
                 產生
@@ -136,29 +156,34 @@ function WhatsappForm({ config }: { config: WhatsappConfig }) {
             <p className="label">自己定一串就好，要和填進 Meta 的完全一致</p>
           </fieldset>
 
-          <button type="submit" className="btn btn-primary" disabled={save.isPending || !complete}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={save.isPending || !changed || incomplete}
+          >
             {save.isPending && <span className="loading loading-spinner" />}
             儲存
           </button>
         </form>
 
-        <fieldset className="fieldset border-t border-base-300 pt-4">
-          <legend className="fieldset-legend">Webhook 網址</legend>
-          <div className="join w-full">
-            <input type="text" className="input join-item w-full" value={webhookUrl} readOnly />
+        <div className="mt-2 border-t border-base-300 pt-4">
+          <p className="mb-2 text-sm font-medium">Webhook 網址</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-box bg-base-200 px-3 py-2 font-mono text-xs break-all">
+              {webhookUrl}
+            </code>
             <button
               type="button"
-              className="btn join-item"
+              className="btn btn-sm"
               onClick={() => void navigator.clipboard.writeText(webhookUrl)}
             >
               複製
             </button>
           </div>
-          {/* Meta 那端要自己貼,所以我們只是提供一個方便值;後台和對外網域不一定相同 */}
-          <p className="label">
+          <p className="mt-1 text-xs opacity-60">
             貼到 Meta 的 Callback URL。如果你的後台和對外網域不同，請自行替換網域
           </p>
-        </fieldset>
+        </div>
 
         {save.isSuccess && (
           <div className="toast toast-end">

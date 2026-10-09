@@ -9,6 +9,7 @@ import { lineConfigMapper } from '../model/dto/line.ts';
 import type { ConfigMapper } from '../model/dto/types.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 import { telegramConfigMapper } from '../model/dto/telegram.ts';
+import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
 
 // [白名單]後台可寫入的配置，system 等內部資料不在其中
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
@@ -24,6 +25,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
 export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
   line: lineConfigMapper,
   telegram: telegramConfigMapper,
+  whatsapp: whatsappConfigMapper,
 };
 
 const SystemConfigSchema = z.object({
