@@ -9,9 +9,12 @@ import {
   type SchedulingSelection,
 } from '../lib/admin.ts';
 
-const PROVIDER = 'google-calendar';
+const GOOGLE = 'google-calendar';
 
-const EMPTY: GoogleCalendarVo = {
+// 新增供應商 = 這裡加一行 + 下面多掛一個設定表單,並和後端的 providers 表保持一致
+const PROVIDERS = [{ value: GOOGLE, label: 'Google 日曆' }];
+
+const EMPTY_GOOGLE: GoogleCalendarVo = {
   serviceAccountEmail: '',
   hasPrivateKey: false,
   calendarId: '',
@@ -20,14 +23,17 @@ const EMPTY: GoogleCalendarVo = {
 export function CalendarSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'calendar'],
-    // 指標與設定分成兩列,要一起拿回來才知道「啟用中」該不該打勾
+    // 指標與設定分成兩列,要一起拿回來才知道現在用的是哪一家
     queryFn: async () => {
       const [selection, google] = await Promise.all([
         getSection<SchedulingSelection>('scheduling'),
-        getSection<GoogleCalendarVo>(PROVIDER),
+        getSection<GoogleCalendarVo>(GOOGLE),
       ]);
 
-      return { enabled: selection?.provider === PROVIDER, google: { ...EMPTY, ...google } };
+      return {
+        provider: selection?.provider ?? null,
+        google: { ...EMPTY_GOOGLE, ...google },
+      };
     },
   });
 
@@ -47,32 +53,32 @@ export function CalendarSettingsPage() {
     );
   }
 
-  return <CalendarForm initialEnabled={data.enabled} config={data.google} />;
+  return <CalendarForm initialProvider={data.provider} google={data.google} />;
 }
 
 function CalendarForm({
-  initialEnabled,
-  config,
+  initialProvider,
+  google,
 }: {
-  initialEnabled: boolean;
-  config: GoogleCalendarVo;
+  initialProvider: string | null;
+  google: GoogleCalendarVo;
 }) {
-  const [enabled, setEnabled] = useState(initialEnabled);
-  const [email, setEmail] = useState(config.serviceAccountEmail);
+  const [provider, setProvider] = useState(initialProvider);
+  const [email, setEmail] = useState(google.serviceAccountEmail);
   // undefined 代表「不變更」,不會放進送出的 payload
   const [privateKey, setPrivateKey] = useState<string | undefined>(
-    config.hasPrivateKey ? undefined : '',
+    google.hasPrivateKey ? undefined : '',
   );
-  const [calendarId, setCalendarId] = useState(config.calendarId);
+  const [calendarId, setCalendarId] = useState(google.calendarId);
   const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    mutationFn: async (next: { enabled: boolean; settings: GoogleCalendarRequest }) => {
+    mutationFn: async (next: { provider: string | null; settings: GoogleCalendarRequest }) => {
       // 先存設定再切指標。順序反過來的話,中間失敗會讓系統指向一組還沒更新的設定
-      await saveSection(PROVIDER, next.settings);
-      await saveSection('scheduling', { provider: next.enabled ? PROVIDER : null });
+      await saveSection(GOOGLE, next.settings);
+      await saveSection('scheduling', { provider: next.provider });
     },
     onSuccess: () => {
       // 存完就回到唯讀狀態,不然畫面還停在剛剛編輯的樣子
@@ -107,28 +113,20 @@ function CalendarForm({
   // 取消變更:金鑰與電子郵件都回到後端現有的那一組
   function cancelEdit() {
     setPrivateKey(undefined);
-    setEmail(config.serviceAccountEmail);
+    setEmail(google.serviceAccountEmail);
     setFileError('');
   }
 
+  const usingGoogle = provider === GOOGLE;
   const editing = privateKey !== undefined;
-  const hasKey = editing ? !!email && privateKey !== '' : config.hasPrivateKey;
-  const canSubmit = !enabled || (hasKey && !!calendarId);
+  const hasKey = editing ? !!email && privateKey !== '' : google.hasPrivateKey;
+  // 沒有選中這家就不檢查它的必填欄位。未來多一家時這裡要跟著多一個分支
+  const canSubmit = !usingGoogle || (hasKey && !!calendarId);
 
   return (
     <div className="card max-w-2xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
-        <h2 className="card-title">Google 日曆設定</h2>
-
-        <label className="label cursor-pointer justify-start gap-3">
-          <input
-            type="checkbox"
-            className="toggle toggle-primary"
-            checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
-          />
-          <span>啟用日曆預約功能</span>
-        </label>
+        <h2 className="card-title">日曆設定</h2>
 
         <form
           className="flex flex-col gap-4"
@@ -139,15 +137,31 @@ function CalendarForm({
               calendarId,
             };
             if (privateKey !== undefined) settings.privateKey = privateKey;
-            save.mutate({ enabled, settings });
+            save.mutate({ provider, settings });
           }}
         >
-          <fieldset className="contents" disabled={!enabled}>
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">使用的日曆服務</legend>
+            <select
+              className="select w-full"
+              value={provider ?? ''}
+              onChange={(event) => setProvider(event.target.value || null)}
+            >
+              <option value="">不啟用預約功能</option>
+              {PROVIDERS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </fieldset>
+
+          <fieldset className="contents" disabled={!usingGoogle}>
             <div className="flex flex-col gap-3 rounded-box border border-base-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="font-medium">服務帳號金鑰</span>
                 {editing ? (
-                  config.hasPrivateKey && (
+                  google.hasPrivateKey && (
                     <button
                       type="button"
                       className="btn btn-sm btn-error btn-soft"
@@ -166,7 +180,7 @@ function CalendarForm({
               {editing && (
                 <label
                   className={`flex flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed p-6 transition-colors ${
-                    enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                    usingGoogle ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
                   } ${
                     dragging
                       ? 'border-primary bg-primary/5'
@@ -180,7 +194,7 @@ function CalendarForm({
                   onDrop={(event) => {
                     event.preventDefault();
                     setDragging(false);
-                    if (!enabled) return;
+                    if (!usingGoogle) return;
                     const file = event.dataTransfer.files[0];
                     if (file) void importServiceAccountJson(file);
                   }}
