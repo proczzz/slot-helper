@@ -4,7 +4,15 @@ import type { User } from '../model/entity/user.ts';
 
 // config 表中的 key
 export type ConfigKey =
-  'system' | 'ai' | 'shop' | 'line' | 'telegram' | 'whatsapp' | 'scheduling' | 'google-calendar';
+  | 'system'
+  | 'ai'
+  | 'shop'
+  | 'line'
+  | 'telegram'
+  | 'whatsapp'
+  | 'scheduling'
+  | 'scheduling-state'
+  | 'google-calendar';
 
 export interface ConfigRepository {
   get(key: ConfigKey): Promise<string | null>;

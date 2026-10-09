@@ -3,7 +3,7 @@ import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { GoogleCalendarSettingsSchema } from '../adapter/scheduling/google-calendar.ts';
 import { providers } from '../adapter/scheduling/index.ts';
-import { SchedulingSelectionSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
+import { SchedulingSelectionSchema, type SchedulingConfig, type TokenStore } from '../adapter/scheduling/types.ts';
 import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
@@ -68,6 +68,21 @@ export async function loadSchedulingConfig(
   if (!raw) return null;
 
   return { provider: selection.provider, settings: JSON.parse(raw) };
+}
+
+// 供應商自己更新的狀態存在獨立的一列，避免管理員更新設定時覆蓋token
+export function createTokenStore(configRepository: ConfigRepository): TokenStore {
+  return {
+    get() {
+      return configRepository.get('scheduling-state');
+    },
+    set(value) {
+      return configRepository.set('scheduling-state', value);
+    },
+    clear() {
+      return configRepository.remove('scheduling-state');
+    },
+  };
 }
 
 export function loadTelegramConfig(

@@ -3,7 +3,7 @@ import { createLanguageModel } from '../adapter/ai/index.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
-import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
+import type { SchedulingConfig, SchedulingProvider } from '../adapter/scheduling/types.ts';
 import { createTelegramClient } from '../adapter/telegram/telegram-client.ts';
 import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
@@ -23,6 +23,7 @@ import type {
 } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
 import {
+  createTokenStore,
   loadAiKeys,
   loadLineConfig,
   loadSchedulingConfig,
@@ -64,9 +65,19 @@ export async function createServices(database: Database): Promise<Services> {
   const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
-  const { jwtSecret, ...providers } = await getSharedProviders(configRepository, userRepository);
+  const { jwtSecret, schedulingConfig, ...providers } = await getSharedProviders(
+    configRepository,
+    userRepository,
+  );
+
   return {
     ...providers,
+    // provider 會透過 TokenStore 寫資料庫,所以不能快取。
+    // 用快取的設定現建,只是組幾個 closure,沒有 I/O
+    schedulingProvider: createSchedulingProvider(
+      schedulingConfig,
+      createTokenStore(configRepository),
+    ),
     adminAuth: createAdminAuth(userRepository, jwtSecret),
     configRepository,
     customerRepository,
@@ -79,7 +90,7 @@ interface SharedProviders {
   jwtSecret: string;
   model: LanguageModel | null;
   shopConfig: ShopConfig;
-  schedulingProvider: SchedulingProvider | null;
+  schedulingConfig: SchedulingConfig | null;
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null;
@@ -99,7 +110,7 @@ async function getSharedProviders(
   cachedProviders = {
     model: createLanguageModel(await loadAiKeys(configRepository)),
     shopConfig: await loadShopSettings(configRepository),
-    schedulingProvider: createSchedulingProvider(await loadSchedulingConfig(configRepository)),
+    schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
     telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),

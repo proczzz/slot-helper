@@ -46,10 +46,11 @@ export interface SchedulingProvider {
   deleteEvent(eventId: string): Promise<void>;
 }
 
-// 每個供應商自己帶著名稱,並自行解析它需要的設定;設定不合就回 null
+// 每個供應商自己帶著名稱,並自行解析它需要的設定;設定不合就回 null。
+// 用不到 tokens 的供應商(服務帳號憑證永久有效)可以省略第二個參數
 export interface SchedulingProviderDefinition {
   name: string;
-  create(settings: unknown): SchedulingProvider | null;
+  create(settings: unknown, tokens: TokenStore): SchedulingProvider | null;
 }
 
 // settings 的形狀由各供應商自己決定,中央不介入
@@ -62,4 +63,12 @@ export type SchedulingSelection = z.infer<typeof SchedulingSelectionSchema>;
 export interface SchedulingConfig {
   provider: string;
   settings: unknown;
+}
+
+// 供應商保存自己滾動的狀態(例如 OAuth 的 refresh token)。
+// 綁定到 config 表的某一列,供應商不需要知道是哪一列
+export interface TokenStore {
+  get(): Promise<string | null>;
+  set(value: string): Promise<void>;
+  clear(): Promise<void>;
 }
