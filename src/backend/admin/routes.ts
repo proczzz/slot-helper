@@ -1,9 +1,22 @@
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { listAvailableModels } from '../adapter/ai/index.ts';
-import { loadTelegramConfig, SECTION_MAPPERS, SECTION_SCHEMAS } from '../app/config.ts';
+import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
+import {
+  createTokenStore,
+  loadOutlookSettings,
+  loadTelegramConfig,
+  SECTION_MAPPERS,
+  SECTION_SCHEMAS,
+} from '../app/config.ts';
+import {
+  OAUTH_COOKIE_PATH,
+  OAUTH_REDIRECT_COOKIE,
+  OAUTH_STATE_COOKIE,
+} from '../app/oauth-routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
+import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { handleChat } from '../core/chat-service.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
@@ -11,10 +24,10 @@ import { CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
+import { WebhookSchema } from '../model/dto/telegram.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
-import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
-import { WebhookSchema } from '../model/dto/telegram.ts';
+import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
 
 type AdminVariables = {
   Variables: AppVariables['Variables'] & { username: string };
@@ -123,6 +136,48 @@ adminRoutes.get('/calendar/labels', async (c) => {
   if (!schedulingProvider) return c.json(jsend.success([]));
 
   return c.json(jsend.success(await schedulingProvider.getLabels()));
+});
+
+const OAUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true, // 同 admin cookie,本機用 http 開發要改 false
+  sameSite: 'Lax', // callback 是跨站頂層導覽,Strict 不會送出
+  path: OAUTH_COOKIE_PATH,
+  maxAge: 600, // 老闆同意的過程就10分鐘內
+} as const;
+
+// 取得微軟授權頁url，並預留cookies給callback頁，前端自己跳轉
+adminRoutes.post('/outlook/authorize', async (c) => {
+  const { configRepository } = c.var.services;
+  const settings = await loadOutlookSettings(configRepository);
+  if (!settings) {
+    return c.json(jsend.fail('請先儲存 Client ID 與用戶端密碼'), 400);
+  }
+
+  const { redirectUri } = OutlookAuthorizeSchema.parse(await c.req.json());
+  const state = crypto.randomUUID();
+
+  setCookie(c, OAUTH_REDIRECT_COOKIE, redirectUri, OAUTH_COOKIE_OPTIONS);
+  setCookie(c, OAUTH_STATE_COOKIE, state, OAUTH_COOKIE_OPTIONS);
+
+  // 組同意授權頁的 url 給前端
+  return c.json(jsend.success({ url: buildAuthorizeUrl(settings, redirectUri, state) }));
+});
+
+// 問:現在是否連結(有refresh token嗎)?
+adminRoutes.get('/outlook/connection', async (c) => {
+  const { configRepository } = c.var.services;
+  const state = parseOutlookState(await createTokenStore(configRepository).get());
+
+  return c.json(jsend.success({ connected: !!state, accountEmail: state?.accountEmail ?? '' }));
+});
+
+// 移除目前的連結(移除refresh token)
+adminRoutes.delete('/outlook/connection', async (c) => {
+  const { configRepository } = c.var.services;
+  await createTokenStore(configRepository).clear();
+
+  return c.json(jsend.success(null));
 });
 
 adminRoutes.get('/customers', async (c) => {

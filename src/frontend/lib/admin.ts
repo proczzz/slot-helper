@@ -26,14 +26,7 @@ export async function logout(): Promise<void> {
 }
 
 export type Section =
-  | 'ai'
-  | 'shop'
-  | 'line'
-  | 'scheduling'
-  | 'google-calendar'
-  | 'outlook'
-  | 'telegram'
-  | 'whatsapp';
+  'ai' | 'shop' | 'line' | 'scheduling' | 'google-calendar' | 'outlook' | 'telegram' | 'whatsapp';
 
 export async function getSection<T>(section: Section): Promise<T | null> {
   const response = await request(`/api/admin/config/${section}`);
@@ -149,12 +142,11 @@ export interface GoogleCalendarRequest {
   calendarId: string;
 }
 
-// GET 回來的。clientSecret 是一串亂碼,但老闆可能有多組,露尾碼讓他確認貼對了哪一組;
+// GET 回來的。遮罩露前三碼,因為 Azure 的憑證列表也顯示前三碼,老闆才對得起來;
 // 空字串代表尚未設定(SecretField 的協定)
 export interface OutlookVo {
   clientId: string;
   clientSecretMask: string;
-  redirectUri: string;
   calendarId: string;
 }
 
@@ -163,7 +155,6 @@ export interface OutlookVo {
 export interface OutlookRequest {
   clientId: string;
   clientSecret?: string;
-  redirectUri: string;
   calendarId: string;
 }
 
@@ -174,6 +165,37 @@ export async function changePassword(currentPassword: string, newPassword: strin
     body: JSON.stringify({ currentPassword, newPassword }),
   });
 
+  await assertOk(response);
+}
+
+// 授權狀態存在 scheduling-state 那一列,不走設定頁的通用端點(它不在白名單裡)
+export interface OutlookConnection {
+  connected: boolean;
+  accountEmail: string;
+}
+
+export async function getOutlookConnection(): Promise<OutlookConnection> {
+  const response = await request('/api/admin/outlook/connection');
+  const body = (await response.json()) as JSendBody<OutlookConnection>;
+  if (body.status !== 'success') throw new Error('讀取 Outlook 授權狀態失敗');
+  return body.data ?? { connected: false, accountEmail: '' };
+}
+
+// redirectUri 由這裡用當下的 origin 算出來送上去 —— 它不是設定,
+// 而是「這一次授權從哪個網域發起」,後端會連同 state 一起種進 cookie 交給 callback
+export async function startOutlookAuthorize(redirectUri: string): Promise<string> {
+  const response = await request('/api/admin/outlook/authorize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ redirectUri }),
+  });
+  const body = (await response.json()) as JSendBody<{ url: string }>;
+  if (body.status !== 'success' || !body.data) throw new Error(toErrorMessage(body));
+  return body.data.url;
+}
+
+export async function disconnectOutlook(): Promise<void> {
+  const response = await request('/api/admin/outlook/connection', { method: 'DELETE' });
   await assertOk(response);
 }
 

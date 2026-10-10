@@ -8,7 +8,7 @@ const MENU = [
   { to: '/conversations', label: 'AI 記憶' },
   { to: '/settings/shop', label: '店家資訊' },
   { to: '/settings/ai', label: 'AI 模型' },
-  { to: '/settings/calendar', label: 'Google 日曆' },
+  { to: '/settings/calendar', label: '日曆' },
   { to: '/settings/line', label: 'LINE' },
   { to: '/settings/whatsapp', label: 'WhatsApp' },
   { to: '/settings/telegram', label: 'Telegram' },

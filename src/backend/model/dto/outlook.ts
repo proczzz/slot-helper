@@ -5,7 +5,6 @@ const StoredSchema = z
   .object({
     clientId: z.string().default(''),
     clientSecret: z.string().default(''),
-    redirectUri: z.string().default(''),
     calendarId: z.string().default(''),
   })
   .prefault({});
@@ -13,8 +12,11 @@ const StoredSchema = z
 const RequestSchema = z.object({
   clientId: z.string().optional(),
   clientSecret: z.string().optional(),
-  redirectUri: z.string().optional(),
   calendarId: z.string().optional(),
+});
+
+export const OutlookAuthorizeSchema = z.object({
+  redirectUri: z.string().min(1),
 });
 
 export const outlookConfigMapper: ConfigMapper = {
@@ -33,8 +35,7 @@ export const outlookConfigMapper: ConfigMapper = {
     const settings = StoredSchema.parse(stored);
     return {
       clientId: settings.clientId,
-      clientSecretMask: settings.clientSecret ? `••••••${settings.clientSecret.slice(-4)}` : '',
-      redirectUri: settings.redirectUri,
+      clientSecretMask: settings.clientSecret ? `${settings.clientSecret.slice(0, 3)}••••••` : '',
       calendarId: settings.calendarId,
     };
   },

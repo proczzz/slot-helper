@@ -3,6 +3,10 @@ import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { GoogleCalendarSettingsSchema } from '../adapter/scheduling/google-calendar.ts';
 import { providers } from '../adapter/scheduling/index.ts';
+import {
+  OutlookOauthSchema,
+  type OutlookOauthSettings,
+} from '../adapter/scheduling/outlook-oauth.ts';
 import { OutlookSettingsSchema } from '../adapter/scheduling/outlook.ts';
 import {
   SchedulingSelectionSchema,
@@ -76,6 +80,14 @@ export async function loadSchedulingConfig(
   if (!raw) return null;
 
   return { provider: selection.provider, settings: JSON.parse(raw) };
+}
+
+// 授權流程要讀 outlook 那一列,而且此時 calendarId 還是空的,
+// 所以用只要求三個欄位的 OauthSchema 驗(object schema 會剝掉 calendarId)
+export function loadOutlookSettings(
+  configRepository: ConfigRepository,
+): Promise<OutlookOauthSettings | null> {
+  return loadSection(configRepository, 'outlook', OutlookOauthSchema, null);
 }
 
 // 供應商自己更新的狀態存在獨立的一列，避免管理員更新設定時覆蓋token
