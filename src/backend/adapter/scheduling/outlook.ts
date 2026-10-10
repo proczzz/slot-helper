@@ -1,4 +1,5 @@
 import z from 'zod';
+import { toPresetColor } from './outlook-colors.ts';
 import { getAccessToken, OutlookOauthSchema, type OutlookOauthSettings } from './outlook-oauth.ts';
 import type {
   Event,
@@ -179,9 +180,15 @@ export const outlookProvider: SchedulingProviderDefinition = {
         const response = await call(`${GRAPH}/me/outlook/masterCategories`);
         await assertOk(response, 'list Outlook categories');
 
-        const data = (await response.json()) as { value: { displayName: string }[] };
+        const data = (await response.json()) as {
+          value: { displayName: string; color?: string }[];
+        };
 
-        return data.value.map((item) => ({ id: item.displayName, name: item.displayName }));
+        return data.value.map((item) => ({
+          id: item.displayName,
+          name: item.displayName,
+          color: toPresetColor(item.color),
+        }));
       },
 
       async createEvent(event: NewEvent): Promise<{ eventId: string }> {
