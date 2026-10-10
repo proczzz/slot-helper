@@ -3,9 +3,10 @@ import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
 import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
 import { googleProvider } from './google.ts';
-import { openAiProvider } from './openai.ts';
-import type { AiKey, LanguageModelProvider } from './types.ts';
 import { nvidiaProvider } from './nvidia.ts';
+import { openAiProvider } from './openai.ts';
+import { openRouterProvider } from './openrouter.ts';
+import type { AiKey, LanguageModelProvider } from './types.ts';
 
 const providers: Partial<Record<string, LanguageModelProvider>> = {
   anthropic: anthropicProvider,
@@ -13,6 +14,7 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
   google: googleProvider,
   nvidia: nvidiaProvider,
   openai: openAiProvider,
+  openrouter: openRouterProvider,
 };
 
 // 目前只用第一組,多組備援之後再做
