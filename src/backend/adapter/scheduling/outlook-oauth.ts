@@ -1,4 +1,5 @@
 import z from 'zod';
+import type { TokenStore } from './types';
 
 // 授權需要這兩個
 export const OutlookOauthSchema = z.object({
@@ -86,6 +87,40 @@ export function refreshTokens(
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   });
+}
+
+let cachedToken: { refreshToken: string; accessToken: string; expiresAt: number } | null = null;
+
+// 讀出存著的 refresh token,必要時刷新並寫回。回 null 代表還沒連結(預期狀態,不是錯誤)
+export async function getAccessToken(
+  settings: OutlookOauthSettings,
+  tokens: TokenStore,
+): Promise<string | null> {
+  const state = parseOutlookState(await tokens.get());
+  if (!state) return null;
+
+  if (
+    cachedToken &&
+    cachedToken.refreshToken === state.refreshToken &&
+    cachedToken.expiresAt > Date.now() + 60_000
+  ) {
+    return cachedToken.accessToken;
+  }
+
+  const fresh = await refreshTokens(settings, state.refreshToken);
+
+  // 換到的新 refresh token 一定要寫回去,否則下次還是用舊的那顆,90 天後就過期了
+  const next: OutlookState = { ...state, refreshToken: fresh.refreshToken };
+  await tokens.set(JSON.stringify(next));
+
+  cachedToken = {
+    refreshToken: fresh.refreshToken,
+    accessToken: fresh.accessToken,
+    expiresAt: fresh.expiresAt,
+  };
+
+  console.log('Outlook: 已更新快取token');
+  return fresh.accessToken;
 }
 
 // 顯示用的,拿不到不該讓整個授權失敗。個人帳號的 mail 可能是空的,退回 userPrincipalName

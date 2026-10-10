@@ -150,12 +150,25 @@ export interface OutlookVo {
   calendarId: string;
 }
 
-// PUT 送出的:clientSecret 只在老闆重新輸入時才放進來。
-// calendarId 要等授權完才拿得到,所以允許空字串
+// PUT 的語意是「沒送的欄位不變」,所以全部可選 ——
+// 設定表單不送 calendarId、日曆下拉只送 calendarId
 export interface OutlookRequest {
-  clientId: string;
+  clientId?: string;
   clientSecret?: string;
-  calendarId: string;
+  calendarId?: string;
+}
+
+export interface OutlookCalendar {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export async function getOutlookCalendars(): Promise<OutlookCalendar[]> {
+  const response = await request('/api/admin/outlook/calendars');
+  const body = (await response.json()) as JSendBody<OutlookCalendar[]>;
+  if (body.status !== 'success') throw new Error(toErrorMessage(body));
+  return body.data ?? [];
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

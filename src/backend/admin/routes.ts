@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { listAvailableModels } from '../adapter/ai/index.ts';
 import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
+import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
 import {
   createTokenStore,
   loadOutlookSettings,
@@ -23,11 +24,11 @@ import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
+import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
 import { WebhookSchema } from '../model/dto/telegram.ts';
 import type { ConfigKey } from '../repository/types.ts';
 import { ADMIN_COOKIE_NAME } from './auth.ts';
-import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
 
 type AdminVariables = {
   Variables: AppVariables['Variables'] & { username: string };
@@ -178,6 +179,20 @@ adminRoutes.delete('/outlook/connection', async (c) => {
   await createTokenStore(configRepository).clear();
 
   return c.json(jsend.success(null));
+});
+
+// 診斷性質的端點,所以把 Graph 的錯誤原文交給老闆,而不是丟給 error-handler 變成 500
+adminRoutes.get('/outlook/calendars', async (c) => {
+  const { configRepository } = c.var.services;
+  const settings = await loadOutlookSettings(configRepository);
+  if (!settings) return c.json(jsend.success([]));
+
+  try {
+    const calendars = await fetchOutlookCalendars(settings, createTokenStore(configRepository));
+    return c.json(jsend.success(calendars));
+  } catch (error) {
+    return c.json(jsend.fail(error instanceof Error ? error.message : '讀取日曆清單失敗'), 400);
+  }
 });
 
 adminRoutes.get('/customers', async (c) => {

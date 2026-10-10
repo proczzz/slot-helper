@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   disconnectOutlook,
+  getOutlookCalendars,
   getOutlookConnection,
   saveSection,
   startOutlookAuthorize,
@@ -21,23 +22,50 @@ export function OutlookForm({ config }: { config: OutlookVo }) {
   const [clientSecret, setClientSecret] = useState<string | undefined>(
     config.clientSecretMask ? undefined : '',
   );
+  const [calendarId, setCalendarId] = useState(config.calendarId);
   const queryClient = useQueryClient();
+
+  const changed =
+    clientSecret !== undefined || clientId !== config.clientId || calendarId !== config.calendarId;
+  const incomplete = !clientId || clientSecret === '';
+  // 授權要用後端已儲存的設定,所以改過還沒存時不能連結
+  const stored = !!config.clientId && !!config.clientSecretMask;
+
+  // 日曆清單要連結完才列得出來。這個 key 和 ConnectionSection 裡的相同,
+  // React Query 共用快取,不會重複請求
+  const connection = useQuery({
+    queryKey: ['outlook-connection'],
+    queryFn: getOutlookConnection,
+    enabled: stored,
+  });
+  const connected = connection.data?.connected === true;
+
+  const calendars = useQuery({
+    queryKey: ['outlook-calendars'],
+    queryFn: getOutlookCalendars,
+    enabled: connected,
+  });
 
   const save = useMutation({
     mutationFn: (next: OutlookRequest) => saveSection('outlook', next),
     onSuccess: () => {
       setClientSecret(undefined);
       void queryClient.invalidateQueries({ queryKey: ['config', 'calendar'] });
+      // 換了日曆,店家設定頁讀的標籤清單也跟著變
       void queryClient.invalidateQueries({ queryKey: ['calendar-labels'] });
     },
   });
 
   useAutoReset(save);
 
-  const changed = clientSecret !== undefined || clientId !== config.clientId;
-  const incomplete = !clientId || clientSecret === '';
-  // 授權要用後端已儲存的設定,所以改過還沒存時不能連結
-  const stored = !!config.clientId && !!config.clientSecretMask;
+  let calendarHint;
+  if (!connected) {
+    calendarHint = <p className="label">連結 Outlook 帳號之後才能選擇日曆</p>;
+  } else if (calendars.isError) {
+    calendarHint = <p className="label text-error">{calendars.error.message}</p>;
+  } else {
+    calendarHint = <p className="label">建議另開一本只放預約與臨時休假的日曆</p>;
+  }
 
   return (
     <div className="flex flex-col gap-4 border-t border-base-300 pt-4">
@@ -47,8 +75,8 @@ export function OutlookForm({ config }: { config: OutlookVo }) {
             到 Azure Portal 註冊應用程式，支援帳戶類型選「任何組織目錄 + 個人 Microsoft 帳戶」
           </li>
           <li>「驗證」頁面新增「Web」平台，重新導向 URI 貼下面那個網址 —— 必須完全一致</li>
-          <li>「憑證及祕密」建立用戶端密碼（最長 24 個月），把 Client ID 與密碼填進下面</li>
-          <li>儲存之後按「連結 Outlook」，同意授權就會回到這一頁</li>
+          <li>「憑證及祕密」建立用戶端密碼（最長 24 個月），把 Client ID 與密碼填進下面並儲存</li>
+          <li>按「連結 Outlook」同意授權，回來之後選擇預約日曆再儲存一次</li>
         </ol>
       </div>
 
@@ -57,8 +85,7 @@ export function OutlookForm({ config }: { config: OutlookVo }) {
         onSubmit={(event) => {
           event.preventDefault();
 
-          // calendarId 由日曆選單負責,這裡原樣送回去,不要清掉它
-          const next: OutlookRequest = { clientId, calendarId: config.calendarId };
+          const next: OutlookRequest = { clientId, calendarId };
           if (clientSecret !== undefined) next.clientSecret = clientSecret;
           save.mutate(next);
         }}
@@ -84,13 +111,34 @@ export function OutlookForm({ config }: { config: OutlookVo }) {
           hint="Azure 只在建立當下顯示完整的值,之後只看得到前三碼"
         />
 
+        <fieldset className="fieldset">
+          <legend className="fieldset-legend">預約日曆</legend>
+          <select
+            className="select w-full"
+            value={calendarId}
+            disabled={!connected || calendars.isPending}
+            onChange={(event) => setCalendarId(event.target.value)}
+          >
+            <option value="">尚未選擇</option>
+            {/* 還沒連結時清單是空的,但已經存過的值要留在選項裡,畫面才不會看起來沒選 */}
+            {!connected && calendarId && <option value={calendarId}>目前選擇的日曆</option>}
+            {(calendars.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+                {item.isDefault ? '（預設）' : ''}
+              </option>
+            ))}
+          </select>
+          {calendarHint}
+        </fieldset>
+
         <button
           type="submit"
           className="btn btn-primary"
           disabled={save.isPending || !changed || incomplete}
         >
           {save.isPending && <span className="loading loading-spinner" />}
-          儲存 Outlook 設定
+          儲存
         </button>
       </form>
 
@@ -158,6 +206,7 @@ function ConnectionSection({
     mutationFn: disconnectOutlook,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['outlook-connection'] });
+      void queryClient.invalidateQueries({ queryKey: ['outlook-calendars'] });
     },
   });
 
