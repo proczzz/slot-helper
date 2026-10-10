@@ -12,7 +12,10 @@ export interface ChatResponse {
 }
 
 export const TestCustomerSchema = z.object({
-  id: z.string().min(1, '請輸入識別碼'),
+  id: z
+    .string()
+    .min(1, '請輸入識別碼')
+    .regex(/^[A-Za-z0-9_-]+$/, '識別碼只能用英文、數字、底線與連字號'),
   name: z.string().min(1, '請輸入名稱'),
 });
 

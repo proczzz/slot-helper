@@ -7,6 +7,10 @@ export function NewCustomerModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const queryClient = useQueryClient();
 
+  // 後端的 schema 也是這條規則,先在前端擋住可以少一次往返。
+  // 這個值會變成 customerId 的一部分,而 customerId 會進日曆供應商的查詢條件
+  const invalid = id.length > 0 && !/^[A-Za-z0-9_-]+$/.test(id);
+
   const create = useMutation({
     mutationFn: (next: { id: string; name: string }) => createTestCustomer(next.id, next.name),
     // 等清單重抓完才關閉,避免關掉後才看到新顧客冒出來
@@ -32,13 +36,17 @@ export function NewCustomerModal({ onClose }: { onClose: () => void }) {
             <legend className="fieldset-legend">識別碼</legend>
             <input
               type="text"
-              className="input w-full"
+              className={`input w-full ${invalid ? 'input-error' : ''}`}
               value={id}
               onChange={(event) => setId(event.target.value)}
               placeholder="alice"
               autoFocus
             />
-            <p className="label">用來區分不同測試身分，會存成 test:alice</p>
+            {invalid ? (
+              <p className="label text-error">只能用英文、數字、底線與連字號</p>
+            ) : (
+              <p className="label">用來區分不同測試身分，會存成 test:alice</p>
+            )}
           </fieldset>
 
           <fieldset className="fieldset">
@@ -61,7 +69,7 @@ export function NewCustomerModal({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={create.isPending || !id || !name}
+              disabled={create.isPending || !id || !name || invalid}
             >
               {create.isPending && <span className="loading loading-spinner loading-xs" />}
               建立

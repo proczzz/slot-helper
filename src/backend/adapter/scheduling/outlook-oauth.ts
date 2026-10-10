@@ -45,6 +45,8 @@ const SCOPES = [
   'offline_access',
   'https://graph.microsoft.com/Calendars.ReadWrite',
   'https://graph.microsoft.com/User.Read',
+  // 列出帳號的類別(事件標籤)需要這個;寫入 categories 本身不需要
+  'https://graph.microsoft.com/MailboxSettings.Read',
 ].join(' ');
 
 // 老闆的瀏覽器要去的網址

@@ -1,4 +1,5 @@
 import { googleCalendarProvider } from './google-calendar.ts';
+import { outlookProvider } from './outlook.ts';
 import type {
   SchedulingConfig,
   SchedulingProvider,
@@ -7,7 +8,7 @@ import type {
 } from './types.ts';
 
 // 新增供應商 = 開一個檔實作 SchedulingProviderDefinition + 這裡加一個
-const definitions: SchedulingProviderDefinition[] = [googleCalendarProvider];
+const definitions: SchedulingProviderDefinition[] = [googleCalendarProvider, outlookProvider];
 
 export const providers: Partial<Record<string, SchedulingProviderDefinition>> = Object.fromEntries(
   definitions.map((definition) => [definition.name, definition]),
