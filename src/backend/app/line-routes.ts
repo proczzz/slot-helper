@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { LineEvent, LineWebhookBody } from '../adapter/line/types.ts';
-import { FALLBACK_REPLY, handleChat } from '../core/chat-service.ts';
+import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const LINE_CHANNEL = 'line';
@@ -11,6 +11,7 @@ lineRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆]的實現
   const {
     lineClient,
+    chatSettings,
     activeModel,
     shopConfig,
     conversationRepository,
@@ -64,6 +65,7 @@ lineRoutes.post('/webhook', async (c) => {
         customerId: id,
         customerName: profile?.displayName ?? null,
         message: event.message!.text!,
+        chatSettings,
         activeModel,
         shopConfig,
         conversationRepository,
@@ -75,7 +77,7 @@ lineRoutes.post('/webhook', async (c) => {
       await client.replyText(replyToken, result.reply);
     } catch (error) {
       console.error('處理 LINE 訊息失敗:', error);
-      await client.replyText(replyToken, FALLBACK_REPLY).catch((replyError) => {
+      await client.replyText(replyToken, chatSettings.fallbackReply).catch((replyError) => {
         console.error('LINE 回覆失敗:', replyError);
       });
     }

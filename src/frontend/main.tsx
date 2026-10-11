@@ -11,6 +11,7 @@ import { DashboardPage } from './pages/DashboardPage.tsx';
 import { LineSettingsPage } from './pages/LineSettingPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { ShopSettingsPage } from './pages/ShopSettingsPage.tsx';
+import { SystemSettingsPage } from './pages/SystemSettingsPage.tsx';
 import { TelegramSettingsPage } from './pages/TelegramSettingPage.tsx';
 import { WhatsappSettingsPage } from './pages/WhatsappSettingPage.tsx';
 import './styles.css';
@@ -41,6 +42,7 @@ function App() {
             <Route path="/settings/line" element={<LineSettingsPage />} />
             <Route path="/settings/telegram" element={<TelegramSettingsPage />} />
             <Route path="/settings/whatsapp" element={<WhatsappSettingsPage />} />
+            <Route path="/settings/system" element={<SystemSettingsPage />} />
             <Route path="/settings/account" element={<AccountPage />} />
           </Route>
         </Route>

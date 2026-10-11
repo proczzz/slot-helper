@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { WhatsappMessage, WhatsappWebhookBody } from '../adapter/whatsapp/types.ts';
-import { FALLBACK_REPLY, handleChat } from '../core/chat-service.ts';
+import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
@@ -28,6 +28,7 @@ whatsappRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆、通知]的實現
   const {
     whatsappClient,
+    chatSettings,
     activeModel,
     shopConfig,
     conversationRepository,
@@ -86,6 +87,7 @@ whatsappRoutes.post('/webhook', async (c) => {
         customerId: id,
         customerName: name,
         message: text,
+        chatSettings,
         activeModel,
         shopConfig,
         conversationRepository,
@@ -97,7 +99,7 @@ whatsappRoutes.post('/webhook', async (c) => {
       await client.sendText(message.from, result.reply);
     } catch (error) {
       console.error('處理 WhatsApp 訊息失敗:', error);
-      await client.sendText(message.from, FALLBACK_REPLY).catch((replyError) => {
+      await client.sendText(message.from, chatSettings.fallbackReply).catch((replyError) => {
         console.error('WhatsApp 回覆失敗:', replyError);
       });
     }

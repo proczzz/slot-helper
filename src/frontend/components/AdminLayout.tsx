@@ -12,6 +12,7 @@ const MENU = [
   { to: '/settings/line', label: 'LINE' },
   { to: '/settings/whatsapp', label: 'WhatsApp' },
   { to: '/settings/telegram', label: 'Telegram' },
+  { to: '/settings/system', label: '系統設定' },
   { to: '/settings/account', label: '帳號' },
 ];
 

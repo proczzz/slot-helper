@@ -16,16 +16,19 @@ import {
 import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
+import { SystemConfigSchema } from '../core/system-config.ts';
 import { googleCalendarConfigMapper } from '../model/dto/google-calendar.ts';
 import { lineConfigMapper } from '../model/dto/line.ts';
 import { outlookConfigMapper } from '../model/dto/outlook.ts';
+import { systemConfigMapper } from '../model/dto/system.ts';
 import { telegramConfigMapper } from '../model/dto/telegram.ts';
 import type { ConfigMapper } from '../model/dto/types.ts';
 import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
-// [白名單]後台可寫入的配置，system 等內部資料不在其中
+// [白名單]後台可寫入的配置，scheduling-state 資料不在其中(禁止寫入)
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
+  system: SystemConfigSchema,
   shop: ShopConfigSchema,
   ai: AiConfigSchema,
   scheduling: SchedulingSelectionSchema,
@@ -38,6 +41,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
 
 // 有 mapper 的區塊由它決定怎麼綁與怎麼顯示;沒有的原樣存取
 export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
+  system: systemConfigMapper,
   'google-calendar': googleCalendarConfigMapper,
   outlook: outlookConfigMapper,
   line: lineConfigMapper,

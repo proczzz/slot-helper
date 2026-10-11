@@ -34,10 +34,10 @@ async function initialize(
   });
 
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const system: SystemConfig = {
+  const system = SystemConfigSchema.parse({
     jwtSecret: btoa(String.fromCharCode(...bytes)),
     initializedAt: new Date().toISOString(),
-  };
+  });
 
   await configRepository.set('system', JSON.stringify(system));
 

@@ -8,14 +8,13 @@ import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
 import { createSupportTools } from './support-tools.ts';
-
-const HISTORY_LIMIT = 40;
-export const FALLBACK_REPLY = '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。';
+import type { ChatSettings } from './system-config.ts';
 
 export interface ChatInput {
   customerId: string;
   customerName: string | null;
   message: string;
+  chatSettings: ChatSettings; // 系統設定
   activeModel: ActiveModel;
   shopConfig: ShopConfig;
   conversationRepository: ConversationRepository;
@@ -28,6 +27,7 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     customerId,
     customerName,
     message,
+    chatSettings,
     activeModel,
     shopConfig,
     conversationRepository,
@@ -35,9 +35,10 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     telegramClient,
   } = input;
   const { model, provider, modelName } = activeModel;
+  const { historyTurns: historyTurns, maxSteps, fallbackReply } = chatSettings;
   const receivedAt = Date.now(); // 用戶發訊息時間
   // 讀歷史對話
-  const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
+  const history = await conversationRepository.getMessages(customerId, historyTurns * 2);
   const messages = [
     // 騙 AI，fallback 是他說過的話
     ...history.map((m) => ({
@@ -61,7 +62,7 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     system: buildSystemPrompt(shopConfig, customerName),
     messages,
     tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
-    stopWhen: stepCountIs(8), // 工具最多操作次數上限，超過時終止
+    stopWhen: stepCountIs(maxSteps), // 工具最多操作次數上限，超過時終止
   });
 
   const trace = collectTrace(result.steps);
@@ -72,7 +73,7 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     { role: 'user', content: message, timestamp: receivedAt },
     {
       role: hasReply ? 'assistant' : 'fallback',
-      content: hasReply ? result.text : FALLBACK_REPLY,
+      content: hasReply ? result.text : fallbackReply,
       timestamp: Date.now(),
       provider,
       model: modelName,
@@ -80,7 +81,7 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     },
   ]);
 
-  return { reply: hasReply ? result.text : FALLBACK_REPLY };
+  return { reply: hasReply ? result.text : fallbackReply };
 }
 
 interface ReplyTrace {

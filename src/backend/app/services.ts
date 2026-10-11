@@ -11,6 +11,7 @@ import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
+import { ChatSettingsSchema, type ChatSettings } from '../core/system-config.ts';
 import type { Database } from '../db/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
@@ -46,14 +47,15 @@ export type AppVariables = {
 export interface Services {
   // 包含 Database ，不可放進快取跨請求共用
   configRepository: ConfigRepository;
-  conversationRepository: ConversationRepository;
   customerRepository: CustomerRepository;
+  conversationRepository: ConversationRepository;
   adminAuth: AdminAuth; // 身分驗證模組
+  schedulingProvider: SchedulingProvider | null; // 日曆
 
   // 從設定字串建立，可跨請求共用
+  chatSettings: ChatSettings; // 系統設定:AI 記憶輪數、步數、保底訊息
   activeModel: ActiveModel | null; // AI
   shopConfig: ShopConfig; // 營業時間、部分提示詞
-  schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
@@ -72,22 +74,23 @@ export async function createServices(database: Database): Promise<Services> {
 
   return {
     ...providers,
+    configRepository,
+    customerRepository,
+    conversationRepository,
+    adminAuth: createAdminAuth(userRepository, jwtSecret),
     // provider 會透過 TokenStore 寫資料庫,所以不能快取。
     // 用快取的設定現建,只是組幾個 closure,沒有 I/O
     schedulingProvider: createSchedulingProvider(
       schedulingConfig,
       createTokenStore(configRepository),
     ),
-    adminAuth: createAdminAuth(userRepository, jwtSecret),
-    configRepository,
-    customerRepository,
-    conversationRepository,
   };
 }
 
 // 快取不能包含資料庫
 interface SharedProviders {
   jwtSecret: string;
+  chatSettings: ChatSettings;
   activeModel: ActiveModel | null;
   shopConfig: ShopConfig;
   schedulingConfig: SchedulingConfig | null;
@@ -108,13 +111,14 @@ async function getSharedProviders(
   const system = await ensureInitialized(configRepository, userRepository);
 
   cachedProviders = {
+    jwtSecret: system.jwtSecret,
+    chatSettings: ChatSettingsSchema.parse(system),
     activeModel: createLanguageModel(await loadAiKeys(configRepository)),
     shopConfig: await loadShopSettings(configRepository),
     schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
     telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),
-    jwtSecret: system.jwtSecret,
   };
   return cachedProviders;
 }

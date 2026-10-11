@@ -286,6 +286,7 @@ adminRoutes.post('/test-customers', async (c) => {
 
 adminRoutes.post('/test-chat', async (c) => {
   const {
+    chatSettings,
     activeModel,
     shopConfig,
     conversationRepository,
@@ -305,6 +306,7 @@ adminRoutes.post('/test-chat', async (c) => {
     customerId: id,
     customerName: customer.name,
     message,
+    chatSettings,
     activeModel,
     shopConfig,
     conversationRepository,

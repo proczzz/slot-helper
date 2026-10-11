@@ -26,7 +26,15 @@ export async function logout(): Promise<void> {
 }
 
 export type Section =
-  'ai' | 'shop' | 'line' | 'scheduling' | 'google-calendar' | 'outlook' | 'telegram' | 'whatsapp';
+  | 'system'
+  | 'ai'
+  | 'shop'
+  | 'line'
+  | 'scheduling'
+  | 'google-calendar'
+  | 'outlook'
+  | 'telegram'
+  | 'whatsapp';
 
 export async function getSection<T>(section: Section): Promise<T | null> {
   const response = await request(`/api/admin/config/${section}`);
@@ -43,6 +51,14 @@ export async function saveSection<T>(section: Section, data: T): Promise<void> {
   });
 
   await assertOk(response);
+}
+
+// system 區塊的 VO 與 Request 形狀相同 —— jwtSecret 由後端的 mapper 擋住,
+// 前端從頭到尾不知道它存在
+export interface SystemConfigVo {
+  historyTurns: number;
+  maxSteps: number;
+  fallbackReply: string;
 }
 
 export interface AiKey {
