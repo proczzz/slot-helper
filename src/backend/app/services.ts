@@ -10,6 +10,7 @@ import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
 import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
+import { createNotifier, type Notifier } from '../core/notifications.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
 import { ChatSettingsSchema, type ChatSettings } from '../core/system-config.ts';
 import type { Database } from '../db/types.ts';
@@ -59,6 +60,7 @@ export interface Services {
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
+  notifier: Notifier; // 通知模組
 }
 
 export async function createServices(database: Database): Promise<Services> {
@@ -97,6 +99,7 @@ interface SharedProviders {
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null;
+  notifier: Notifier; // 通知模組
 }
 
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
@@ -109,6 +112,7 @@ async function getSharedProviders(
   if (cachedProviders) return cachedProviders;
 
   const system = await ensureInitialized(configRepository, userRepository);
+  const telegramClient = createTelegramClient(await loadTelegramConfig(configRepository));
 
   cachedProviders = {
     jwtSecret: system.jwtSecret,
@@ -118,7 +122,8 @@ async function getSharedProviders(
     schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
     whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
-    telegramClient: createTelegramClient(await loadTelegramConfig(configRepository)),
+    telegramClient,
+    notifier: createNotifier(telegramClient),
   };
   return cachedProviders;
 }

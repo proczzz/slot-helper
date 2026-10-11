@@ -20,7 +20,6 @@ import { clearCachedProviders } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { handleChat } from '../core/chat-service.ts';
-import { notifyLogin } from '../core/notifications.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { CustomerQuerySchema } from '../model/dto/customer.ts';
@@ -40,11 +39,11 @@ const adminRoutes = new Hono<AdminVariables>();
 
 adminRoutes.post('/login', async (c) => {
   // Step1. 檢查:環境配置&驗證密碼
-  const { adminAuth, telegramClient } = c.var.services;
+  const { adminAuth, notifier } = c.var.services;
   const { username, password } = LoginSchema.parse(await readJson(c));
   const authenticated = await adminAuth.authenticate(username, password);
   // [背景] 登入通知
-  c.var.runInBackground(notifyLogin(telegramClient, { success: authenticated, ip: clientIp(c) }));
+  c.var.runInBackground(notifier.login({ success: authenticated, ip: clientIp(c) }));
 
   if (!authenticated) {
     return c.json(jsend.fail('帳號或密碼錯誤'), 401);

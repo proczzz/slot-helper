@@ -14,7 +14,7 @@ app.use(async (c, next) => {
   c.set('services', services);
   // 回應送出後 Workers 會中止未完成的工作, waitUntil 方法會讓平台等它做完
   c.set('runInBackground', (task) => {
-    c.executionCtx.waitUntil(task.catch(handleBackgroundFailure(services.telegramClient)));
+    c.executionCtx.waitUntil(task.catch(handleBackgroundFailure(services.notifier)));
   });
   await next();
 });

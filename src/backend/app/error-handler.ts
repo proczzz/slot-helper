@@ -1,8 +1,7 @@
 import type { Context } from 'hono';
 import { ZodError } from 'zod';
-import type { TelegramClient } from '../adapter/telegram/types.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import { notifySystemError } from '../core/notifications.ts';
+import type { Notifier } from '../core/notifications.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import type { AppVariables } from './services.ts';
 
@@ -20,17 +19,15 @@ export function handleError(err: Error, c: Context<AppVariables>) {
   }
 
   console.error('未預期的錯誤:', err);
-  c.var.runInBackground(
-    notifySystemError(c.var.services.telegramClient, `${c.req.method} ${c.req.path}`, err),
-  );
+  c.var.runInBackground(c.var.services.notifier.systemError(`${c.req.method} ${c.req.path}`, err));
 
   return c.json(jsend.error('伺服器發生錯誤'), 500);
 }
 
 // 背景執行層級錯誤處理
-export function handleBackgroundFailure(telegramClient: TelegramClient | null) {
+export function handleBackgroundFailure(notifier: Notifier) {
   return (error: unknown) => {
     console.error('背景工作失敗:', error);
-    void notifySystemError(telegramClient, '背景工作', error);
+    void notifier.systemError('背景工作', error);
   };
 }

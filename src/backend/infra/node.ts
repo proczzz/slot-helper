@@ -30,7 +30,7 @@ app.use(async (c, next) => {
   const services = await createServices(database);
   c.set('services', services);
   c.set('runInBackground', (task) => {
-    task.catch(handleBackgroundFailure(services.telegramClient));
+    task.catch(handleBackgroundFailure(services.notifier));
   });
   await next();
 });
