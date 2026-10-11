@@ -288,6 +288,29 @@ export interface Message {
   // 只有 assistant 的訊息有,而且舊資料是 null
   provider?: string | null;
   model?: string | null;
+  trace?: string | null; // ReplyTrace 的 JSON 原文
+}
+
+// messages.trace 存的形狀。包成物件而不是裸陣列,
+// 未來加 key(例如模型的思考過程)才不會變成兩種格式並存
+export interface ReplyTrace {
+  tools: ToolCallRecord[];
+  reasoning?: ReasoningRecord[];
+}
+
+// 推理模型(deepseek-reasoner 這類)才有。同一輪的多段已在後端合併
+export interface ReasoningRecord {
+  step: number;
+  text: string;
+}
+
+// error 有值代表失敗,output 與 error 都沒有代表步數用完、沒拿到結果
+export interface ToolCallRecord {
+  step: number;
+  name: string;
+  input: unknown;
+  output?: unknown;
+  error?: string;
 }
 
 // 參數順序對齊後端的 CustomerRepository.list

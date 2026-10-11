@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS messages (
   content TEXT NOT NULL,
   timestamp INTEGER NOT NULL,
   provider TEXT,
-  model TEXT
+  model TEXT,
+  trace TEXT
 )`;
 
 const CREATE_INDEX = `
@@ -35,7 +36,8 @@ export function createConversationRepository(database: Database): ConversationRe
     // 由新到舊，before 是上一批最後一筆的 id
     async listMessages(sessionId, before, limit) {
       return database.query<Message>({
-        sql: `SELECT id, role, content, timestamp, provider, model FROM messages
+        sql: `SELECT id, role, content, timestamp, provider, model, trace
+              FROM messages
               WHERE session_id = ? AND id < ?
               ORDER BY id DESC LIMIT ?`,
         params: [sessionId, before ?? Number.MAX_SAFE_INTEGER, limit],
@@ -45,8 +47,9 @@ export function createConversationRepository(database: Database): ConversationRe
     async appendMessages(sessionId, messages) {
       await database.batch(
         messages.map((message) => ({
-          sql: `INSERT INTO messages (session_id, role, content, timestamp, provider, model)
-                VALUES (?, ?, ?, ?, ?, ?)`,
+          sql: `INSERT INTO messages 
+                (session_id, role, content, timestamp, provider, model, trace)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`,
           params: [
             sessionId,
             message.role,
@@ -54,6 +57,7 @@ export function createConversationRepository(database: Database): ConversationRe
             message.timestamp,
             message.provider ?? null,
             message.model ?? null,
+            message.trace ?? null,
           ],
         })),
       );

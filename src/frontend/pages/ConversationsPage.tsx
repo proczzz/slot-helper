@@ -7,7 +7,11 @@ import {
   listMessages,
   sendTestMessage,
   type Message,
+  type ReplyTrace,
+  type ToolCallRecord,
 } from '../lib/admin.ts';
+
+const EMPTY_TRACE: ReplyTrace = { tools: [] };
 
 const TEST_PREFIX = 'test:';
 
@@ -271,7 +275,7 @@ export function ConversationsPage() {
 
       {showNewCustomer && <NewCustomerModal onClose={() => setShowNewCustomer(false)} />}
 
-      {inspected && <ModelModal message={inspected} onClose={() => setInspected(null)} />}
+      {inspected && <ReplyDetailModal message={inspected} onClose={() => setInspected(null)} />}
 
       {loadError && (
         <div className="toast toast-end">
@@ -314,11 +318,31 @@ function Bubble({
   );
 }
 
-function ModelModal({ message, onClose }: { message: Message; onClose: () => void }) {
+// 存進去的是 JSON 原文,壞掉的話寧可不顯示也不要讓整頁白畫面
+function parseTrace(raw: string | null | undefined): ReplyTrace {
+  if (!raw) return EMPTY_TRACE;
+  try {
+    const parsed = JSON.parse(raw) as ReplyTrace;
+    return { tools: parsed.tools ?? [], reasoning: parsed.reasoning };
+  } catch {
+    return EMPTY_TRACE;
+  }
+}
+
+function ReplyDetailModal({ message, onClose }: { message: Message; onClose: () => void }) {
+  const trace = parseTrace(message.trace);
+  // 把思考與工具按輪次交錯,才看得出「想了什麼 → 於是呼叫了什麼」
+  const steps = [
+    ...new Set([
+      ...(trace.reasoning ?? []).map((item) => item.step),
+      ...trace.tools.map((call) => call.step),
+    ]),
+  ].sort((a, b) => a - b);
+
   return (
     <div className="modal modal-open">
-      <div className="modal-box">
-        <h3 className="text-lg font-bold">這則回覆由誰產生</h3>
+      <div className="modal-box max-w-2xl">
+        <h3 className="text-lg font-bold">這則回覆的細節</h3>
 
         {message.provider ? (
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 py-4 text-sm">
@@ -335,6 +359,37 @@ function ModelModal({ message, onClose }: { message: Message; onClose: () => voi
           </p>
         )}
 
+        <h4 className="border-t border-base-200 pt-4 font-semibold">AI 的處理過程</h4>
+
+        {steps.length === 0 ? (
+          <p className="py-2 text-sm text-base-content/60">這則回覆沒有思考或工具紀錄。</p>
+        ) : (
+          <ol className="flex flex-col gap-3 py-2">
+            {steps.map((step) => (
+              <li key={step} className="flex flex-col gap-2">
+                <span className="text-xs text-base-content/50">第 {step} 輪</span>
+
+                {(trace.reasoning ?? [])
+                  .filter((item) => item.step === step)
+                  .map((item, index) => (
+                    <details key={index} className="rounded-box bg-base-200 p-3">
+                      <summary className="cursor-pointer text-sm">思考過程</summary>
+                      <p className="mt-2 text-xs whitespace-pre-wrap text-base-content/70">
+                        {item.text}
+                      </p>
+                    </details>
+                  ))}
+
+                {trace.tools
+                  .filter((call) => call.step === step)
+                  .map((call, index) => (
+                    <ToolCallRow key={index} call={call} />
+                  ))}
+              </li>
+            ))}
+          </ol>
+        )}
+
         <div className="modal-action">
           <button type="button" className="btn" onClick={onClose}>
             關閉
@@ -342,6 +397,35 @@ function ModelModal({ message, onClose }: { message: Message; onClose: () => voi
         </div>
       </div>
       <div className="modal-backdrop" onClick={onClose} />
+    </div>
+  );
+}
+
+function ToolCallRow({ call }: { call: ToolCallRecord }) {
+  let badge = <span className="badge badge-sm badge-success">成功</span>;
+  if (call.error !== undefined) {
+    badge = <span className="badge badge-sm badge-error">失敗</span>;
+  } else if (call.output === undefined) {
+    badge = <span className="badge badge-sm badge-warning">沒有結果</span>;
+  }
+
+  return (
+    <div className="rounded-box bg-base-200 p-3">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 font-mono text-sm">{call.name}</span>
+        {badge}
+      </div>
+
+      {call.error !== undefined && (
+        <p className="pt-2 text-sm whitespace-pre-wrap text-error">{call.error}</p>
+      )}
+
+      <details className="pt-2">
+        <summary className="cursor-pointer text-xs text-base-content/60">參數與結果</summary>
+        <pre className="mt-2 overflow-x-auto rounded-box bg-base-100 p-2 text-xs">
+          {JSON.stringify({ input: call.input, output: call.output }, null, 2)}
+        </pre>
+      </details>
     </div>
   );
 }

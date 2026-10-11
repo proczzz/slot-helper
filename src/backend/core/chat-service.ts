@@ -35,14 +35,14 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
   } = input;
   const { model, provider, modelName } = activeModel;
   const receivedAt = Date.now(); // 用戶發訊息時間
-  // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
+  // 讀歷史對話
   const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user' as const, content: message },
   ];
 
-  // 兩組工具合併。全空時要傳 undefined 而不是 {},避免送出空的 tools 欄位
+  // 已啟用的 Tools 合併
   const tools = {
     ...(schedulingProvider
       ? createSchedulingTools(schedulingProvider, customerId, shopConfig)
@@ -55,19 +55,12 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     model,
     system: buildSystemPrompt(shopConfig, customerName),
     messages,
-    tools: Object.keys(tools).length > 0 ? tools : undefined,
-    stopWhen: stepCountIs(8),
+    tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
+    stopWhen: stepCountIs(8), // 工具最多操作次數上限，超過時終止
   });
 
-  // 只記錄工具呼叫、結果與錯誤;推理過程和回覆文字不記
-  // Error 物件直接 stringify 會變成 {},轉成訊息字串
-  const toolParts = result.steps
-    .flatMap((s) => s.content)
-    .filter((p) => ['tool-call', 'tool-result', 'tool-error'].includes(p.type));
-
-  console.debug(
-    JSON.stringify(toolParts, (_, value) => (value instanceof Error ? value.message : value)),
-  );
+  const trace = collectTrace(result.steps);
+  const hasTrace = trace.tools.length > 0 || trace.reasoning !== undefined;
 
   if (result.text) {
     await conversationRepository.appendMessages(customerId, [
@@ -78,9 +71,84 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
         timestamp: Date.now(),
         provider,
         model: modelName,
+        trace: hasTrace ? JSON.stringify(trace) : null,
       },
     ]);
   }
 
   return { reply: result.text };
+}
+
+interface ReplyTrace {
+  tools: ToolCallRecord[]; // 工具呼叫紀錄
+  reasoning?: ReasoningRecord[]; // 推理模型才有
+}
+
+// 存進資料庫中的工具呼叫記錄，避免AI套件改形狀
+interface ToolCallRecord {
+  step: number;
+  name: string;
+  input: unknown;
+  output?: unknown;
+  error?: string;
+}
+
+interface ReasoningRecord {
+  step: number;
+  text: string;
+}
+
+// AI SDK 每一步的內容主體
+interface ToolPart {
+  type: string;
+  toolCallId: string;
+  toolName: string;
+  text?: string; // reasoning part 的內容
+  input?: unknown;
+  output?: unknown;
+  error?: unknown;
+}
+
+function collectTrace(steps: { content: unknown[] }[]): ReplyTrace {
+  const tools: ToolCallRecord[] = [];
+  const reasoning: ReasoningRecord[] = [];
+  const byId = new Map<string, ToolCallRecord>();
+
+  for (const [position, step] of steps.entries()) {
+    const stepNumber = position + 1;
+
+    for (const part of step.content as ToolPart[]) {
+      if (part.type === 'reasoning') {
+        // 同一輪的思考可能切成好幾個 part,合併成一段
+        const last = reasoning[reasoning.length - 1];
+        if (last && last.step === stepNumber) last.text += part.text ?? '';
+        else reasoning.push({ step: stepNumber, text: part.text ?? '' });
+        continue;
+      }
+
+      if (part.type === 'tool-call') {
+        // 同一輪裡的多筆,就是模型一次發出的平行呼叫
+        const record: ToolCallRecord = {
+          step: stepNumber,
+          name: part.toolName,
+          input: part.input ?? null,
+        };
+        tools.push(record);
+        byId.set(part.toolCallId, record);
+        continue;
+      }
+
+      const record = byId.get(part.toolCallId);
+      if (!record) continue;
+
+      if (part.type === 'tool-result') {
+        record.output = part.output ?? null;
+      } else if (part.type === 'tool-error') {
+        // Error 直接 stringify 會變成 {}
+        record.error = part.error instanceof Error ? part.error.message : String(part.error);
+      }
+    }
+  }
+
+  return reasoning.length > 0 ? { tools, reasoning } : { tools };
 }
