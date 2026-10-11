@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { mkdirSync } from 'node:fs';
+import { handleBackgroundFailure } from '../app/error-handler.ts';
 import { routes } from '../app/routes.ts';
 import type { AppVariables } from '../app/services.ts';
 import { createServices } from '../app/services.ts';
@@ -26,11 +27,10 @@ const app = new Hono<AppVariables>();
 
 // http fliter: 在 context 提供各式物件與方法給邏輯層呼叫
 app.use(async (c, next) => {
-  // [llm、資料庫、日曆]
-  c.set('services', await createServices(database));
-  // 處裡線程拋出的例外
+  const services = await createServices(database);
+  c.set('services', services);
   c.set('runInBackground', (task) => {
-    task.catch((error) => console.error('背景工作失敗:', error));
+    task.catch(handleBackgroundFailure(services.telegramClient));
   });
   await next();
 });

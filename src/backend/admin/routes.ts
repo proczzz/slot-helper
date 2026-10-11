@@ -224,7 +224,7 @@ adminRoutes.post('/telegram/test', async (c) => {
 
   // 這支端點的用途就是診斷,所以把 Telegram 的錯誤原文交給老闆,而不是丟給 error-handler 變成 500
   try {
-    await telegramClient.sendText('SlotHelper 測試訊息。\n\n恭喜你成功接通 Telegram !!');
+    await telegramClient.sendText('SlotHelper 測試訊息\n\n恭喜你成功接通 Telegram !! 🥳🥳');
   } catch (error) {
     return c.json(jsend.fail(error instanceof Error ? error.message : '發送失敗'), 400);
   }
