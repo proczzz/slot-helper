@@ -6,11 +6,14 @@ export interface Notifier {
   systemError(where: string, error: unknown): Promise<void>;
 }
 
+const MAX_LENGTH = 3000; // 最長通知字數限制
 export function createNotifier(telegramClient: TelegramClient | null): Notifier {
   async function send(text: string): Promise<void> {
     if (!telegramClient) return;
     try {
-      await telegramClient.sendText(text);
+      await telegramClient.sendText(
+        text.length > MAX_LENGTH ? `${text.slice(0, MAX_LENGTH)}…(已截斷)` : text,
+      );
     } catch (error) {
       console.error('通知老闆失敗:', error);
     }
