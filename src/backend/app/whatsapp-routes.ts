@@ -29,7 +29,7 @@ whatsappRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆、通知]的實現
   const {
     whatsappClient,
-    model,
+    activeModel,
     shopConfig,
     conversationRepository,
     customerRepository,
@@ -71,7 +71,7 @@ whatsappRoutes.post('/webhook', async (c) => {
     const text = message.text!.body;
 
     try {
-      if (!model) return; // 沒 AI
+      if (!activeModel) return; // 沒 AI
       const id = `${WHATSAPP_CHANNEL}:${message.from}`;
 
       // [儲存/更新] 顧客名稱。WhatsApp 沒有提供頭像
@@ -83,16 +83,16 @@ whatsappRoutes.post('/webhook', async (c) => {
       });
 
       // 取得 AI 回應
-      const result = await handleChat(
-        id,
-        name,
-        text,
-        model,
+      const result = await handleChat({
+        customerId: id,
+        customerName: name,
+        message: text,
+        activeModel,
         shopConfig,
         conversationRepository,
         schedulingProvider,
         telegramClient,
-      );
+      });
 
       await customerRepository.updateLastMessage(id, text, Date.now());
       await client.sendText(message.from, result.reply || FALLBACK_REPLY);

@@ -2,14 +2,16 @@ import type { Database, Statement } from '../db/types.ts';
 import type { Message } from '../model/entity/message.ts';
 import type { ConversationRepository } from './types.ts';
 
-// !!! 內容需與 migrations/000_create_messages_table.sql 保持一致
+// !!! 內容需與 migrations/0001_create_messages_table.sql 保持一致
 const CREATE_TABLE = `
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id TEXT NOT NULL,
   role TEXT NOT NULL,
   content TEXT NOT NULL,
-  timestamp INTEGER NOT NULL
+  timestamp INTEGER NOT NULL,
+  provider TEXT,
+  model TEXT
 )`;
 
 const CREATE_INDEX = `
@@ -33,7 +35,7 @@ export function createConversationRepository(database: Database): ConversationRe
     // 由新到舊，before 是上一批最後一筆的 id
     async listMessages(sessionId, before, limit) {
       return database.query<Message>({
-        sql: `SELECT id, role, content, timestamp FROM messages
+        sql: `SELECT id, role, content, timestamp, provider, model FROM messages
               WHERE session_id = ? AND id < ?
               ORDER BY id DESC LIMIT ?`,
         params: [sessionId, before ?? Number.MAX_SAFE_INTEGER, limit],
@@ -43,8 +45,16 @@ export function createConversationRepository(database: Database): ConversationRe
     async appendMessages(sessionId, messages) {
       await database.batch(
         messages.map((message) => ({
-          sql: 'INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)',
-          params: [sessionId, message.role, message.content, message.timestamp],
+          sql: `INSERT INTO messages (session_id, role, content, timestamp, provider, model)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+          params: [
+            sessionId,
+            message.role,
+            message.content,
+            message.timestamp,
+            message.provider ?? null,
+            message.model ?? null,
+          ],
         })),
       );
     },

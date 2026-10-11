@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS messages (
   session_id TEXT NOT NULL,
   role TEXT NOT NULL,
   content TEXT NOT NULL,
-  timestamp INTEGER NOT NULL
+  timestamp INTEGER NOT NULL,
+  provider TEXT,
+  model TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);

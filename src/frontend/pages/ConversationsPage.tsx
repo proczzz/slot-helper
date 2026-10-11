@@ -52,6 +52,8 @@ export function ConversationsPage() {
   const [channel, setChannel] = useState<ChannelFilter>('all');
   const [input, setInput] = useState('');
   const [showNewCustomer, setShowNewCustomer] = useState(false);
+  // 點開 AI 回覆要看是哪個模型產生的。先用 modal,未來 UI 再調整
+  const [inspected, setInspected] = useState<Message | null>(null);
   const queryClient = useQueryClient();
 
   // channel 進 queryKey,所以每個過濾選項各自是一份 query、各自保有自己的分頁
@@ -214,6 +216,9 @@ export function ConversationsPage() {
                   role={message.role}
                   content={message.content}
                   at={message.timestamp}
+                  onInspect={
+                    message.role === 'assistant' ? () => setInspected(message) : undefined
+                  }
                 />
               ))}
 
@@ -266,6 +271,8 @@ export function ConversationsPage() {
 
       {showNewCustomer && <NewCustomerModal onClose={() => setShowNewCustomer(false)} />}
 
+      {inspected && <ModelModal message={inspected} onClose={() => setInspected(null)} />}
+
       {loadError && (
         <div className="toast toast-end">
           <div className="alert alert-error">{loadError.message}</div>
@@ -280,11 +287,13 @@ function Bubble({
   content,
   at,
   pending,
+  onInspect,
 }: {
   role: Message['role'];
   content: string;
   at?: number;
   pending?: boolean;
+  onInspect?: () => void;
 }) {
   return (
     <div
@@ -294,10 +303,45 @@ function Bubble({
     >
       {at !== undefined && <div className="chat-header text-xs opacity-60">{formatTime(at)}</div>}
       <div
-        className={`chat-bubble whitespace-pre-wrap ${role === 'user' ? '' : 'chat-bubble-primary'}`}
+        className={`chat-bubble whitespace-pre-wrap ${role === 'user' ? '' : 'chat-bubble-primary'} ${
+          onInspect ? 'cursor-pointer' : ''
+        }`}
+        onClick={onInspect}
       >
         {content}
       </div>
+    </div>
+  );
+}
+
+function ModelModal({ message, onClose }: { message: Message; onClose: () => void }) {
+  return (
+    <div className="modal modal-open">
+      <div className="modal-box">
+        <h3 className="text-lg font-bold">這則回覆由誰產生</h3>
+
+        {message.provider ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 py-4 text-sm">
+            <dt className="text-base-content/60">供應商</dt>
+            <dd className="font-mono">{message.provider}</dd>
+            <dt className="text-base-content/60">模型</dt>
+            <dd className="font-mono break-all">{message.model}</dd>
+            <dt className="text-base-content/60">時間</dt>
+            <dd>{formatTime(message.timestamp)}</dd>
+          </dl>
+        ) : (
+          <p className="py-4 text-sm text-base-content/60">
+            這則訊息沒有記錄模型資訊，是加入這個功能之前存下的。
+          </p>
+        )}
+
+        <div className="modal-action">
+          <button type="button" className="btn" onClick={onClose}>
+            關閉
+          </button>
+        </div>
+      </div>
+      <div className="modal-backdrop" onClick={onClose} />
     </div>
   );
 }

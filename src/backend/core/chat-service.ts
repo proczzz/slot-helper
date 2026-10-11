@@ -1,26 +1,39 @@
-import type { LanguageModel } from 'ai';
 import { generateText, stepCountIs } from 'ai';
+import type { ActiveModel } from '../adapter/ai/types.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
+import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { ChatResponse } from '../model/dto/chat.ts';
 import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
-import type { TelegramClient } from '../adapter/telegram/types.ts';
 import { createSupportTools } from './support-tools.ts';
 
 const HISTORY_LIMIT = 40;
 
-export async function handleChat(
-  customerId: string,
-  customerName: string | null,
-  message: string,
-  model: LanguageModel,
-  shopConfig: ShopConfig,
-  conversationRepository: ConversationRepository,
-  schedulingProvider: SchedulingProvider | null,
-  telegramClient: TelegramClient | null,
-): Promise<ChatResponse> {
+export interface ChatInput {
+  customerId: string;
+  customerName: string | null;
+  message: string;
+  activeModel: ActiveModel;
+  shopConfig: ShopConfig;
+  conversationRepository: ConversationRepository;
+  schedulingProvider: SchedulingProvider | null;
+  telegramClient: TelegramClient | null;
+}
+
+export async function handleChat(input: ChatInput): Promise<ChatResponse> {
+  const {
+    customerId,
+    customerName,
+    message,
+    activeModel,
+    shopConfig,
+    conversationRepository,
+    schedulingProvider,
+    telegramClient,
+  } = input;
+  const { model, provider, modelName } = activeModel;
   const receivedAt = Date.now(); // 用戶發訊息時間
   // 若有開啟記憶功能 -> 先讀歷史對話(最多讀40則)
   const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
@@ -59,7 +72,13 @@ export async function handleChat(
   if (result.text) {
     await conversationRepository.appendMessages(customerId, [
       { role: 'user', content: message, timestamp: receivedAt },
-      { role: 'assistant', content: result.text, timestamp: Date.now() },
+      {
+        role: 'assistant',
+        content: result.text,
+        timestamp: Date.now(),
+        provider,
+        model: modelName,
+      },
     ]);
   }
 

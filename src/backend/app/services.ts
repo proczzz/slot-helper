@@ -1,5 +1,5 @@
-import type { LanguageModel } from 'ai';
 import { createLanguageModel } from '../adapter/ai/index.ts';
+import type { ActiveModel } from '../adapter/ai/types.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
@@ -51,7 +51,7 @@ export interface Services {
   adminAuth: AdminAuth; // 身分驗證模組
 
   // 從設定字串建立，可跨請求共用
-  model: LanguageModel | null; // AI
+  activeModel: ActiveModel | null; // AI
   shopConfig: ShopConfig; // 營業時間、部分提示詞
   schedulingProvider: SchedulingProvider | null; // google日曆
   lineClient: LineClient | null;
@@ -88,7 +88,7 @@ export async function createServices(database: Database): Promise<Services> {
 // 快取不能包含資料庫
 interface SharedProviders {
   jwtSecret: string;
-  model: LanguageModel | null;
+  activeModel: ActiveModel | null;
   shopConfig: ShopConfig;
   schedulingConfig: SchedulingConfig | null;
   lineClient: LineClient | null;
@@ -108,7 +108,7 @@ async function getSharedProviders(
   const system = await ensureInitialized(configRepository, userRepository);
 
   cachedProviders = {
-    model: createLanguageModel(await loadAiKeys(configRepository)),
+    activeModel: createLanguageModel(await loadAiKeys(configRepository)),
     shopConfig: await loadShopSettings(configRepository),
     schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),

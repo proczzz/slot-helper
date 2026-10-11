@@ -285,6 +285,9 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  // 只有 assistant 的訊息有,而且舊資料是 null
+  provider?: string | null;
+  model?: string | null;
 }
 
 // 參數順序對齊後端的 CustomerRepository.list

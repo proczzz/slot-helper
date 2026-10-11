@@ -286,14 +286,14 @@ adminRoutes.post('/test-customers', async (c) => {
 
 adminRoutes.post('/test-chat', async (c) => {
   const {
-    model,
+    activeModel,
     shopConfig,
     conversationRepository,
     customerRepository,
     schedulingProvider,
     telegramClient,
   } = c.var.services;
-  if (!model) return c.json(jsend.error('AI 尚未設定'), 503);
+  if (!activeModel) return c.json(jsend.error('AI 尚未設定'), 503);
 
   const { sessionId, message } = ChatRequestSchema.parse(await c.req.json());
   const id = `${TEST_CHANNEL}:${sessionId}`;
@@ -301,16 +301,16 @@ adminRoutes.post('/test-chat', async (c) => {
   const customer = await customerRepository.findById(id);
   if (!customer) return c.body(null, 404);
 
-  const result = await handleChat(
-    id,
-    customer.name,
+  const result = await handleChat({
+    customerId: id,
+    customerName: customer.name,
     message,
-    model,
+    activeModel,
     shopConfig,
     conversationRepository,
     schedulingProvider,
     telegramClient,
-  );
+  });
 
   await customerRepository.updateLastMessage(id, message, Date.now());
 

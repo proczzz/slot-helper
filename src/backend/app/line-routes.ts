@@ -12,7 +12,7 @@ lineRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆]的實現
   const {
     lineClient,
-    model,
+    activeModel,
     shopConfig,
     conversationRepository,
     customerRepository,
@@ -47,7 +47,7 @@ lineRoutes.post('/webhook', async (c) => {
     const client = lineClient!;
 
     try {
-      if (!model) return; // 沒 AI
+      if (!activeModel) return; // 沒 AI
 
       const id = `${LINE_CHANNEL}:${userId}`;
       const profile = await client.getProfile(userId);
@@ -61,16 +61,16 @@ lineRoutes.post('/webhook', async (c) => {
       });
 
       // 取得 AI 回應
-      const result = await handleChat(
-        id,
-        profile?.displayName ?? null,
-        event.message!.text!,
-        model,
+      const result = await handleChat({
+        customerId: id,
+        customerName: profile?.displayName ?? null,
+        message: event.message!.text!,
+        activeModel,
         shopConfig,
         conversationRepository,
         schedulingProvider,
         telegramClient,
-      );
+      });
 
       await customerRepository.updateLastMessage(id, event.message!.text!, Date.now());
       await client.replyText(replyToken, result.reply || FALLBACK_REPLY);

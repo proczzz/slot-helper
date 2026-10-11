@@ -16,3 +16,10 @@ export const AiConfigSchema = z.array(
 
 export type AiConfig = z.infer<typeof AiConfigSchema>;
 export type AiKey = z.infer<typeof AiConfigSchema>[number];
+
+// 存進對話紀錄時分辨是哪個 llm 回覆使用
+export interface ActiveModel {
+  model: LanguageModel;
+  provider: string;
+  modelName: string;
+}

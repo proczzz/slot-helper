@@ -1,4 +1,3 @@
-import type { LanguageModel } from 'ai';
 import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
 import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
@@ -7,7 +6,7 @@ import { groqProvider } from './groq.ts';
 import { nvidiaProvider } from './nvidia.ts';
 import { openAiProvider } from './openai.ts';
 import { openRouterProvider } from './openrouter.ts';
-import type { AiKey, LanguageModelProvider } from './types.ts';
+import type { ActiveModel, AiKey, LanguageModelProvider } from './types.ts';
 
 const providers: Partial<Record<string, LanguageModelProvider>> = {
   anthropic: anthropicProvider,
@@ -20,7 +19,7 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
 };
 
 // 目前只用第一組,多組備援之後再做
-export function createLanguageModel(keys: AiKey[]): LanguageModel | null {
+export function createLanguageModel(keys: AiKey[]): ActiveModel | null {
   const key = keys[0];
   if (!key) return null;
 
@@ -28,7 +27,11 @@ export function createLanguageModel(keys: AiKey[]): LanguageModel | null {
   if (!provider) return null;
 
   console.log(`使用AI供應商: ${key.provider}`);
-  return provider.createModel(key.apiKey, key.model);
+  return {
+    model: provider.createModel(key.apiKey, key.model),
+    provider: key.provider,
+    modelName: key.model,
+  };
 }
 
 // 列出可用llm
