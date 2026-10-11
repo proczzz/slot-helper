@@ -1,4 +1,5 @@
 import z from 'zod';
+import { ExpectedError } from '../../core/app-error.ts';
 import { toPresetColor } from './outlook-colors.ts';
 import { getAccessToken, OutlookOauthSchema, type OutlookOauthSettings } from './outlook-oauth.ts';
 import type {
@@ -95,7 +96,7 @@ export const outlookProvider: SchedulingProviderDefinition = {
     async function authorize(): Promise<string> {
       const accessToken = await getAccessToken(oauth, tokens);
       // 設定齊全但沒授權(老闆解除連結後 calendarId 還留著)
-      if (!accessToken) throw new Error('Outlook 尚未授權,請到後台重新連結');
+      if (!accessToken) throw new ExpectedError('Outlook 尚未授權,請到後台重新連結');
       return accessToken;
     }
 

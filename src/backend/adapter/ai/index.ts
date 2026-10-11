@@ -1,4 +1,5 @@
 import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
+import { ExpectedError } from '../../core/app-error.ts';
 import { anthropicProvider } from './anthropic.ts';
 import { deepSeekProvider } from './deepseek.ts';
 import { googleProvider } from './google.ts';
@@ -38,7 +39,7 @@ export function createLanguageModel(keys: AiKey[]): ActiveModel | null {
 export async function listAvailableModels(provider: string, apiKey: string): Promise<string[]> {
   const supported = getSupportedProviders();
   if (!supported.includes(provider as Provider)) {
-    throw new Error(`llm-lister 尚未支援 ${provider}，請手動輸入模型名稱`);
+    throw new ExpectedError(`llm-lister 尚未支援 ${provider}，請手動輸入模型名稱`);
   }
 
   const models = await listModels(provider as Provider, apiKey);

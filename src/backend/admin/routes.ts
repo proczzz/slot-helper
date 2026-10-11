@@ -18,6 +18,7 @@ import {
 import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
+import { ExpectedError } from '../core/app-error.ts';
 import { handleChat } from '../core/chat-service.ts';
 import { notifyLogin } from '../core/notifications.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
@@ -40,7 +41,7 @@ const adminRoutes = new Hono<AdminVariables>();
 adminRoutes.post('/login', async (c) => {
   // Step1. 檢查:環境配置&驗證密碼
   const { adminAuth, telegramClient } = c.var.services;
-  const { username, password } = LoginSchema.parse(await c.req.json());
+  const { username, password } = LoginSchema.parse(await readJson(c));
   const authenticated = await adminAuth.authenticate(username, password);
   // [背景] 登入通知
   c.var.runInBackground(notifyLogin(telegramClient, { success: authenticated, ip: clientIp(c) }));
@@ -83,7 +84,7 @@ adminRoutes.get('/me', (c) => c.json(jsend.success(null)));
 
 adminRoutes.post('/password', async (c) => {
   const { adminAuth } = c.var.services;
-  const { currentPassword, newPassword } = ChangePasswordSchema.parse(await c.req.json());
+  const { currentPassword, newPassword } = ChangePasswordSchema.parse(await readJson(c));
 
   if (!(await adminAuth.changePassword(c.var.username, currentPassword, newPassword))) {
     return c.json(jsend.fail({ currentPassword: '目前密碼錯誤' }), 400);
@@ -114,7 +115,7 @@ adminRoutes.put('/config/:section', async (c) => {
   const schema = SECTION_SCHEMAS[section];
   if (!schema) return c.json(jsend.fail('未知的設定區塊'), 400);
 
-  const body = (await c.req.json()) as unknown;
+  const body = (await readJson(c)) as unknown;
   const mapper = SECTION_MAPPERS[section];
 
   let value: unknown;
@@ -132,7 +133,7 @@ adminRoutes.put('/config/:section', async (c) => {
 });
 
 adminRoutes.post('/ai/models', async (c) => {
-  const { provider, apiKey } = ListModelsSchema.parse(await c.req.json());
+  const { provider, apiKey } = ListModelsSchema.parse(await readJson(c));
   return c.json(jsend.success(await listAvailableModels(provider, apiKey)));
 });
 
@@ -159,7 +160,7 @@ adminRoutes.post('/outlook/authorize', async (c) => {
     return c.json(jsend.fail('請先儲存 Client ID 與用戶端密碼'), 400);
   }
 
-  const { redirectUri } = OutlookAuthorizeSchema.parse(await c.req.json());
+  const { redirectUri } = OutlookAuthorizeSchema.parse(await readJson(c));
   const state = crypto.randomUUID();
 
   setCookie(c, OAUTH_REDIRECT_COOKIE, redirectUri, OAUTH_COOKIE_OPTIONS);
@@ -249,7 +250,7 @@ adminRoutes.post('/telegram/webhook', async (c) => {
   // 網址由前端給。後端自己推導的話,反向代理會終止 TLS、內網後台的網域也不是對外網域,
   // 都推不出正確的值;瀏覽器本來就知道自己連的是哪裡。
   // 已登入者能把 webhook 指到任意網址,但他本來就能直接改密碼,不構成新的權限提升
-  const { url } = WebhookSchema.parse(await c.req.json());
+  const { url } = WebhookSchema.parse(await readJson(c));
 
   // 純機器對機器的驗證碼,老闆不需要看到也不需要輸入,每次註冊都換新的
   const webhookSecret = crypto.randomUUID();
@@ -276,7 +277,7 @@ const TEST_CHANNEL = 'test';
 // 建立或更新測試用的顧客
 adminRoutes.post('/test-customers', async (c) => {
   const { customerRepository } = c.var.services;
-  const { id, name } = TestCustomerSchema.parse(await c.req.json());
+  const { id, name } = TestCustomerSchema.parse(await readJson(c));
 
   await customerRepository.upsertProfile({
     id: `${TEST_CHANNEL}:${id}`,
@@ -300,7 +301,7 @@ adminRoutes.post('/test-chat', async (c) => {
   } = c.var.services;
   if (!activeModel) return c.json(jsend.error('AI 尚未設定'), 503);
 
-  const { sessionId, message } = ChatRequestSchema.parse(await c.req.json());
+  const { sessionId, message } = ChatRequestSchema.parse(await readJson(c));
   const id = `${TEST_CHANNEL}:${sessionId}`;
 
   const customer = await customerRepository.findById(id);
@@ -328,6 +329,15 @@ adminRoutes.post('/test-chat', async (c) => {
 function clientIp(c: Context<AdminVariables>): string {
   const forwarded = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
   return c.req.header('cf-connecting-ip') ?? forwarded ?? '未知';
+}
+
+// 外部送來的 body 不是合法 JSON —— 呼叫端的問題,不是系統故障
+export async function readJson(c: Context): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    throw new ExpectedError('請求內容不是合法的 JSON');
+  }
 }
 
 export { adminRoutes };
