@@ -220,9 +220,7 @@ export function ConversationsPage() {
                   role={message.role}
                   content={message.content}
                   at={message.timestamp}
-                  onInspect={
-                    message.role === 'assistant' ? () => setInspected(message) : undefined
-                  }
+                  onInspect={message.role === 'user' ? undefined : () => setInspected(message)}
                 />
               ))}
 
@@ -236,12 +234,6 @@ export function ConversationsPage() {
                 <p className="py-2 text-center text-xs text-base-content/40">沒有更早的訊息了</p>
               )}
             </div>
-
-            {send.isSuccess && send.data === '' && (
-              <div className="alert alert-warning mx-3 mb-0 w-auto">
-                AI 沒有回覆內容，這則訊息沒有被記錄。日曆可能已經被改動，請自行確認。
-              </div>
-            )}
 
             {selected.channel === 'test' && (
               <form
@@ -299,15 +291,24 @@ function Bubble({
   pending?: boolean;
   onInspect?: () => void;
 }) {
+  let bubbleColor = 'chat-bubble-primary';
+  if (role === 'user') bubbleColor = '';
+  else if (role === 'fallback') bubbleColor = 'chat-bubble-warning';
+
   return (
     <div
       className={`chat ${role === 'user' ? 'chat-start' : 'chat-end'} ${
         pending ? 'opacity-50' : ''
       }`}
     >
-      {at !== undefined && <div className="chat-header text-xs opacity-60">{formatTime(at)}</div>}
+      {at !== undefined && (
+        <div className="chat-header text-xs opacity-60">
+          {formatTime(at)}
+          {role === 'fallback' && <span className="ml-2 text-warning">保底訊息</span>}
+        </div>
+      )}
       <div
-        className={`chat-bubble whitespace-pre-wrap ${role === 'user' ? '' : 'chat-bubble-primary'} ${
+        className={`chat-bubble whitespace-pre-wrap ${bubbleColor} ${
           onInspect ? 'cursor-pointer' : ''
         }`}
         onClick={onInspect}

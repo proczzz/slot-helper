@@ -1,6 +1,6 @@
 export interface Message {
   id?: number;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'fallback'; // fallback 是保底訊息
   content: string;
   timestamp: number;
   provider?: string | null;

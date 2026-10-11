@@ -1,10 +1,9 @@
 import { Hono } from 'hono';
 import type { LineEvent, LineWebhookBody } from '../adapter/line/types.ts';
-import { handleChat } from '../core/chat-service.ts';
+import { FALLBACK_REPLY, handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const LINE_CHANNEL = 'line';
-const FALLBACK_REPLY = '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。';
 
 const lineRoutes = new Hono<AppVariables>();
 
@@ -73,7 +72,7 @@ lineRoutes.post('/webhook', async (c) => {
       });
 
       await customerRepository.updateLastMessage(id, event.message!.text!, Date.now());
-      await client.replyText(replyToken, result.reply || FALLBACK_REPLY);
+      await client.replyText(replyToken, result.reply);
     } catch (error) {
       console.error('處理 LINE 訊息失敗:', error);
       await client.replyText(replyToken, FALLBACK_REPLY).catch((replyError) => {

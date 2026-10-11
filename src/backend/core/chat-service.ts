@@ -10,6 +10,7 @@ import type { ShopConfig } from './shop-config.ts';
 import { createSupportTools } from './support-tools.ts';
 
 const HISTORY_LIMIT = 40;
+export const FALLBACK_REPLY = '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。';
 
 export interface ChatInput {
   customerId: string;
@@ -38,7 +39,11 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
   // 讀歷史對話
   const history = await conversationRepository.getMessages(customerId, HISTORY_LIMIT);
   const messages = [
-    ...history.map((m) => ({ role: m.role, content: m.content })),
+    // 騙 AI，fallback 是他說過的話
+    ...history.map((m) => ({
+      role: m.role === 'fallback' ? ('assistant' as const) : m.role,
+      content: m.content,
+    })),
     { role: 'user' as const, content: message },
   ];
 
@@ -60,23 +65,22 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
   });
 
   const trace = collectTrace(result.steps);
+  const hasReply = result.text.length > 0;
   const hasTrace = trace.tools.length > 0 || trace.reasoning !== undefined;
 
-  if (result.text) {
-    await conversationRepository.appendMessages(customerId, [
-      { role: 'user', content: message, timestamp: receivedAt },
-      {
-        role: 'assistant',
-        content: result.text,
-        timestamp: Date.now(),
-        provider,
-        model: modelName,
-        trace: hasTrace ? JSON.stringify(trace) : null,
-      },
-    ]);
-  }
+  await conversationRepository.appendMessages(customerId, [
+    { role: 'user', content: message, timestamp: receivedAt },
+    {
+      role: hasReply ? 'assistant' : 'fallback',
+      content: hasReply ? result.text : FALLBACK_REPLY,
+      timestamp: Date.now(),
+      provider,
+      model: modelName,
+      trace: hasTrace ? JSON.stringify(trace) : null,
+    },
+  ]);
 
-  return { reply: result.text };
+  return { reply: hasReply ? result.text : FALLBACK_REPLY };
 }
 
 interface ReplyTrace {

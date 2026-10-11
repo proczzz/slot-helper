@@ -282,7 +282,8 @@ export interface Customer {
 
 export interface Message {
   id: number;
-  role: 'user' | 'assistant';
+  // fallback = AI 沒給出文字,顧客收到的是保底訊息
+  role: 'user' | 'assistant' | 'fallback';
   content: string;
   timestamp: number;
   // 只有 assistant 的訊息有,而且舊資料是 null

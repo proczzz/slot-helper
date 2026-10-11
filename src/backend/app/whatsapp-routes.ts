@@ -1,11 +1,10 @@
 import { Hono } from 'hono';
 import type { WhatsappMessage, WhatsappWebhookBody } from '../adapter/whatsapp/types.ts';
-import { handleChat } from '../core/chat-service.ts';
+import { FALLBACK_REPLY, handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
 const WHATSAPP_CHANNEL = 'whatsapp';
-const FALLBACK_REPLY = '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。';
 
 const whatsappRoutes = new Hono<AppVariables>();
 
@@ -95,7 +94,7 @@ whatsappRoutes.post('/webhook', async (c) => {
       });
 
       await customerRepository.updateLastMessage(id, text, Date.now());
-      await client.sendText(message.from, result.reply || FALLBACK_REPLY);
+      await client.sendText(message.from, result.reply);
     } catch (error) {
       console.error('處理 WhatsApp 訊息失敗:', error);
       await client.sendText(message.from, FALLBACK_REPLY).catch((replyError) => {
