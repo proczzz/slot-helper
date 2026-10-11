@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Context, Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { listAvailableModels } from '../adapter/ai/index.ts';
 import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
@@ -19,6 +19,7 @@ import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { handleChat } from '../core/chat-service.ts';
+import { notifyLogin } from '../core/notifications.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { CustomerQuerySchema } from '../model/dto/customer.ts';
@@ -38,10 +39,13 @@ const adminRoutes = new Hono<AdminVariables>();
 
 adminRoutes.post('/login', async (c) => {
   // Step1. 檢查:環境配置&驗證密碼
-  const { adminAuth } = c.var.services;
+  const { adminAuth, telegramClient } = c.var.services;
   const { username, password } = LoginSchema.parse(await c.req.json());
+  const authenticated = await adminAuth.authenticate(username, password);
+  // [背景] 登入通知
+  c.var.runInBackground(notifyLogin(telegramClient, { success: authenticated, ip: clientIp(c) }));
 
-  if (!(await adminAuth.authenticate(username, password))) {
+  if (!authenticated) {
     return c.json(jsend.fail('帳號或密碼錯誤'), 401);
   }
 
@@ -318,5 +322,12 @@ adminRoutes.post('/test-chat', async (c) => {
 
   return c.json(jsend.success(result));
 });
+
+// Cloudflare 的 CF-Connecting-IP 由邊緣填入,可信;
+// 自架時只有 X-Forwarded-For,而那個 header 任何人都能偽造,只能當線索
+function clientIp(c: Context<AdminVariables>): string {
+  const forwarded = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
+  return c.req.header('cf-connecting-ip') ?? forwarded ?? '未知';
+}
 
 export { adminRoutes };
