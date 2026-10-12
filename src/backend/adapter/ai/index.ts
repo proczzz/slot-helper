@@ -1,22 +1,25 @@
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createDeepSeek } from '@ai-sdk/deepseek';
+import { createGoogle } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
 import { ExpectedError } from '../../core/app-error.ts';
-import { anthropicProvider } from './anthropic.ts';
-import { deepSeekProvider } from './deepseek.ts';
-import { googleProvider } from './google.ts';
-import { groqProvider } from './groq.ts';
-import { nvidiaProvider } from './nvidia.ts';
-import { openAiProvider } from './openai.ts';
-import { openRouterProvider } from './openrouter.ts';
+import { fromCompatible, fromFactory } from './factory.ts';
 import type { ActiveModel, AiKey, LanguageModelProvider } from './types.ts';
 
 const providers: Partial<Record<string, LanguageModelProvider>> = {
-  anthropic: anthropicProvider,
-  deepseek: deepSeekProvider,
-  google: googleProvider,
-  groq: groqProvider,
-  nvidia: nvidiaProvider,
-  openai: openAiProvider,
-  openrouter: openRouterProvider,
+  // 官方套件
+  anthropic: fromFactory(createAnthropic),
+  deepseek: fromFactory(createDeepSeek),
+  google: fromFactory(createGoogle),
+  groq: fromFactory(createGroq),
+  openai: fromFactory(createOpenAI),
+  // 社區套件
+  openrouter: fromFactory(createOpenRouter),
+  //OpenAI 相容套件(缺專屬套件)
+  nvidia: fromCompatible('nvidia', 'https://integrate.api.nvidia.com/v1'),
 };
 
 // 目前只用第一組,多組備援之後再做

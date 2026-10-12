@@ -1,10 +1,7 @@
 import type { LanguageModel } from 'ai';
 import z from 'zod';
 
-export interface LanguageModelProvider {
-  createModel(apiKey: string, model: string): LanguageModel;
-}
-
+// 存 config table
 export const AiConfigSchema = z.array(
   z.object({
     name: z.string().min(1, '請輸入名稱'),
@@ -17,9 +14,13 @@ export const AiConfigSchema = z.array(
 export type AiConfig = z.infer<typeof AiConfigSchema>;
 export type AiKey = z.infer<typeof AiConfigSchema>[number];
 
-// 存進對話紀錄時分辨是哪個 llm 回覆使用
+// 存 service
 export interface ActiveModel {
   model: LanguageModel;
   provider: string;
-  modelName: string;
+  modelName: string; // 存進對話紀錄時分辨是哪個 llm 回覆使用
+}
+
+export interface LanguageModelProvider {
+  createModel(apiKey: string, model: string): LanguageModel;
 }
