@@ -42,7 +42,7 @@ export interface CustomerRepository {
 }
 
 export interface ConversationRepository {
-  getMessages(sessionId: string, limit: number): Promise<Message[]>;
+  getMessages(sessionId: string, limit: number, since: number): Promise<Message[]>;
   listMessages(sessionId: string, before: number | null, limit: number): Promise<Message[]>;
   appendMessages(sessionId: string, messages: Message[]): Promise<void>;
 }

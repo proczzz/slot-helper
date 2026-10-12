@@ -3,7 +3,8 @@ import { ChatSettingsSchema } from '../../core/system-config.ts';
 import type { ConfigMapper } from './types.ts';
 
 export const SystemRequestSchema = z.object({
-  historyTurns: z.number().int().min(1).max(50),
+  historyTurns: z.number().int().min(2).max(50),
+  historyDays: z.number().int().min(1).max(365),
   maxSteps: z.number().int().min(1).max(20),
   fallbackReply: z.string().min(1, '請輸入保底訊息'),
 });

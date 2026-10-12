@@ -6,12 +6,14 @@ import { getSection, saveSection, type SystemConfigVo } from '../lib/admin.ts';
 // 和後端 core/system-config.ts 的預設值保持一致
 const EMPTY: SystemConfigVo = {
   historyTurns: 15,
+  historyDays: 30,
   maxSteps: 8,
   fallbackReply: '不好意思,系統暫時有點問題,請稍後再傳一次訊息,或直接打電話給店裡。',
 };
 
 // 和後端的 schema 一致,超出範圍就不給存
-const HISTORY_RANGE = { min: 1, max: 50 };
+const HISTORY_RANGE = { min: 2, max: 50 };
+const DAYS_RANGE = { min: 1, max: 365 };
 const STEPS_RANGE = { min: 1, max: 20 };
 
 export function SystemSettingsPage() {
@@ -42,6 +44,7 @@ export function SystemSettingsPage() {
 function SystemForm({ config }: { config: SystemConfigVo }) {
   // 輸入框的值用字串存,空白與「正在打字」才表示得出來
   const [historyTurns, setHistoryTurns] = useState(String(config.historyTurns));
+  const [historyDays, setHistoryDays] = useState(String(config.historyDays));
   const [maxSteps, setMaxSteps] = useState(String(config.maxSteps));
   const [fallbackReply, setFallbackReply] = useState(config.fallbackReply);
   const queryClient = useQueryClient();
@@ -56,9 +59,12 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
   useAutoReset(save);
 
   const turns = Number(historyTurns);
+  const days = Number(historyDays);
   const steps = Number(maxSteps);
   const historyInvalid =
     !Number.isInteger(turns) || turns < HISTORY_RANGE.min || turns > HISTORY_RANGE.max;
+  const daysInvalid =
+    !Number.isInteger(days) || days < DAYS_RANGE.min || days > DAYS_RANGE.max;
   const stepsInvalid =
     !Number.isInteger(steps) || steps < STEPS_RANGE.min || steps > STEPS_RANGE.max;
   const replyInvalid = fallbackReply.trim().length === 0;
@@ -73,7 +79,12 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
           onSubmit={(event) => {
             event.preventDefault();
             // 後端的 schema 收的是數字,不是字串
-            save.mutate({ historyTurns: turns, maxSteps: steps, fallbackReply });
+            save.mutate({
+              historyTurns: turns,
+              historyDays: days,
+              maxSteps: steps,
+              fallbackReply,
+            });
           }}
         >
           <fieldset className="fieldset">
@@ -93,6 +104,27 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
             ) : (
               <p className="mt-1 text-xs opacity-60">
                 一輪是顧客與 AI 各一則訊息。記得越久，每次回覆的費用越高
+              </p>
+            )}
+          </fieldset>
+
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">AI 記憶的保留天數</legend>
+            <input
+              type="number"
+              className={`input w-full ${daysInvalid ? 'input-error' : ''}`}
+              value={historyDays}
+              min={DAYS_RANGE.min}
+              max={DAYS_RANGE.max}
+              onChange={(event) => setHistoryDays(event.target.value)}
+            />
+            {daysInvalid ? (
+              <p className="label text-error">
+                請輸入 {DAYS_RANGE.min} 到 {DAYS_RANGE.max} 之間的整數
+              </p>
+            ) : (
+              <p className="mt-1 text-xs opacity-60">
+                超過這個天數的對話不會再給 AI 看。顧客隔很久才回來時，AI 不會提起太舊的事
               </p>
             )}
           </fieldset>
@@ -137,7 +169,9 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={save.isPending || historyInvalid || stepsInvalid || replyInvalid}
+            disabled={
+              save.isPending || historyInvalid || daysInvalid || stepsInvalid || replyInvalid
+            }
           >
             {save.isPending && <span className="loading loading-spinner" />}
             儲存

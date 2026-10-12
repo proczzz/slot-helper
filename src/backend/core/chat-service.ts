@@ -5,11 +5,11 @@ import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { ChatResponse } from '../model/dto/chat.ts';
 import type { ConversationRepository } from '../repository/types.ts';
 import { buildSystemPrompt } from './build-system-prompt.ts';
+import type { Notifier } from './notifications.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
 import { createSupportTools } from './support-tools.ts';
 import type { ChatSettings } from './system-config.ts';
-import type { Notifier } from './notifications.ts';
 
 export interface ChatInput {
   customerId: string;
@@ -23,6 +23,8 @@ export interface ChatInput {
   telegramClient: TelegramClient | null;
   notifier: Notifier;
 }
+
+const DAY_MS = 24 * 60 * 60_000;
 
 export async function handleChat(input: ChatInput): Promise<ChatResponse> {
   const {
@@ -38,10 +40,14 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     notifier,
   } = input;
   const { model, provider, modelName } = activeModel;
-  const { historyTurns: historyTurns, maxSteps, fallbackReply } = chatSettings;
+  const { historyTurns, historyDays, maxSteps, fallbackReply } = chatSettings;
   const receivedAt = Date.now(); // 用戶發訊息時間
   // 讀歷史對話
-  const history = await conversationRepository.getMessages(customerId, historyTurns * 2);
+  const history = await conversationRepository.getMessages(
+    customerId,
+    historyTurns * 2,
+    Date.now() - historyDays * DAY_MS,
+  );
   const messages = [
     // 騙 AI，fallback 是他說過的話
     ...history.map((m) => ({

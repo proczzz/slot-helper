@@ -57,6 +57,7 @@ export async function saveSection<T>(section: Section, data: T): Promise<void> {
 // 前端從頭到尾不知道它存在
 export interface SystemConfigVo {
   historyTurns: number;
+  historyDays: number;
   maxSteps: number;
   fallbackReply: string;
 }

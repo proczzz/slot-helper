@@ -25,11 +25,13 @@ export const CREATE_MESSAGES_TABLE: Statement[] = [
 
 export function createConversationRepository(database: Database): ConversationRepository {
   return {
-    async getMessages(sessionId, limit) {
+    async getMessages(sessionId, limit, since) {
       // 先由新到舊取最後 N 筆,再反轉成時間順序交給 AI
       const rows = await database.query<Message>({
-        sql: 'SELECT role, content, timestamp FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?',
-        params: [sessionId, limit],
+        sql: `SELECT role, content, timestamp FROM messages
+              WHERE session_id = ? AND timestamp >= ?
+              ORDER BY id DESC LIMIT ?`,
+        params: [sessionId, since, limit],
       });
       return rows.reverse();
     },
