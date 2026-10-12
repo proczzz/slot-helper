@@ -111,7 +111,7 @@ export function createSchedulingTools(
 
   // 取消與改期都必須確認這筆預約屬於當前顧客。回字串代表不是,內容是給 AI 看的原因。
   // 老闆在日曆上手動建立的事件沒有 ownerId,一樣會被擋下
-  async function findOwnEvent(eventId: string): Promise<Event | string> {
+  async function loadAppointment(eventId: string): Promise<Event | string> {
     const event = await schedulingProvider.getEvent(eventId);
     if (!event || event.ownerId !== customerId) {
       return '找不到這筆預約，請先用 findMyAppointments 確認識別碼';
@@ -244,7 +244,7 @@ export function createSchedulingTools(
         note: NoteSchema,
       }),
       execute: async ({ eventId, start, end, service, summary, note }) => {
-        const event = await findOwnEvent(eventId);
+        const event = await loadAppointment(eventId);
         if (typeof event === 'string') return { rescheduled: false, reason: event };
 
         const slot = resolveSlot(start, end, service);
@@ -283,7 +283,7 @@ export function createSchedulingTools(
         eventId: z.string().describe('要取消的預約識別碼'),
       }),
       execute: async ({ eventId }) => {
-        const found = await findOwnEvent(eventId);
+        const found = await loadAppointment(eventId);
         if (typeof found === 'string') return { cancelled: false, reason: found };
 
         await schedulingProvider.deleteEvent(eventId);

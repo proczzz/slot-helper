@@ -9,6 +9,7 @@ import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
 import { createSupportTools } from './support-tools.ts';
 import type { ChatSettings } from './system-config.ts';
+import type { Notifier } from './notifications.ts';
 
 export interface ChatInput {
   customerId: string;
@@ -20,6 +21,7 @@ export interface ChatInput {
   conversationRepository: ConversationRepository;
   schedulingProvider: SchedulingProvider | null;
   telegramClient: TelegramClient | null;
+  notifier: Notifier;
 }
 
 export async function handleChat(input: ChatInput): Promise<ChatResponse> {
@@ -33,6 +35,7 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     conversationRepository,
     schedulingProvider,
     telegramClient,
+    notifier,
   } = input;
   const { model, provider, modelName } = activeModel;
   const { historyTurns: historyTurns, maxSteps, fallbackReply } = chatSettings;
@@ -63,6 +66,10 @@ export async function handleChat(input: ChatInput): Promise<ChatResponse> {
     messages,
     tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
     stopWhen: stepCountIs(maxSteps), // 工具最多操作次數上限，超過時終止
+    onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
+      if (toolOutput.type === 'tool-error')
+        await notifier.systemError(`工具 ${toolCall.toolName}`, toolOutput.error);
+    },
   });
 
   const trace = collectTrace(result.steps);

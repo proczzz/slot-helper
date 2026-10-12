@@ -50,7 +50,7 @@ telegramRoutes.post('/webhook', async (c) => {
     console.log('已透過 Telegram 重設管理密碼');
 
     await telegramClient!.sendText(
-      `後台登入資訊\n\n帳號：${ADMIN_USERNAME}\n新密碼：${password}\n\n` +
+      `💡 後台登入資訊\n\n帳號：${ADMIN_USERNAME}\n新密碼：${password}\n\n` +
         '請登入後立刻修改密碼，並刪除這則訊息。',
     );
   }

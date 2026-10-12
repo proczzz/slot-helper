@@ -35,6 +35,7 @@ whatsappRoutes.post('/webhook', async (c) => {
     customerRepository,
     schedulingProvider,
     telegramClient,
+    notifier,
   } = c.var.services;
   // 檢查: 如果沒有設定 whatsapp 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!whatsappClient) return c.text('WhatsApp is not configured', 404);
@@ -93,6 +94,7 @@ whatsappRoutes.post('/webhook', async (c) => {
         conversationRepository,
         schedulingProvider,
         telegramClient,
+        notifier,
       });
 
       await customerRepository.updateLastMessage(id, text, Date.now());

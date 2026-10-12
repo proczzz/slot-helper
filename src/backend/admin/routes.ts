@@ -297,6 +297,7 @@ adminRoutes.post('/test-chat', async (c) => {
     customerRepository,
     schedulingProvider,
     telegramClient,
+    notifier,
   } = c.var.services;
   if (!activeModel) return c.json(jsend.error('AI 尚未設定'), 503);
 
@@ -316,6 +317,7 @@ adminRoutes.post('/test-chat', async (c) => {
     conversationRepository,
     schedulingProvider,
     telegramClient,
+    notifier,
   });
 
   await customerRepository.updateLastMessage(id, message, Date.now());

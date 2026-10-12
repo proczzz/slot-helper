@@ -23,13 +23,13 @@ export function createNotifier(telegramClient: TelegramClient | null): Notifier 
     enabled: telegramClient !== null,
 
     login({ success, ip }) {
-      return send(`${success ? '後台登入成功' : '後台登入失敗'}\n來源 IP: ${ip}`);
+      return send(`${success ? '💡 後台登入成功' : '🚨 後台登入失敗'}\n來源 IP: ${ip}`);
     },
 
     systemError(where, error) {
       // Error 物件直接 stringify 會變成 {}
       const detail = error instanceof Error ? error.message : String(error);
-      return send(`⚠️系統發生錯誤\n\n位置: ${where}\n\n訊息: ${detail}`);
+      return send(`⚠️ 系統發生錯誤\n\n位置: ${where}\n\n訊息: ${detail}`);
     },
   };
 }
