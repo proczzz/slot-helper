@@ -4,7 +4,16 @@ import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { getSection, listModels, saveSection, type AiKey } from '../lib/admin.ts';
 
 // 寫死的清單,要和後端 adapter/ai/index.ts 的 providers 表保持一致
-const PROVIDERS = ['deepseek', 'anthropic', 'google', 'openai', 'nvidia', 'openrouter', 'groq'];
+const PROVIDERS = [
+  'anthropic',
+  'deepseek',
+  'google',
+  'groq',
+  'nvidia',
+  'openai',
+  'openrouter',
+  'xai',
+];
 
 const EMPTY: AiKey = { name: '', provider: '', apiKey: '', model: '' };
 

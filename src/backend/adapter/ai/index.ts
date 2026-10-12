@@ -3,6 +3,7 @@ import { createDeepSeek } from '@ai-sdk/deepseek';
 import { createGoogle } from '@ai-sdk/google';
 import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
+import { createXai } from '@ai-sdk/xai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
 import { ExpectedError } from '../../core/app-error.ts';
@@ -16,6 +17,7 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
   google: fromFactory(createGoogle),
   groq: fromFactory(createGroq),
   openai: fromFactory(createOpenAI),
+  xai: fromFactory(createXai),
   // 社區套件
   openrouter: fromFactory(createOpenRouter),
   //OpenAI 相容套件(缺專屬套件)
