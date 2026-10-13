@@ -62,11 +62,15 @@ export interface SystemConfigVo {
   fallbackReply: string;
 }
 
+// active 參與服務、test 只給後台測試、idle 僅保存
+export type AiUsage = 'active' | 'test' | 'idle';
+
 export interface AiKey {
   name: string;
   provider: string;
   apiKey: string;
   model: string;
+  usage: AiUsage;
 }
 
 export type Period = [string, string];

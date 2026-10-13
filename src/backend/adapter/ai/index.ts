@@ -24,15 +24,14 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
   nvidia: fromCompatible('nvidia', 'https://integrate.api.nvidia.com/v1'),
 };
 
-// 目前只用第一組,多組備援之後再做
+// 目前只用第一組 active,多組備援之後再做
 export function createLanguageModel(keys: AiKey[]): ActiveModel | null {
-  const key = keys[0];
+  const key = keys.find((item) => item.usage === 'active');
   if (!key) return null;
 
   const provider = providers[key.provider];
   if (!provider) return null;
 
-  console.log(`使用AI供應商: ${key.provider}`);
   return {
     model: provider.createModel(key.apiKey, key.model),
     provider: key.provider,
