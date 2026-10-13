@@ -1,8 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { TelegramClient } from '../adapter/telegram/types.ts';
+import type { Notifier } from './notifications';
 
-export function createSupportTools(telegramClient: TelegramClient, customerName: string | null) {
+export function createSupportTools(notifier: Notifier) {
   return {
     notifyOwner: tool({
       description:
@@ -12,7 +12,7 @@ export function createSupportTools(telegramClient: TelegramClient, customerName:
       }),
       execute: async ({ message }) => {
         try {
-          await telegramClient.sendText(`🤖: ${message}`);
+          await notifier.reportAgentIssue(message);
         } catch (error) {
           // 不能丟錯 —— 會變成 tool-error,模型會連續重試
           console.error('通知管理員失敗:', error);

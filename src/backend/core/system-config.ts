@@ -3,7 +3,7 @@ import z from 'zod';
 export const SystemConfigSchema = z.object({
   jwtSecret: z.string().min(1),
   initializedAt: z.string(),
-  historyTurns: z.number().int().min(2).max(50).default(15),
+  historyTurns: z.number().int().min(0).max(50).default(15),
   historyDays: z.number().int().min(1).max(365).default(30),
   maxSteps: z.number().int().min(1).max(20).default(8),
   fallbackReply: z

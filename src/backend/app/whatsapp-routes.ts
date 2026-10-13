@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import type { WhatsappMessage, WhatsappWebhookBody } from '../adapter/whatsapp/types.ts';
-import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
@@ -26,17 +25,7 @@ whatsappRoutes.get('/webhook', (c) => {
 
 whatsappRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆、通知]的實現
-  const {
-    whatsappClient,
-    chatSettings,
-    activeModel,
-    shopConfig,
-    conversationRepository,
-    customerRepository,
-    schedulingProvider,
-    telegramClient,
-    notifier,
-  } = c.var.services;
+  const { whatsappClient, chatSettings, customerRepository, chatService } = c.var.services;
   // 檢查: 如果沒有設定 whatsapp 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!whatsappClient) return c.text('WhatsApp is not configured', 404);
 
@@ -72,7 +61,7 @@ whatsappRoutes.post('/webhook', async (c) => {
     const text = message.text!.body;
 
     try {
-      if (!activeModel) return; // 沒 AI
+      if (!chatService) return; // 沒 AI 就沒 chatService
       const id = `${WHATSAPP_CHANNEL}:${message.from}`;
 
       // [儲存/更新] 顧客名稱。WhatsApp 沒有提供頭像
@@ -84,20 +73,9 @@ whatsappRoutes.post('/webhook', async (c) => {
       });
 
       // 取得 AI 回應
-      const result = await handleChat({
-        customerId: id,
-        customerName: name,
-        message: text,
-        chatSettings,
-        activeModel,
-        shopConfig,
-        conversationRepository,
-        schedulingProvider,
-        telegramClient,
-        notifier,
-      });
+      const result = await chatService.handleChat(id, name || '未知', text); // FIXME: name怪怪的
 
-      await customerRepository.updateLastMessage(id, text, Date.now());
+      await customerRepository.updateLastMessage(id, text, Date.now()); // TODO 別的thread做，然後放service裏
       await client.sendText(message.from, result.reply);
     } catch (error) {
       console.error('處理 WhatsApp 訊息失敗:', error);

@@ -4,9 +4,11 @@ export interface Notifier {
   enabled: boolean;
   login(details: { success: boolean; ip: string }): Promise<void>;
   systemError(where: string, error: unknown): Promise<void>;
+  reportAgentIssue(message: string): Promise<void>;
 }
 
 const MAX_LENGTH = 3000; // 最長通知字數限制
+
 export function createNotifier(telegramClient: TelegramClient | null): Notifier {
   async function send(text: string): Promise<void> {
     if (!telegramClient) return;
@@ -30,6 +32,9 @@ export function createNotifier(telegramClient: TelegramClient | null): Notifier 
       // Error 物件直接 stringify 會變成 {}
       const detail = error instanceof Error ? error.message : String(error);
       return send(`⚠️ 系統發生錯誤\n\n位置: ${where}\n\n訊息: ${detail}`);
+    },
+    reportAgentIssue(message) {
+      return send(`🤖: ${message}`);
     },
   };
 }

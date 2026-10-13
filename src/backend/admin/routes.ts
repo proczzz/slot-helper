@@ -19,7 +19,6 @@ import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import { handleChat } from '../core/chat-service.ts';
 import { ListModelsSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { CustomerQuerySchema } from '../model/dto/customer.ts';
@@ -289,17 +288,8 @@ adminRoutes.post('/test-customers', async (c) => {
 });
 
 adminRoutes.post('/test-chat', async (c) => {
-  const {
-    chatSettings,
-    activeModel,
-    shopConfig,
-    conversationRepository,
-    customerRepository,
-    schedulingProvider,
-    telegramClient,
-    notifier,
-  } = c.var.services;
-  if (!activeModel) return c.json(jsend.error('AI 尚未設定'), 503);
+  const { customerRepository, chatService } = c.var.services;
+  if (!chatService) return c.json(jsend.error('AI 尚未設定'), 503); // 沒 AI 就沒 chatService
 
   const { sessionId, message } = ChatRequestSchema.parse(await readJson(c));
   const id = `${TEST_CHANNEL}:${sessionId}`;
@@ -307,18 +297,7 @@ adminRoutes.post('/test-chat', async (c) => {
   const customer = await customerRepository.findById(id);
   if (!customer) return c.body(null, 404);
 
-  const result = await handleChat({
-    customerId: id,
-    customerName: customer.name,
-    message,
-    chatSettings,
-    activeModel,
-    shopConfig,
-    conversationRepository,
-    schedulingProvider,
-    telegramClient,
-    notifier,
-  });
+  const result = await chatService.handleChat(id, customer.name, message);
 
   await customerRepository.updateLastMessage(id, message, Date.now());
 

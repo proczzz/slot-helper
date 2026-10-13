@@ -12,7 +12,7 @@ const EMPTY: SystemConfigVo = {
 };
 
 // 和後端的 schema 一致,超出範圍就不給存
-const HISTORY_RANGE = { min: 2, max: 50 };
+const HISTORY_RANGE = { min: 0, max: 50 };
 const DAYS_RANGE = { min: 1, max: 365 };
 const STEPS_RANGE = { min: 1, max: 20 };
 
@@ -103,7 +103,7 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
               </p>
             ) : (
               <p className="mt-1 text-xs opacity-60">
-                一輪是顧客與 AI 各一則訊息。記得越久，每次回覆的費用越高
+                一輪是顧客與 AI 各一則訊息，設 0 代表不使用記憶。記得越久，每次回覆的費用越高
               </p>
             )}
           </fieldset>

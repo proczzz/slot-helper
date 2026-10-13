@@ -10,6 +10,7 @@ import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
 import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
+import { createChatService, type ChatService } from '../core/chat-service.ts';
 import { createNotifier, type Notifier } from '../core/notifications.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
 import { ChatSettingsSchema, type ChatSettings } from '../core/system-config.ts';
@@ -52,11 +53,10 @@ export interface Services {
   conversationRepository: ConversationRepository;
   adminAuth: AdminAuth; // 身分驗證模組
   schedulingProvider: SchedulingProvider | null; // 日曆
+  chatService: ChatService | null; // 核心處理訊息服務
 
   // 從設定字串建立，可跨請求共用
   chatSettings: ChatSettings; // 系統設定:AI 記憶輪數、步數、保底訊息
-  activeModel: ActiveModel | null; // AI
-  shopConfig: ShopConfig; // 營業時間、部分提示詞
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
@@ -69,23 +69,45 @@ export async function createServices(database: Database): Promise<Services> {
   const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
-  const { jwtSecret, schedulingConfig, ...providers } = await getSharedProviders(
-    configRepository,
-    userRepository,
+  const {
+    jwtSecret,
+    schedulingConfig,
+    activeModel,
+    chatSettings,
+    shopConfig,
+    telegramClient,
+    notifier,
+    ...providers
+  } = await getSharedProviders(configRepository, userRepository);
+  const schedulingProvider = createSchedulingProvider(
+    schedulingConfig,
+    createTokenStore(configRepository),
   );
+
+  const chatService = activeModel
+    ? createChatService(
+        activeModel,
+        chatSettings,
+        shopConfig,
+        conversationRepository,
+        schedulingProvider,
+        notifier,
+      )
+    : null;
 
   return {
     ...providers,
+    chatSettings,
+    telegramClient,
+    notifier,
     configRepository,
     customerRepository,
     conversationRepository,
     adminAuth: createAdminAuth(userRepository, jwtSecret),
     // provider 會透過 TokenStore 寫資料庫,所以不能快取。
     // 用快取的設定現建,只是組幾個 closure,沒有 I/O
-    schedulingProvider: createSchedulingProvider(
-      schedulingConfig,
-      createTokenStore(configRepository),
-    ),
+    schedulingProvider,
+    chatService,
   };
 }
 

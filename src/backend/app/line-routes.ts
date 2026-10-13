@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import type { LineEvent, LineWebhookBody } from '../adapter/line/types.ts';
-import { handleChat } from '../core/chat-service.ts';
 import type { AppVariables } from './services.ts';
 
 const LINE_CHANNEL = 'line';
@@ -9,17 +8,7 @@ const lineRoutes = new Hono<AppVariables>();
 
 lineRoutes.post('/webhook', async (c) => {
   // 從 context 取:[llm、資料庫、日曆]的實現
-  const {
-    lineClient,
-    chatSettings,
-    activeModel,
-    shopConfig,
-    conversationRepository,
-    customerRepository,
-    schedulingProvider,
-    telegramClient,
-    notifier,
-  } = c.var.services;
+  const { lineClient, chatSettings, customerRepository, chatService } = c.var.services;
   // 檢查: 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!lineClient) return c.text('LINE is not configured', 404);
 
@@ -48,7 +37,7 @@ lineRoutes.post('/webhook', async (c) => {
     const client = lineClient!;
 
     try {
-      if (!activeModel) return; // 沒 AI
+      if (!chatService) return; // 沒 AI 就沒 chatService
 
       const id = `${LINE_CHANNEL}:${userId}`;
       const profile = await client.getProfile(userId);
@@ -62,18 +51,11 @@ lineRoutes.post('/webhook', async (c) => {
       });
 
       // 取得 AI 回應
-      const result = await handleChat({
-        customerId: id,
-        customerName: profile?.displayName ?? null,
-        message: event.message!.text!,
-        chatSettings,
-        activeModel,
-        shopConfig,
-        conversationRepository,
-        schedulingProvider,
-        telegramClient,
-        notifier,
-      });
+      const result = await chatService.handleChat(
+        id,
+        profile?.displayName ?? null,
+        event.message!.text!,
+      );
 
       await customerRepository.updateLastMessage(id, event.message!.text!, Date.now());
       await client.replyText(replyToken, result.reply);
