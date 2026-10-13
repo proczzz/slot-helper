@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
-import type { WhatsappMessage, WhatsappWebhookBody } from '../adapter/whatsapp/types.ts';
+import type {
+  WhatsappClient,
+  WhatsappMessage,
+  WhatsappWebhookBody,
+} from '../adapter/whatsapp/types.ts';
+import type { MessageService } from '../core/message-service.ts';
 import type { AppVariables } from './services.ts';
 
 const WHATSAPP_CHANNEL = 'whatsapp';
@@ -37,8 +42,18 @@ whatsappRoutes.post('/webhook', async (c) => {
   if (!messageService) return c.text('OK'); // 有設定 Whatsapp 但沒 AI，回平台200
 
   // Step2. 處理訊息與回應(非阻塞)
-  // payload 嵌套三層,而且同一包會混入已送達、已讀的狀態回報 —— 那些沒有 messages
+  c.var.runInBackground(handleMessages(body, whatsappClient, messageService));
+
+  // Step3. 回應給 Meta
+  // (這時候 step2 應該還在別的線程跑，客戶還沒收到訊息)
+  return c.text('OK');
+});
+
+// payload 嵌套三層,而且同一包會混入已送達、已讀的狀態回報 —— 那些沒有 messages
+async function handleMessages(body: string, client: WhatsappClient, service: MessageService) {
   const data = JSON.parse(body) as WhatsappWebhookBody;
+
+  const tasks: Promise<void>[] = [];
   for (const entry of data.entry ?? []) {
     for (const change of entry.changes ?? []) {
       const contacts = change.value?.contacts ?? [];
@@ -46,8 +61,9 @@ whatsappRoutes.post('/webhook', async (c) => {
         if (!isTextMessage(message)) continue;
         // webhook 直接帶顧客名稱，不必像 LINE 再呼叫一次 getProfile
         const name = contacts.find((item) => item.wa_id === message.from)?.profile?.name ?? null;
-        c.var.runInBackground(
-          messageService.handleMessage(whatsappClient, {
+
+        tasks.push(
+          service.handleMessage(client, {
             channel: WHATSAPP_CHANNEL,
             customerId: `${WHATSAPP_CHANNEL}:${message.from}`,
             name,
@@ -59,11 +75,8 @@ whatsappRoutes.post('/webhook', async (c) => {
       }
     }
   }
-
-  // Step3. 回應給 Meta
-  // (這時候 step2 應該還在別的線程跑，客戶還沒收到訊息)
-  return c.text('OK');
-});
+  await Promise.all(tasks);
+}
 
 function isTextMessage(message: WhatsappMessage): boolean {
   return message.type === 'text' && !!message.text?.body;
