@@ -1,5 +1,5 @@
 import { Context, Hono } from 'hono';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { setCookie } from 'hono/cookie';
 import { listAvailableModels } from '../adapter/ai/index.ts';
 import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
 import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
@@ -28,7 +28,7 @@ import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
 import { ChangePasswordSchema } from '../model/dto/password.ts';
 import { WebhookSchema } from '../model/dto/telegram.ts';
 import type { ConfigKey } from '../repository/types.ts';
-import { ADMIN_COOKIE_NAME } from './auth.ts';
+import { clearSessionCookie, readSessionCookie, setSessionCookie } from './auth.ts';
 
 type AdminVariables = {
   Variables: AppVariables['Variables'] & { username: string };
@@ -49,26 +49,20 @@ adminRoutes.post('/login', async (c) => {
   }
 
   // Step2. 發 jwt 憑證
-  setCookie(c, ADMIN_COOKIE_NAME, await adminAuth.issueToken(username), {
-    httpOnly: true, // JS 無法讀取此 cookie
-    secure: true, // 非 https 瀏覽器發給後端(正式環境必須 true，本機開發才能用 false)
-    sameSite: 'Strict', // 只有從本站發起的請求才會帶上這個 cookie
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  setSessionCookie(c, await adminAuth.issueToken(username));
 
   return c.json(jsend.success(null));
 });
 
 adminRoutes.post('/logout', (c) => {
-  deleteCookie(c, ADMIN_COOKIE_NAME, { path: '/' });
+  clearSessionCookie(c);
   return c.json(jsend.success(null));
 });
 
 // 以下路由都需要登入，驗證身分後context存入用戶名
 adminRoutes.use('/*', async (c, next) => {
   const { adminAuth } = c.var.services;
-  const token = getCookie(c, ADMIN_COOKIE_NAME);
+  const token = readSessionCookie(c);
   const username = token ? await adminAuth.verifyToken(token) : null;
   if (!username) {
     return c.body(null, 401);
@@ -76,6 +70,7 @@ adminRoutes.use('/*', async (c, next) => {
 
   c.set('username', username);
   await next();
+  setSessionCookie(c, await adminAuth.issueToken(username));
 });
 
 adminRoutes.get('/me', (c) => c.json(jsend.success(null)));
@@ -312,7 +307,7 @@ function clientIp(c: Context<AdminVariables>): string {
 }
 
 // 外部送來的 body 不是合法 JSON —— 呼叫端的問題,不是系統故障
-export async function readJson(c: Context): Promise<unknown> {
+async function readJson(c: Context): Promise<unknown> {
   try {
     return await c.req.json();
   } catch {
