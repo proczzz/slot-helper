@@ -27,7 +27,8 @@ export function createChatService(
   conversationRepository: ConversationRepository, // repository
   schedulingProvider: SchedulingProvider | null, // service
   notifier: Notifier, // service
-): ChatService {
+): ChatService | null {
+  if (!activeModel) return null;
   const supportTools = notifier.enabled ? createSupportTools(notifier) : {};
 
   return {

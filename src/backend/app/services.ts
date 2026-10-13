@@ -58,7 +58,6 @@ export interface Services {
   messageService: MessageService | null;
 
   // 從設定字串建立，可跨請求共用
-  chatSettings: ChatSettings; // 系統設定:AI 記憶輪數、步數、保底訊息
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
@@ -71,52 +70,40 @@ export async function createServices(database: Database): Promise<Services> {
   const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
-  const {
-    jwtSecret,
-    schedulingConfig,
-    activeModel,
-    chatSettings,
-    shopConfig,
-    telegramClient,
-    notifier,
-    ...providers
-  } = await getSharedProviders(configRepository, userRepository);
+  const cache = await getSharedProviders(configRepository, userRepository);
+
   const schedulingProvider = createSchedulingProvider(
-    schedulingConfig,
+    cache.schedulingConfig,
     createTokenStore(configRepository),
   );
-
-  const chatService = activeModel
-    ? createChatService(
-        activeModel,
-        chatSettings,
-        shopConfig,
-        conversationRepository,
-        schedulingProvider,
-        notifier,
-      )
-    : null;
-
+  const chatService = createChatService(
+    cache.activeModel,
+    cache.chatSettings,
+    cache.shopConfig,
+    conversationRepository,
+    schedulingProvider,
+    cache.notifier,
+  );
   const messageService = createMessageService(
     chatService,
     customerRepository,
-    chatSettings.fallbackReply,
+    cache.chatSettings.fallbackReply,
   );
+  const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
 
   return {
-    ...providers,
-    chatSettings,
-    telegramClient,
-    notifier,
     configRepository,
     customerRepository,
     conversationRepository,
-    adminAuth: createAdminAuth(userRepository, jwtSecret),
-    // provider 會透過 TokenStore 寫資料庫,所以不能快取。
-    // 用快取的設定現建,只是組幾個 closure,沒有 I/O
+    adminAuth,
     schedulingProvider,
     chatService,
     messageService,
+
+    lineClient: cache.lineClient,
+    whatsappClient: cache.whatsappClient,
+    telegramClient: cache.telegramClient,
+    notifier: cache.notifier,
   };
 }
 

@@ -23,7 +23,7 @@ whatsappRoutes.get('/webhook', (c) => {
 });
 
 whatsappRoutes.post('/webhook', async (c) => {
-  // 從 context 取:[llm、資料庫、日曆、通知]的實現
+  // 從 context 注入需要的 services
   const { whatsappClient, messageService } = c.var.services;
   // 檢查: 如果沒有設定 whatsapp 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!whatsappClient) return c.text('WhatsApp is not configured', 404);
@@ -34,7 +34,7 @@ whatsappRoutes.post('/webhook', async (c) => {
   if (!(await whatsappClient.verifyRequest(body, c.req.raw.headers))) {
     return c.text('Invalid signature', 401);
   }
-  if (!messageService) return c.text('OK'); // 有設定 line 但沒 AI，回平台200
+  if (!messageService) return c.text('OK'); // 有設定 Whatsapp 但沒 AI，回平台200
 
   // Step2. 處理訊息與回應(非阻塞)
   // payload 嵌套三層,而且同一包會混入已送達、已讀的狀態回報 —— 那些沒有 messages
@@ -47,7 +47,7 @@ whatsappRoutes.post('/webhook', async (c) => {
         // webhook 直接帶顧客名稱，不必像 LINE 再呼叫一次 getProfile
         const name = contacts.find((item) => item.wa_id === message.from)?.profile?.name ?? null;
         c.var.runInBackground(
-          messageService?.handleMessage(whatsappClient, {
+          messageService.handleMessage(whatsappClient, {
             channel: WHATSAPP_CHANNEL,
             customerId: `${WHATSAPP_CHANNEL}:${message.from}`,
             name,

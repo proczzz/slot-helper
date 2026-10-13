@@ -7,7 +7,7 @@ const LINE_CHANNEL = 'line';
 const lineRoutes = new Hono<AppVariables>();
 
 lineRoutes.post('/webhook', async (c) => {
-  // 從 context 取:[llm、資料庫、日曆]的實現
+  // 從 context 注入需要的 services
   const { lineClient, messageService } = c.var.services;
   // 檢查: 如果沒有設定 line 還是會開啟 /webhook 接口，但不會執行實際工作
   if (!lineClient) return c.text('LINE is not configured', 404);
@@ -18,7 +18,9 @@ lineRoutes.post('/webhook', async (c) => {
   if (!(await lineClient.verifyRequest(body, c.req.raw.headers))) {
     return c.text('Invalid signature', 401);
   }
-  if (!messageService) return c.text('OK'); // 有設定 line 但沒 AI，回平台200
+  if (!messageService) return c.text('OK'); // 有設定 Line 但沒 AI，回平台200
+  const client = lineClient;
+  const service = messageService;
 
   // Step2. 處裡訊息與回應(非阻塞)
   const { events } = JSON.parse(body) as LineWebhookBody;
@@ -34,9 +36,9 @@ lineRoutes.post('/webhook', async (c) => {
   async function reply(event: LineEvent) {
     const userId = event.source.userId!;
     // 查不到 用戶名&頭貼 就算了
-    const profile = await lineClient!.getProfile(userId).catch(() => null);
+    const profile = await client.getProfile(userId).catch(() => null);
 
-    await messageService!.handleMessage(lineClient!, {
+    await service.handleMessage(client, {
       channel: LINE_CHANNEL,
       customerId: `${LINE_CHANNEL}:${userId}`,
       name: profile?.displayName ?? null,
