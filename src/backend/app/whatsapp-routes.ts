@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import type { WhatsappMessage, WhatsappWebhookBody } from '../adapter/whatsapp/types.ts';
 import type { AppVariables } from './services.ts';
 
-const SIGNATURE_HEADER = 'x-hub-signature-256';
 const WHATSAPP_CHANNEL = 'whatsapp';
 
 const whatsappRoutes = new Hono<AppVariables>();
@@ -32,8 +31,7 @@ whatsappRoutes.post('/webhook', async (c) => {
   // Step1. 驗證發送請求的人是 Meta
   // (簽章是對原始 body 字串簽發的,要先取純文本;Meta 送的是 sha256= 加十六進位)
   const body = await c.req.text();
-  const signature = c.req.header(SIGNATURE_HEADER) ?? '';
-  if (!(await whatsappClient.verifySignature(body, signature))) {
+  if (!(await whatsappClient.verifyRequest(body, c.req.raw.headers))) {
     return c.text('Invalid signature', 401);
   }
 
@@ -76,10 +74,10 @@ whatsappRoutes.post('/webhook', async (c) => {
       const result = await chatService.handleChat(id, name || '未知', text); // FIXME: name怪怪的
 
       await customerRepository.updateLastMessage(id, text, Date.now()); // TODO 別的thread做，然後放service裏
-      await client.sendText(message.from, result.reply);
+      await client.reply(message.from, result.reply);
     } catch (error) {
       console.error('處理 WhatsApp 訊息失敗:', error);
-      await client.sendText(message.from, chatSettings.fallbackReply).catch((replyError) => {
+      await client.reply(message.from, chatSettings.fallbackReply).catch((replyError) => {
         console.error('WhatsApp 回覆失敗:', replyError);
       });
     }

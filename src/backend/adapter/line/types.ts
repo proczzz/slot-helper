@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MessagingConfigSchema } from '../types';
+import { MessagingConfigSchema, type MessagingClient } from '../types';
 
 export const LineConfigSchema = MessagingConfigSchema;
 export type LineConfig = z.infer<typeof LineConfigSchema>;
@@ -9,9 +9,7 @@ export interface LineProfile {
   pictureUrl?: string;
 }
 
-export interface LineClient {
-  verifySignature(body: string, signature: string): Promise<boolean>;
-  replyText(replyToken: string, text: string): Promise<void>;
+export interface LineClient extends MessagingClient {
   getProfile(userId: string): Promise<LineProfile | null>;
 }
 

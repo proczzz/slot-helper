@@ -2,6 +2,7 @@ import type { LineClient, LineConfig, LineProfile } from './types.ts';
 
 const REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 const PROFILE_URL = 'https://api.line.me/v2/bot/profile';
+const SIGNATURE_HEADER = 'x-line-signature';
 
 export function createLineClient(config: LineConfig | null): LineClient | null {
   if (!config) return null; // 老闆沒要用line
@@ -9,7 +10,9 @@ export function createLineClient(config: LineConfig | null): LineClient | null {
   const encoder = new TextEncoder();
 
   return {
-    async verifySignature(body: string, signature: string) {
+    async verifyRequest(body, headers) {
+      const signature = headers.get(SIGNATURE_HEADER) ?? '';
+
       let signatureBytes: Uint8Array;
       try {
         signatureBytes = Uint8Array.from(atob(signature), (char) => char.charCodeAt(0));
@@ -28,7 +31,7 @@ export function createLineClient(config: LineConfig | null): LineClient | null {
       return crypto.subtle.verify('HMAC', key, signatureBytes, encoder.encode(body));
     },
 
-    async replyText(replyToken: string, text: string) {
+    async reply(replyToken, text) {
       const response = await fetch(REPLY_URL, {
         method: 'POST',
         headers: {

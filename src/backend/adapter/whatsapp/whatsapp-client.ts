@@ -2,6 +2,7 @@ import type { WhatsappClient, WhatsappConfig } from './types.ts';
 
 const API_VERSION = 'v25.0';
 const API_BASE = 'https://graph.facebook.com';
+const SIGNATURE_HEADER = 'x-hub-signature-256';
 
 export function createWhatsappClient(config: WhatsappConfig | null): WhatsappClient | null {
   if (!config) return null; // 老闆沒要用 WhatsApp
@@ -11,10 +12,12 @@ export function createWhatsappClient(config: WhatsappConfig | null): WhatsappCli
 
   return {
     // 只用於 Meta 設定 webhook 時
-    verifyToken(token: string) {
+    verifyToken(token) {
       return token === challengeToken;
     },
-    async verifySignature(body: string, signature: string) {
+    async verifyRequest(body, headers) {
+      const signature = headers.get(SIGNATURE_HEADER) ?? '';
+      
       // Meta 送的是 'sha256=' 加十六進位,和 LINE 的 base64 不同
       const hex = signature.startsWith('sha256=') ? signature.slice(7) : '';
       if (!/^[0-9a-f]{64}$/i.test(hex)) return false;
@@ -33,7 +36,7 @@ export function createWhatsappClient(config: WhatsappConfig | null): WhatsappCli
     },
 
     // 沒有 reply token，直接對顧客的號碼發送，24h內回覆都算在1000次(月)免費額度內
-    async sendText(to: string, text: string) {
+    async reply(to, text) {
       const response = await fetch(messagesUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },

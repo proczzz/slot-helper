@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MessagingConfigSchema } from '../types';
+import { MessagingConfigSchema, type MessagingClient } from '../types';
 
 export const WhatsappConfigSchema = MessagingConfigSchema.extend({
   phoneNumberId: z.string().min(1, '請輸入 Phone number ID'),
@@ -8,10 +8,8 @@ export const WhatsappConfigSchema = MessagingConfigSchema.extend({
 });
 export type WhatsappConfig = z.infer<typeof WhatsappConfigSchema>;
 
-export interface WhatsappClient {
+export interface WhatsappClient extends MessagingClient {
   verifyToken(token: string): boolean;
-  verifySignature(body: string, signature: string): Promise<boolean>;
-  sendText(to: string, text: string): Promise<void>;
 }
 
 // webhook 的通知,只宣告我們會讀的欄位。參考:

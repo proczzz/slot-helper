@@ -15,8 +15,7 @@ lineRoutes.post('/webhook', async (c) => {
   // Step1. 驗證發送請求的人是 Line官方
   // (簽章是對原始 body 字串簽發的，要先取純文本)
   const body = await c.req.text();
-  const signature = c.req.header('x-line-signature') ?? '';
-  if (!(await lineClient.verifySignature(body, signature))) {
+  if (!(await lineClient.verifyRequest(body, c.req.raw.headers))) {
     return c.text('Invalid signature', 401);
   }
 
@@ -58,10 +57,10 @@ lineRoutes.post('/webhook', async (c) => {
       );
 
       await customerRepository.updateLastMessage(id, event.message!.text!, Date.now());
-      await client.replyText(replyToken, result.reply);
+      await client.reply(replyToken, result.reply);
     } catch (error) {
       console.error('處理 LINE 訊息失敗:', error);
-      await client.replyText(replyToken, chatSettings.fallbackReply).catch((replyError) => {
+      await client.reply(replyToken, chatSettings.fallbackReply).catch((replyError) => {
         console.error('LINE 回覆失敗:', replyError);
       });
     }
