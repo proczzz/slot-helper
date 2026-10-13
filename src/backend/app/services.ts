@@ -11,6 +11,7 @@ import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
 import { createChatService, type ChatService } from '../core/chat-service.ts';
+import { createMessageService, type MessageService } from '../core/message-service.ts';
 import { createNotifier, type Notifier } from '../core/notifications.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
 import { ChatSettingsSchema, type ChatSettings } from '../core/system-config.ts';
@@ -54,6 +55,7 @@ export interface Services {
   adminAuth: AdminAuth; // 身分驗證模組
   schedulingProvider: SchedulingProvider | null; // 日曆
   chatService: ChatService | null; // 核心處理訊息服務
+  messageService: MessageService | null;
 
   // 從設定字串建立，可跨請求共用
   chatSettings: ChatSettings; // 系統設定:AI 記憶輪數、步數、保底訊息
@@ -95,6 +97,12 @@ export async function createServices(database: Database): Promise<Services> {
       )
     : null;
 
+  const messageService = createMessageService(
+    chatService,
+    customerRepository,
+    chatSettings.fallbackReply,
+  );
+
   return {
     ...providers,
     chatSettings,
@@ -108,6 +116,7 @@ export async function createServices(database: Database): Promise<Services> {
     // 用快取的設定現建,只是組幾個 closure,沒有 I/O
     schedulingProvider,
     chatService,
+    messageService,
   };
 }
 
