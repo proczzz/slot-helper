@@ -65,12 +65,21 @@ export interface SystemConfigVo {
 // active 參與服務、test 只給後台測試、idle 僅保存
 export type AiUsage = 'active' | 'test' | 'idle';
 
-export interface AiKey {
+export interface AiKeyVo {
   name: string;
   provider: string;
-  apiKey: string;
   model: string;
   usage: AiUsage;
+  apiKeyMask: string;
+}
+
+// apiKey 沒送代表沿用舊設定
+export interface AiKeyRequest {
+  name: string;
+  provider: string;
+  model: string;
+  usage: AiUsage;
+  apiKey?: string;
 }
 
 export type Period = [string, string];
@@ -303,11 +312,16 @@ export async function restoreAiKey(name: string): Promise<void> {
   await assertOk(response);
 }
 
-export async function listModels(provider: string, apiKey: string): Promise<string[]> {
+// 沒有 apiKey(前端手上只有遮罩)就送 name,讓後端自己去讀已儲存的那把
+export async function listModels(input: {
+  provider: string;
+  apiKey?: string;
+  name?: string;
+}): Promise<string[]> {
   const response = await request('/api/admin/ai/models', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, apiKey }),
+    body: JSON.stringify(input),
   });
 
   const body = (await response.json()) as JSendBody<string[]>;

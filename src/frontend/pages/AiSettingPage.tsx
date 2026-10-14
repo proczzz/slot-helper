@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { SecretField } from '../components/SecretField.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getAiDemotions,
@@ -8,7 +9,8 @@ import {
   restoreAiKey,
   saveSection,
   type AiDemotion,
-  type AiKey,
+  type AiKeyRequest,
+  type AiKeyVo,
   type AiUsage,
 } from '../lib/admin.ts';
 
@@ -30,14 +32,25 @@ const USAGES: { value: AiUsage; label: string }[] = [
   { value: 'idle', label: '保留不使用' },
 ];
 
-const EMPTY: AiKey = { name: '', provider: '', apiKey: '', model: '', usage: 'active' };
+// apiKey 的 undefined 代表「沒在編輯」,送出時就不會放進 payload
+interface AiKeyDraft extends AiKeyVo {
+  apiKey: string | undefined;
+}
+
+const EMPTY: AiKeyDraft = {
+  name: '',
+  provider: '',
+  model: '',
+  usage: 'active',
+  apiKeyMask: '',
+  apiKey: '',
+};
 
 export function AiSettingsPage() {
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'ai'],
-    // 舊資料沒有 usage,用 EMPTY 補齊才不會讓下拉選單空白
     queryFn: async () =>
-      (await getSection<AiKey[]>('ai'))?.map((key) => ({ ...EMPTY, ...key })) ?? [],
+      (await getSection<AiKeyVo[]>('ai'))?.map((key) => ({ ...key, apiKey: undefined })) ?? [],
   });
 
   // 讀不到只影響「已停用」的提示,不該擋住整頁設定
@@ -65,13 +78,15 @@ export function AiSettingsPage() {
   return <AiForm config={data} demotions={demotions.data ?? []} />;
 }
 
-function AiForm({ config, demotions }: { config: AiKey[]; demotions: AiDemotion[] }) {
+function AiForm({ config, demotions }: { config: AiKeyDraft[]; demotions: AiDemotion[] }) {
   const [keys, setKeys] = useState(config);
   const queryClient = useQueryClient();
 
   const save = useMutation({
-    mutationFn: (next: AiKey[]) => saveSection('ai', next),
+    mutationFn: (next: AiKeyRequest[]) => saveSection('ai', next),
     onSuccess: () => {
+      // 存完就回到遮罩狀態。這是事件而不是同步,所以不需要 useEffect
+      setKeys(keys.map((key) => ({ ...key, apiKey: undefined })));
       void queryClient.invalidateQueries({ queryKey: ['config', 'ai'] });
     },
   });
@@ -82,7 +97,7 @@ function AiForm({ config, demotions }: { config: AiKey[]; demotions: AiDemotion[
     setKeys([...keys, EMPTY]);
   }
 
-  function change(index: number, next: AiKey) {
+  function change(index: number, next: AiKeyDraft) {
     setKeys(keys.map((key, i) => (i === index ? next : key)));
   }
 
@@ -90,7 +105,9 @@ function AiForm({ config, demotions }: { config: AiKey[]; demotions: AiDemotion[
     setKeys(keys.filter((_, i) => i !== index));
   }
 
-  const incomplete = keys.some((key) => !key.name || !key.provider || !key.apiKey || !key.model);
+  const incomplete = keys.some(
+    (key) => !key.name || !key.provider || !key.model || (!key.apiKeyMask && !key.apiKey),
+  );
   const duplicated = new Set(keys.map((key) => key.name)).size !== keys.length;
 
   return (
@@ -98,14 +115,20 @@ function AiForm({ config, demotions }: { config: AiKey[]; demotions: AiDemotion[
       <div className="card-body gap-4">
         <h2 className="card-title">AI 模型</h2>
         <p className="text-sm text-base-content/60">
-          目前只有第一組「使用中」會真的回覆顧客，多組備援還沒做。
+          顧客的訊息由第一組「使用中」回覆，它失效時會自動換下一組。
         </p>
 
         <form
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate(keys);
+
+            // 只送有改過的 apiKey,後端靠「欄位不存在」判斷沿用舊的
+            save.mutate(
+              keys.map(({ apiKeyMask: _mask, apiKey, ...rest }) =>
+                apiKey === undefined ? rest : { ...rest, apiKey },
+              ),
+            );
           }}
         >
           {keys.length === 0 && (
@@ -165,9 +188,9 @@ function AiKeyRow({
   onRemove,
 }: {
   index: number;
-  value: AiKey;
+  value: AiKeyDraft;
   demotion: AiDemotion | undefined;
-  onChange: (next: AiKey) => void;
+  onChange: (next: AiKeyDraft) => void;
   onRemove: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -179,16 +202,21 @@ function AiKeyRow({
     },
   });
 
-  // 要按按鈕才發生、而且得先填好 API key,所以是 mutation 不是 query。
+  // 要按按鈕才發生、而且得先有 key,所以是 mutation 不是 query。
   // 每一列各自一份,否則載入的清單會跑到別人的輸入框
   const models = useMutation({
-    mutationFn: (input: { provider: string; apiKey: string }) =>
-      listModels(input.provider, input.apiKey),
+    mutationFn: () =>
+      listModels(
+        value.apiKey
+          ? { provider: value.provider, apiKey: value.apiKey }
+          : { provider: value.provider, name: value.name },
+      ),
   });
 
   const optionsId = `model-options-${index}`;
+  const hasKey = !!value.apiKey || !!value.apiKeyMask;
 
-  function update(field: keyof AiKey, next: string) {
+  function update(field: 'name' | 'provider' | 'model' | 'usage', next: string) {
     onChange({ ...value, [field]: next });
   }
 
@@ -199,9 +227,7 @@ function AiKeyRow({
           <div className="flex-1">
             <p>這組金鑰失效後已自動停用，處理完再解除。</p>
             <p className="mt-1 font-mono text-xs opacity-70">{demotion.reason}</p>
-            <p className="mt-1 text-xs opacity-60">
-              停用於 {new Date(demotion.at).toLocaleString()}
-            </p>
+            <p className="mt-1 text-xs opacity-60">停用於 {new Date(demotion.at).toLocaleString()}</p>
           </div>
           <button
             type="button"
@@ -271,15 +297,14 @@ function AiKeyRow({
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <fieldset className="fieldset flex-1">
-          <legend className="fieldset-legend">API key</legend>
-          <input
-            type="password"
-            className="input w-full"
+        <div className="flex-1">
+          <SecretField
+            label="API key"
+            mask={value.apiKeyMask}
             value={value.apiKey}
-            onChange={(event) => update('apiKey', event.target.value)}
+            onChange={(next) => onChange({ ...value, apiKey: next })}
           />
-        </fieldset>
+        </div>
 
         <fieldset className="fieldset flex-1">
           <legend className="fieldset-legend">模型</legend>
@@ -295,8 +320,8 @@ function AiKeyRow({
             <button
               type="button"
               className="btn join-item"
-              onClick={() => models.mutate({ provider: value.provider, apiKey: value.apiKey })}
-              disabled={models.isPending || !value.provider || !value.apiKey}
+              onClick={() => models.mutate()}
+              disabled={models.isPending || !value.provider || !hasKey}
             >
               {models.isPending && <span className="loading loading-spinner loading-xs" />}
               載入

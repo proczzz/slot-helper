@@ -6,6 +6,7 @@ import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
 import {
   createAiStateStore,
   createTokenStore,
+  loadAiKeys,
   loadAiState,
   loadOutlookSettings,
   loadTelegramConfig,
@@ -128,8 +129,15 @@ adminRoutes.put('/config/:section', async (c) => {
 });
 
 adminRoutes.post('/ai/models', async (c) => {
-  const { provider, apiKey } = ListModelsSchema.parse(await readJson(c));
-  return c.json(jsend.success(await listAvailableModels(provider, apiKey)));
+  const { configRepository } = c.var.services;
+  const { provider, apiKey, name } = ListModelsSchema.parse(await readJson(c));
+
+  // 前端手上只有遮罩時會送 name,由後端自己讀出那把 key
+  const key =
+    apiKey ?? (await loadAiKeys(configRepository)).find((item) => item.name === name)?.apiKey;
+  if (!key) throw new ExpectedError('找不到這組 API key，請先儲存設定或重新輸入');
+
+  return c.json(jsend.success(await listAvailableModels(provider, key)));
 });
 
 // 系統自動停用的 key:永久失效(401/402/400 這類)時寫入,老闆處理完再解除

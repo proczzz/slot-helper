@@ -31,6 +31,7 @@ import { telegramConfigMapper } from '../model/dto/telegram.ts';
 import type { ConfigMapper } from '../model/dto/types.ts';
 import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
+import { aiConfigMapper } from '../model/dto/ai.ts';
 
 // [白名單]後台可寫入的配置，scheduling-state 資料不在其中(禁止寫入)
 export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
@@ -47,6 +48,7 @@ export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
 
 // 有 mapper 的區塊由它決定怎麼綁與怎麼顯示;沒有的原樣存取
 export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
+  ai: aiConfigMapper,
   system: systemConfigMapper,
   'google-calendar': googleCalendarConfigMapper,
   outlook: outlookConfigMapper,
