@@ -303,8 +303,8 @@ adminRoutes.post('/test-customers', async (c) => {
 });
 
 adminRoutes.post('/test-chat', async (c) => {
-  const { customerRepository, chatService } = c.var.services;
-  if (!chatService) return c.json(jsend.error('AI 尚未設定'), 503); // 沒 AI 就沒 chatService
+  const { customerRepository, testChatService } = c.var.services;
+  if (!testChatService) return c.json(jsend.error('AI 尚未設定'), 503); // 沒 AI 就沒 chatService
 
   const { sessionId, message } = ChatRequestSchema.parse(await readJson(c));
   const id = `${TEST_CHANNEL}:${sessionId}`;
@@ -312,7 +312,7 @@ adminRoutes.post('/test-chat', async (c) => {
   const customer = await customerRepository.findById(id);
   if (!customer) return c.body(null, 404);
 
-  const result = await chatService.handleChat(id, customer.name, message);
+  const result = await testChatService.handleChat(id, customer.name, message);
 
   await customerRepository.updateLastMessage(id, message, Date.now());
 

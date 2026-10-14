@@ -57,6 +57,7 @@ export interface Services {
   adminAuth: AdminAuth; // 身分驗證模組
   schedulingProvider: SchedulingProvider | null; // 日曆
   chatService: ChatService | null; // 核心處理訊息服務
+  testChatService: ChatService | null; // 測試專用key
   messageService: MessageService | null;
 
   // 從設定字串建立，可跨請求共用
@@ -79,15 +80,9 @@ export async function createServices(database: Database): Promise<Services> {
     createTokenStore(configRepository),
   );
   const aiStateStore = withCacheReset(createAiStateStore(configRepository));
-  const chatService = createChatService(
-    cache.activeModels,
-    cache.chatSettings,
-    cache.shopConfig,
-    conversationRepository,
-    schedulingProvider,
-    cache.notifier,
-    aiStateStore
-  );
+  const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
+  const chatService = buildChatService(cache.activeModels);
+  const testChatService = buildChatService(testModels);
   const messageService = createMessageService(
     chatService,
     customerRepository,
@@ -102,6 +97,7 @@ export async function createServices(database: Database): Promise<Services> {
     adminAuth,
     schedulingProvider,
     chatService,
+    testChatService,
     messageService,
 
     lineClient: cache.lineClient,
@@ -109,6 +105,17 @@ export async function createServices(database: Database): Promise<Services> {
     telegramClient: cache.telegramClient,
     notifier: cache.notifier,
   };
+  function buildChatService(models: ActiveModel[]) {
+    return createChatService(
+      models,
+      cache.chatSettings,
+      cache.shopConfig,
+      conversationRepository,
+      schedulingProvider,
+      cache.notifier,
+      aiStateStore,
+    );
+  }
 }
 
 // 快取不能包含資料庫
@@ -116,6 +123,7 @@ interface SharedProviders {
   jwtSecret: string;
   chatSettings: ChatSettings;
   activeModels: ActiveModel[];
+  testModels: ActiveModel[];
   shopConfig: ShopConfig;
   schedulingConfig: SchedulingConfig | null;
   lineClient: LineClient | null;
@@ -136,11 +144,14 @@ async function getSharedProviders(
   const system = await ensureInitialized(configRepository, userRepository);
   const telegramClient = createTelegramClient(await loadTelegramConfig(configRepository));
   const demoted = (await loadAiState(configRepository)).map((item) => item.name);
-
+  const aiKeys = await loadAiKeys(configRepository);
+  const activeModels = createLanguageModels(aiKeys, 'active', demoted);
+  const testModels = createLanguageModels(aiKeys, 'test', demoted);
   cachedProviders = {
     jwtSecret: system.jwtSecret,
     chatSettings: ChatSettingsSchema.parse(system),
-    activeModels: createLanguageModels(await loadAiKeys(configRepository), 'active', demoted),
+    activeModels,
+    testModels,
     shopConfig: await loadShopSettings(configRepository),
     schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
@@ -161,11 +172,13 @@ export function clearCachedProviders() {
 function withCacheReset(store: AiStateStore): AiStateStore {
   return {
     get: () => store.get(),
-    async demote(name, reason) {// 降級
+    async demote(name, reason) {
+      // 降級
       await store.demote(name, reason);
       clearCachedProviders();
     },
-    async restore(name) {// 復原降級
+    async restore(name) {
+      // 復原降級
       await store.restore(name);
       clearCachedProviders();
     },
