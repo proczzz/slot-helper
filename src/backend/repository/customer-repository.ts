@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS customers (
   display_name TEXT,
   picture_url TEXT,
   last_message TEXT,
-  last_message_at INTEGER
+  last_message_at INTEGER,
+  ai_paused_until INTEGER
 )`,
     params: [],
   },
@@ -27,7 +28,8 @@ const COLUMNS = `id, channel, name,
 display_name AS displayName, 
 picture_url AS pictureUrl, 
 last_message AS lastMessage, 
-last_message_at AS lastMessageAt`;
+last_message_at AS lastMessageAt,
+ai_paused_until AS aiPausedUntil`;
 
 const LIST = `SELECT ${COLUMNS} FROM customers 
 WHERE last_message_at < ? 
@@ -78,6 +80,14 @@ export function createCustomerRepository(database: Database): CustomerRepository
       await database.execute({
         sql: 'UPDATE customers SET last_message = ?, last_message_at = ? WHERE id = ?',
         params: [message, timestamp, id],
+      });
+    },
+
+    // null 代表恢復
+    async pauseAi(id, until) {
+      await database.execute({
+        sql: 'UPDATE customers SET ai_paused_until = ? WHERE id = ?',
+        params: [until, id],
       });
     },
   };

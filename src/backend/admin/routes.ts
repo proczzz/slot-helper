@@ -24,7 +24,7 @@ import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { ListModelsSchema, RestoreDemotionSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
-import { CustomerQuerySchema } from '../model/dto/customer.ts';
+import { AiPauseSchema, CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
@@ -238,6 +238,15 @@ adminRoutes.get('/customers/:id/messages', async (c) => {
       await conversationRepository.listMessages(id, before ? Number(before) : null, 50),
     ),
   );
+});
+
+// 暫停 AI 回覆這位顧客，期間沉默。minutes 傳 0 代表恢復。到期時間由後端算
+adminRoutes.post('/customers/ai-pause', async (c) => {
+  const { customerRepository } = c.var.services;
+  const { customerId, minutes } = AiPauseSchema.parse(await readJson(c));
+
+  await customerRepository.pauseAi(customerId, minutes > 0 ? Date.now() + minutes * 60_000 : null);
+  return c.json(jsend.success(null));
 });
 
 adminRoutes.post('/telegram/test', async (c) => {

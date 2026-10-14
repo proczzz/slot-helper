@@ -6,4 +6,5 @@ export interface Customer {
   pictureUrl: string | null;
   lastMessage: string | null;
   lastMessageAt: number | null;
+  aiPausedUntil: number | null;
 }

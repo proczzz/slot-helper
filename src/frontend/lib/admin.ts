@@ -337,6 +337,18 @@ export interface Customer {
   pictureUrl: string | null;
   lastMessage: string | null;
   lastMessageAt: number | null;
+  aiPausedUntil: number | null; // 這個時間之前 AI 完全不回應這位顧客
+}
+
+// minutes 傳 0 代表立即恢復。到期時間由後端算,不送時間戳
+export async function pauseCustomerAi(customerId: string, minutes: number): Promise<void> {
+  const response = await request('/api/admin/customers/ai-pause', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId, minutes }),
+  });
+
+  await assertOk(response);
 }
 
 export interface Message {

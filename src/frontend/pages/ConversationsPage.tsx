@@ -5,7 +5,9 @@ import {
   customerDisplayName,
   listCustomers,
   listMessages,
+  pauseCustomerAi,
   sendTestMessage,
+  type Customer,
   type Message,
   type ReplyTrace,
   type ToolCallRecord,
@@ -202,9 +204,10 @@ export function ConversationsPage() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 border-b border-base-200 p-4">
+            <div className="flex flex-wrap items-center gap-3 border-b border-base-200 p-4">
               <span className="font-semibold">{customerDisplayName(selected)}</span>
               <span className="badge badge-sm">{selected.channel}</span>
+              <AiPauseControl customer={selected} />
             </div>
 
             {/* 訊息由新到舊載入，顯示時靠 flex-col-reverse 反轉，所以第一個子元素在最下面 */}
@@ -273,6 +276,73 @@ export function ConversationsPage() {
         <div className="toast toast-end">
           <div className="alert alert-error">{loadError.message}</div>
         </div>
+      )}
+    </div>
+  );
+}
+
+const PAUSE_OPTIONS = [
+  { minutes: 60, label: '1 小時' },
+  { minutes: 60 * 24, label: '1 天' },
+  { minutes: 60 * 24 * 7, label: '1 週' },
+];
+
+// 暫停期間 AI 完全不回應這位顧客,由老闆自己接手。
+// 刻意不回罐頭訊息 —— 老闆正在跟顧客對話時會一直被插話
+function AiPauseControl({ customer }: { customer: Customer }) {
+  const [minutes, setMinutes] = useState(PAUSE_OPTIONS[0]!.minutes);
+  const queryClient = useQueryClient();
+
+  const pause = useMutation({
+    mutationFn: (next: number) => pauseCustomerAi(customer.id, next),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+
+  const until =
+    customer.aiPausedUntil && customer.aiPausedUntil > Date.now() ? customer.aiPausedUntil : null;
+
+  return (
+    <div className="ml-auto flex items-center gap-2">
+      {pause.isError && <span className="text-xs text-error">{pause.error.message}</span>}
+
+      {until ? (
+        <>
+          <span className="badge badge-warning badge-sm">AI 暫停至 {formatTime(until)}</span>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => pause.mutate(0)}
+            disabled={pause.isPending}
+          >
+            {pause.isPending && <span className="loading loading-spinner loading-xs" />}
+            恢復
+          </button>
+        </>
+      ) : (
+        <>
+          <select
+            className="select select-sm w-24"
+            value={minutes}
+            onChange={(event) => setMinutes(Number(event.target.value))}
+          >
+            {PAUSE_OPTIONS.map((option) => (
+              <option key={option.minutes} value={option.minutes}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => pause.mutate(minutes)}
+            disabled={pause.isPending}
+          >
+            {pause.isPending && <span className="loading loading-spinner loading-xs" />}
+            暫停 AI
+          </button>
+        </>
       )}
     </div>
   );

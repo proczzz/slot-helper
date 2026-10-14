@@ -27,6 +27,10 @@ export function createMessageService(
       const { channel, customerId, name, pictureUrl, text, replyTo } = incoming;
 
       try {
+        // 老闆接手中:沉默，連訊息都不存
+        const customer = await customerRepository.findById(customerId);
+        if (customer?.aiPausedUntil && customer.aiPausedUntil > Date.now()) return;
+
         // 更新用戶資料
         await customerRepository.upsertProfile({ id: customerId, channel, name, pictureUrl });
 

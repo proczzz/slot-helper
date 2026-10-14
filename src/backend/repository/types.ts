@@ -40,6 +40,7 @@ export interface CustomerRepository {
   }): Promise<void>;
   updateDisplayName(id: string, displayName: string | null): Promise<void>;
   updateLastMessage(id: string, message: string, timestamp: number): Promise<void>;
+  pauseAi(id: string, until: number | null): Promise<void>;
 }
 
 export interface ConversationRepository {
