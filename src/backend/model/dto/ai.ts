@@ -12,7 +12,7 @@ const AiKeyRequestSchema = z.object({
 });
 
 // 列出可用AI模型請求 (沒送 apiKey 時用 name 去找已儲存的那把)
-export const ListModelsSchema = z
+export const ListModelsRequestSchema = z
   .object({
     provider: z.string().min(1, '請選擇供應商'),
     apiKey: z.string().min(1).optional(),
@@ -21,8 +21,8 @@ export const ListModelsSchema = z
   .refine((input) => input.apiKey ?? input.name, '請提供 API key 或名稱');
 
 // 復原停用 aikey 請求
-export const RestoreDemotionSchema = z.object({
-  name: z.string().min(1, '請指定要解除的名稱'),
+export const RestoreDemotionRequestSchema = z.object({
+  keyName: z.string().min(1, '請指定要解除的名稱'),
 });
 
 export const aiConfigMapper: ConfigMapper = {

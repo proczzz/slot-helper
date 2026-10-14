@@ -26,6 +26,8 @@ import type {
   UserRepository,
 } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
+import { createAiService, type AiService } from './ai-service.ts';
+import { createConfigService, type ConfigService } from './config-service.ts';
 import {
   createAiStateStore,
   createTokenStore,
@@ -56,6 +58,8 @@ export interface Services {
   customerRepository: CustomerRepository;
   conversationRepository: ConversationRepository;
   adminAuth: AdminAuth; // 身分驗證模組
+  configService: ConfigService; // 後台通用設定端點
+  aiService: AiService;
   schedulingProvider: SchedulingProvider | null; // 日曆
   chatService: ChatService | null; // 核心處理訊息服務
   testChatService: ChatService | null; // 測試專用key
@@ -76,11 +80,13 @@ export async function createServices(database: Database): Promise<Services> {
 
   const cache = await getSharedProviders(configRepository, userRepository);
 
+  const configService = createConfigService(configRepository, clearCachedProviders);
   const schedulingProvider = createSchedulingProvider(
     cache.schedulingConfig,
     createTokenStore(configRepository),
   );
-  const aiStateStore = withCacheReset(createAiStateStore(configRepository));
+  const aiStateStore = createAiStateStore(configRepository, clearCachedProviders);
+  const aiService = createAiService(configRepository, aiStateStore);
   const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
@@ -98,6 +104,8 @@ export async function createServices(database: Database): Promise<Services> {
     customerRepository,
     conversationRepository,
     adminAuth,
+    configService,
+    aiService,
     schedulingProvider,
     chatService,
     testChatService,
@@ -168,22 +176,4 @@ async function getSharedProviders(
 // 後台儲存設定後呼叫。Cloudflare 上只清得掉當前 isolate，其他 isolate 要等自己重建
 export function clearCachedProviders() {
   cachedProviders = undefined;
-}
-
-// 降級與解除都會改變候選清單,寫入後讓快取重建。
-// Cloudflare 上只清得掉當前 isolate,其他 isolate 要等自己重算
-function withCacheReset(store: AiStateStore): AiStateStore {
-  return {
-    get: () => store.get(),
-    async demote(name, reason) {
-      // 降級
-      await store.demote(name, reason);
-      clearCachedProviders();
-    },
-    async restore(name) {
-      // 復原降級
-      await store.restore(name);
-      clearCachedProviders();
-    },
-  };
 }

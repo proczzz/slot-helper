@@ -1,36 +1,24 @@
 import { Context, Hono } from 'hono';
 import { setCookie } from 'hono/cookie';
-import { listAvailableModels } from '../adapter/ai/index.ts';
 import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
 import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
-import {
-  createAiStateStore,
-  createTokenStore,
-  loadAiKeys,
-  loadAiState,
-  loadOutlookSettings,
-  loadTelegramConfig,
-  SECTION_MAPPERS,
-  SECTION_SCHEMAS,
-} from '../app/config.ts';
+import { createTokenStore, loadOutlookSettings, loadTelegramConfig } from '../app/config.ts';
 import {
   OAUTH_COOKIE_PATH,
   OAUTH_REDIRECT_COOKIE,
   OAUTH_STATE_COOKIE,
 } from '../app/oauth-routes.ts';
 import type { AppVariables } from '../app/services.ts';
-import { clearCachedProviders } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import { ListModelsSchema, RestoreDemotionSchema } from '../model/dto/ai.ts';
+import { ListModelsRequestSchema, RestoreDemotionRequestSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { AiPauseSchema, CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
-import { ChangePasswordSchema } from '../model/dto/password.ts';
+import { ChangePasswordRequestSchema } from '../model/dto/password.ts';
 import { WebhookSchema } from '../model/dto/telegram.ts';
-import type { ConfigKey } from '../repository/types.ts';
 import { clearSessionCookie, readSessionCookie, setSessionCookie } from './auth.ts';
 
 type AdminVariables = {
@@ -40,20 +28,16 @@ type AdminVariables = {
 const adminRoutes = new Hono<AdminVariables>();
 
 adminRoutes.post('/login', async (c) => {
-  // Step1. 檢查:環境配置&驗證密碼
   const { adminAuth, notifier } = c.var.services;
   const { username, password } = LoginSchema.parse(await readJson(c));
+  // 驗證密碼
   const authenticated = await adminAuth.authenticate(username, password);
   // [背景] 登入通知
   c.var.runInBackground(notifier.login({ success: authenticated, ip: clientIp(c) }));
 
-  if (!authenticated) {
-    return c.json(jsend.fail('帳號或密碼錯誤'), 401);
-  }
+  if (!authenticated) return c.json(jsend.fail('帳號或密碼錯誤'), 401);
 
-  // Step2. 發 jwt 憑證
   setSessionCookie(c, await adminAuth.issueToken(username));
-
   return c.json(jsend.success(null));
 });
 
@@ -67,94 +51,64 @@ adminRoutes.use('/*', async (c, next) => {
   const { adminAuth } = c.var.services;
   const token = readSessionCookie(c);
   const username = token ? await adminAuth.verifyToken(token) : null;
-  if (!username) {
-    return c.body(null, 401);
-  }
+
+  if (!username) return c.body(null, 401);
 
   c.set('username', username);
   await next();
-  setSessionCookie(c, await adminAuth.issueToken(username));
+  setSessionCookie(c, await adminAuth.issueToken(username)); // 更新 jwt
 });
 
-adminRoutes.get('/me', (c) => c.json(jsend.success(null)));
+adminRoutes.get('/me', (c) => c.json(jsend.success({ username: c.var.username })));
 
-adminRoutes.post('/password', async (c) => {
+adminRoutes.post('/me/password', async (c) => {
   const { adminAuth } = c.var.services;
-  const { currentPassword, newPassword } = ChangePasswordSchema.parse(await readJson(c));
+  const { currentPassword, newPassword } = ChangePasswordRequestSchema.parse(await readJson(c));
+  // 驗證密碼
+  const changed = await adminAuth.changePassword(c.var.username, currentPassword, newPassword);
 
-  if (!(await adminAuth.changePassword(c.var.username, currentPassword, newPassword))) {
-    return c.json(jsend.fail({ currentPassword: '目前密碼錯誤' }), 400);
-  }
+  if (!changed) return c.json(jsend.fail({ currentPassword: '目前密碼錯誤' }), 400);
 
   return c.json(jsend.success(null));
 });
 
 adminRoutes.get('/config/:section', async (c) => {
-  const { configRepository } = c.var.services;
-  const section = c.req.param('section') as ConfigKey;
+  const { configService } = c.var.services;
+  const section = c.req.param('section');
 
-  if (!SECTION_SCHEMAS[section]) return c.json(jsend.fail('未知的設定區塊'), 400);
-
-  const raw = await configRepository.get(section);
-  if (!raw) return c.json(jsend.success(null));
-
-  const stored = JSON.parse(raw) as unknown;
-  const mapper = SECTION_MAPPERS[section];
-
-  return c.json(jsend.success(mapper ? mapper.toVo(stored) : stored));
+  const config = await configService.read(section);
+  return c.json(jsend.success(config));
 });
 
 adminRoutes.put('/config/:section', async (c) => {
-  const { configRepository } = c.var.services;
-  const section = c.req.param('section') as ConfigKey;
+  const { configService } = c.var.services;
+  const section = c.req.param('section');
+  const body = await readJson(c);
 
-  const schema = SECTION_SCHEMAS[section];
-  if (!schema) return c.json(jsend.fail('未知的設定區塊'), 400);
-
-  const body = (await readJson(c)) as unknown;
-  const mapper = SECTION_MAPPERS[section];
-
-  let value: unknown;
-  if (mapper) {
-    const raw = await configRepository.get(section);
-    value = mapper.toConfig(body, raw ? JSON.parse(raw) : null);
-  } else {
-    value = schema.parse(body);
-  }
-
-  await configRepository.set(section, JSON.stringify(value));
-  clearCachedProviders();
-
+  await configService.write(section, body);
   return c.json(jsend.success(null));
 });
 
 adminRoutes.post('/ai/models', async (c) => {
-  const { configRepository } = c.var.services;
-  const { provider, apiKey, name } = ListModelsSchema.parse(await readJson(c));
+  const { aiService } = c.var.services;
+  const request = ListModelsRequestSchema.parse(await readJson(c));
 
-  // 前端手上只有遮罩時會送 name,由後端自己讀出那把 key
-  const key =
-    apiKey ?? (await loadAiKeys(configRepository)).find((item) => item.name === name)?.apiKey;
-  if (!key) throw new ExpectedError('找不到這組 API key，請先儲存設定或重新輸入');
-
-  return c.json(jsend.success(await listAvailableModels(provider, key)));
+  const models = await aiService.listModels(request);
+  return c.json(jsend.success(models));
 });
 
-// 系統自動停用的 key:永久失效(401/402/400 這類)時寫入,老闆處理完再解除
 adminRoutes.get('/ai/demotions', async (c) => {
-  const { configRepository } = c.var.services;
+  const { aiService } = c.var.services;
 
-  return c.json(jsend.success(await loadAiState(configRepository)));
+  const demotions = await aiService.demotions();
+  return c.json(jsend.success(demotions));
 });
 
-// 名稱是老闆自己取的字串,可能含斜線,所以放 body 不放路徑
 adminRoutes.post('/ai/demotions/restore', async (c) => {
-  const { configRepository } = c.var.services;
-  const { name } = RestoreDemotionSchema.parse(await readJson(c));
+  const { aiService } = c.var.services;
+  const { keyName } = RestoreDemotionRequestSchema.parse(await readJson(c));
 
-  await createAiStateStore(configRepository).restore(name);
-  clearCachedProviders(); // 候選清單要重算
-
+  await aiService.restore(keyName);
   return c.json(jsend.success(null));
 });
 

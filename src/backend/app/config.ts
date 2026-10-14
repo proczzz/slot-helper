@@ -7,13 +7,11 @@ import {
   type AiStateStore,
 } from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
-import { GoogleCalendarSettingsSchema } from '../adapter/scheduling/google-calendar.ts';
 import { providers } from '../adapter/scheduling/index.ts';
 import {
   OutlookOauthSchema,
   type OutlookOauthSettings,
 } from '../adapter/scheduling/outlook-oauth.ts';
-import { OutlookSettingsSchema } from '../adapter/scheduling/outlook.ts';
 import {
   SchedulingSelectionSchema,
   type SchedulingConfig,
@@ -23,37 +21,7 @@ import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/t
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
 import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
 import { SystemConfigSchema, type SystemConfig } from '../core/system-config.ts';
-import { aiConfigMapper } from '../model/dto/ai.ts';
-import { googleCalendarConfigMapper } from '../model/dto/google-calendar.ts';
-import { lineConfigMapper } from '../model/dto/line.ts';
-import { outlookConfigMapper } from '../model/dto/outlook.ts';
-import { telegramConfigMapper } from '../model/dto/telegram.ts';
-import type { ConfigMapper } from '../model/dto/types.ts';
-import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
-
-// [白名單]後台可寫入的配置，scheduling-state 資料不在其中(禁止寫入)
-export const SECTION_SCHEMAS: Partial<Record<ConfigKey, z.ZodType>> = {
-  system: SystemConfigSchema,
-  shop: ShopConfigSchema,
-  ai: AiConfigSchema,
-  scheduling: SchedulingSelectionSchema,
-  'google-calendar': GoogleCalendarSettingsSchema,
-  outlook: OutlookSettingsSchema,
-  line: LineConfigSchema,
-  telegram: TelegramConfigSchema,
-  whatsapp: WhatsappConfigSchema,
-};
-
-// 有 mapper 的區塊由它決定怎麼綁與怎麼顯示;沒有的原樣存取
-export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
-  ai: aiConfigMapper,
-  'google-calendar': googleCalendarConfigMapper,
-  outlook: outlookConfigMapper,
-  line: lineConfigMapper,
-  telegram: telegramConfigMapper,
-  whatsapp: whatsappConfigMapper,
-};
 
 export function loadSystemConfig(configRepository: ConfigRepository): Promise<SystemConfig> {
   return loadSection(configRepository, 'system', SystemConfigSchema, SystemConfigSchema.parse({}));
@@ -68,7 +36,10 @@ export function loadAiState(configRepository: ConfigRepository): Promise<AiState
 }
 
 // 把 key 綁死在 ai-state 的 ConfigRepository,對標 createTokenStore
-export function createAiStateStore(configRepository: ConfigRepository): AiStateStore {
+export function createAiStateStore(
+  configRepository: ConfigRepository,
+  onChange: () => void, // 候選清單要重算
+): AiStateStore {
   return {
     get() {
       return loadAiState(configRepository);
@@ -79,6 +50,7 @@ export function createAiStateStore(configRepository: ConfigRepository): AiStateS
       if (current.some((item) => item.name === name)) return; // 已經降級過
 
       await saveAiState(configRepository, [...current, { name, reason, at: Date.now() }]);
+      onChange();
     },
 
     async restore(name) {
@@ -87,6 +59,7 @@ export function createAiStateStore(configRepository: ConfigRepository): AiStateS
         configRepository,
         current.filter((item) => item.name !== name),
       );
+      onChange();
     },
   };
 }

@@ -206,7 +206,7 @@ export async function getOutlookCalendars(): Promise<OutlookCalendar[]> {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  const response = await request('/api/admin/password', {
+  const response = await request('/api/admin/me/password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ currentPassword, newPassword }),
