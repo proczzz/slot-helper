@@ -85,9 +85,11 @@ export async function createServices(database: Database): Promise<Services> {
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
   const messageService = createMessageService(
-    chatService,
+    cache.systemConfig,
     customerRepository,
-    cache.systemConfig.fallbackReply,
+    conversationRepository,
+    chatService,
+    cache.notifier,
   );
   const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
 

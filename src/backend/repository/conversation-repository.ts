@@ -25,13 +25,13 @@ export const CREATE_MESSAGES_TABLE: Statement[] = [
 
 export function createConversationRepository(database: Database): ConversationRepository {
   return {
-    async getMessages(sessionId, limit, since) {
+    async getMessages(sessionId, limit, after) {
       // 先由新到舊取最後 N 筆,再反轉成時間順序交給 AI
       const rows = await database.query<Message>({
         sql: `SELECT role, content, timestamp FROM messages
               WHERE session_id = ? AND timestamp >= ?
               ORDER BY id DESC LIMIT ?`,
-        params: [sessionId, since, limit],
+        params: [sessionId, after, limit],
       });
       return rows.reverse();
     },
@@ -63,6 +63,15 @@ export function createConversationRepository(database: Database): ConversationRe
           ],
         })),
       );
+    },
+
+    async countUserMessages(sessionId, after) {
+      const rows = await database.query<{ count: number }>({
+        sql: `SELECT COUNT(*) AS count FROM messages
+              WHERE session_id = ? AND role = 'user' AND timestamp >= ?`,
+        params: [sessionId, after],
+      });
+      return rows[0]?.count ?? 0;
     },
   };
 }

@@ -5,6 +5,7 @@ export interface Notifier {
   login(details: { success: boolean; ip: string }): Promise<void>;
   systemError(where: string, error: unknown): Promise<void>;
   reportAgentIssue(message: string): Promise<void>;
+  customerPaused(customer: string, minutes: number): Promise<void>;
 }
 
 const MAX_LENGTH = 3000; // 最長通知字數限制
@@ -35,6 +36,11 @@ export function createNotifier(telegramClient: TelegramClient | null): Notifier 
     },
     reportAgentIssue(message) {
       return send(`🤖: ${message}`);
+    },
+    customerPaused(customer, minutes) {
+      return send(
+        `⏸️ 顧客 ${customer} 對話過於頻繁，已暫停 AI ${minutes} 分鐘\n可以到後台提前恢復`,
+      );
     },
   };
 }
