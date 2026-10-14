@@ -3,14 +3,14 @@ import type { ActiveModel } from '../adapter/ai/types.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
-import type { SchedulingConfig, SchedulingProvider } from '../adapter/scheduling/types.ts';
+import type { SchedulingConfig } from '../adapter/scheduling/types.ts';
 import { createTelegramClient } from '../adapter/telegram/telegram-client.ts';
 import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
 import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
 import type { AdminAuth } from '../admin/auth.ts';
 import { createAdminAuth } from '../admin/auth.ts';
-import { createChatService, type ChatService } from '../core/chat-service.ts';
+import { createChatService } from '../core/chat-service.ts';
 import { createMessageService, type MessageService } from '../core/message-service.ts';
 import { createNotifier, type Notifier } from '../core/notifications.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
@@ -19,12 +19,7 @@ import type { Database } from '../db/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
 import { createCustomerRepository } from '../repository/customer-repository.ts';
-import type {
-  ConfigRepository,
-  ConversationRepository,
-  CustomerRepository,
-  UserRepository,
-} from '../repository/types.ts';
+import type { ConfigRepository, UserRepository } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
 import { createAiService, type AiService } from './ai-service.ts';
 import { createCalendarService, type CalendarService } from './calendar-service.ts';
@@ -58,17 +53,12 @@ export type AppVariables = {
 export interface Services {
   // 包含 Database ，不可放進快取跨請求共用
   configRepository: ConfigRepository;
-  customerRepository: CustomerRepository;
-  conversationRepository: ConversationRepository;
   adminAuth: AdminAuth; // 身分驗證模組
   configService: ConfigService; // 後台通用設定端點
   aiService: AiService;
   calendarService: CalendarService;
   telegramService: TelegramService;
   customerService: CustomerService;
-  schedulingProvider: SchedulingProvider | null; // 日曆
-  chatService: ChatService | null; // 核心處理訊息服務
-  testChatService: ChatService | null; // 測試專用key
   messageService: MessageService | null;
 
   // 從設定字串建立，可跨請求共用
@@ -114,17 +104,12 @@ export async function createServices(database: Database): Promise<Services> {
 
   return {
     configRepository,
-    customerRepository,
-    conversationRepository,
     adminAuth,
     configService,
     aiService,
     calendarService,
     telegramService,
     customerService,
-    schedulingProvider,
-    chatService,
-    testChatService,
     messageService,
 
     lineClient: cache.lineClient,
