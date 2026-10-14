@@ -4,19 +4,19 @@ import type { ConfigRepository, UserRepository } from '../repository/types.ts';
 
 export const ADMIN_USERNAME = 'admin';
 
-const SystemConfigSchema = z.object({
+const SystemStateSchema = z.object({
   jwtSecret: z.string(),
   initializedAt: z.string(),
 });
 
-export type SystemConfig = z.infer<typeof SystemConfigSchema>;
+export type SystemState = z.infer<typeof SystemStateSchema>;
 
 export async function ensureInitialized(
   configRepository: ConfigRepository,
   userRepository: UserRepository,
-): Promise<SystemConfig> {
-  const raw = await configRepository.get('system'); // 有Secret就當初始化過
-  if (raw) return SystemConfigSchema.parse(JSON.parse(raw));
+): Promise<SystemState> {
+  const raw = await configRepository.get('system-state'); // 有 secret 就當初始化過
+  if (raw) return SystemStateSchema.parse(JSON.parse(raw));
 
   return initialize(configRepository, userRepository);
 }
@@ -24,7 +24,7 @@ export async function ensureInitialized(
 async function initialize(
   configRepository: ConfigRepository,
   userRepository: UserRepository,
-): Promise<SystemConfig> {
+): Promise<SystemState> {
   // 先建'管理帳號'，後建'jwtSecret'，避免jwtSecret成功、管理帳號失敗(沒帳號登入)
   const password = crypto.randomUUID();
   await userRepository.insert({
@@ -34,7 +34,7 @@ async function initialize(
   });
 
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const system = SystemConfigSchema.parse({
+  const system = SystemStateSchema.parse({
     jwtSecret: btoa(String.fromCharCode(...bytes)),
     initializedAt: new Date().toISOString(),
   });

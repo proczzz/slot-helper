@@ -5,6 +5,7 @@ import type { User } from '../model/entity/user.ts';
 // config 表中的 key
 export type ConfigKey =
   | 'system'
+  | 'system-state'
   | 'ai'
   | 'ai-state'
   | 'shop'

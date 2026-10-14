@@ -1,4 +1,5 @@
 import { generateText, stepCountIs } from 'ai';
+import { describeFailure, isPermanentFailure } from '../adapter/ai/errors.ts';
 import type { ActiveModel, AiStateStore } from '../adapter/ai/types.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
 import type { ChatResponse } from '../model/dto/chat.ts';
@@ -8,8 +9,7 @@ import type { Notifier } from './notifications.ts';
 import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
 import { createSupportTools } from './support-tools.ts';
-import type { ChatSettings } from './system-config.ts';
-import { describeFailure, isPermanentFailure } from '../adapter/ai/errors.ts';
+import type { SystemConfig } from './system-config.ts';
 
 export interface ChatService {
   handleChat(
@@ -23,7 +23,7 @@ const DAY_MS = 24 * 60 * 60_000;
 
 export function createChatService(
   activeModels: ActiveModel[], // lib & properties
-  chatSettings: ChatSettings, // properties
+  systemConfig: SystemConfig, // properties
   shopConfig: ShopConfig, // properties
   conversationRepository: ConversationRepository, // repository
   schedulingProvider: SchedulingProvider | null, // service
@@ -39,11 +39,11 @@ export function createChatService(
 
       // Step1. 讀歷史對話(限制訊息輪數&過濾太久的訊息)。設定0輪代表停用，不查資料庫
       const history =
-        chatSettings.historyTurns !== 0
+        systemConfig.historyTurns !== 0
           ? await conversationRepository.getMessages(
               customerId,
-              chatSettings.historyTurns * 2,
-              receivedAt - chatSettings.historyDays * DAY_MS,
+              systemConfig.historyTurns * 2,
+              receivedAt - systemConfig.historyDays * DAY_MS,
             )
           : [];
       const messages = [
@@ -73,7 +73,7 @@ export function createChatService(
         { role: 'user', content: message, timestamp: receivedAt },
         {
           role: hasReply ? 'assistant' : 'fallback',
-          content: hasReply ? result.text : chatSettings.fallbackReply,
+          content: hasReply ? result.text : systemConfig.fallbackReply,
           timestamp: Date.now(),
           provider: used.provider,
           model: used.modelName,
@@ -81,7 +81,7 @@ export function createChatService(
         },
       ]);
 
-      return { reply: hasReply ? result.text : chatSettings.fallbackReply };
+      return { reply: hasReply ? result.text : systemConfig.fallbackReply };
 
       // 主要 key 失效就換下一組候選,但只在「還沒有工具執行過」的時候 ——
       // 否則重跑會重放副作用,日曆上那筆預約已經存在了
@@ -96,7 +96,7 @@ export function createChatService(
               system: buildSystemPrompt(shopConfig, customerName),
               messages,
               tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
-              stopWhen: stepCountIs(chatSettings.maxSteps), // 工具最多操作次數上限，超過時終止
+              stopWhen: stepCountIs(systemConfig.maxSteps), // 工具最多操作次數上限，超過時終止
               onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
                 touched = true;
                 if (toolOutput.type === 'tool-error')
@@ -105,7 +105,8 @@ export function createChatService(
             });
             return { result, used: candidate };
           } catch (error) {
-            if (isPermanentFailure(error)) { // 等待後也無法復原的問題:降級key
+            if (isPermanentFailure(error)) {
+              // 等待後也無法復原的問題:降級key
               await aiState.demote(candidate.name, describeFailure(error));
             }
 

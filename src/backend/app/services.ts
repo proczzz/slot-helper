@@ -14,7 +14,7 @@ import { createChatService, type ChatService } from '../core/chat-service.ts';
 import { createMessageService, type MessageService } from '../core/message-service.ts';
 import { createNotifier, type Notifier } from '../core/notifications.ts';
 import type { ShopConfig } from '../core/shop-config.ts';
-import { ChatSettingsSchema, type ChatSettings } from '../core/system-config.ts';
+import type { SystemConfig } from '../core/system-config.ts';
 import type { Database } from '../db/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
@@ -34,6 +34,7 @@ import {
   loadLineConfig,
   loadSchedulingConfig,
   loadShopSettings,
+  loadSystemConfig,
   loadTelegramConfig,
   loadWhatsappConfig,
 } from './config.ts';
@@ -86,7 +87,7 @@ export async function createServices(database: Database): Promise<Services> {
   const messageService = createMessageService(
     chatService,
     customerRepository,
-    cache.chatSettings.fallbackReply,
+    cache.systemConfig.fallbackReply,
   );
   const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
 
@@ -108,7 +109,7 @@ export async function createServices(database: Database): Promise<Services> {
   function buildChatService(models: ActiveModel[]) {
     return createChatService(
       models,
-      cache.chatSettings,
+      cache.systemConfig,
       cache.shopConfig,
       conversationRepository,
       schedulingProvider,
@@ -121,7 +122,7 @@ export async function createServices(database: Database): Promise<Services> {
 // 快取不能包含資料庫
 interface SharedProviders {
   jwtSecret: string;
-  chatSettings: ChatSettings;
+  systemConfig: SystemConfig;
   activeModels: ActiveModel[];
   testModels: ActiveModel[];
   shopConfig: ShopConfig;
@@ -141,15 +142,15 @@ async function getSharedProviders(
 ): Promise<SharedProviders> {
   if (cachedProviders) return cachedProviders;
 
-  const system = await ensureInitialized(configRepository, userRepository);
+  const state = await ensureInitialized(configRepository, userRepository);
   const telegramClient = createTelegramClient(await loadTelegramConfig(configRepository));
   const demoted = (await loadAiState(configRepository)).map((item) => item.name);
   const aiKeys = await loadAiKeys(configRepository);
   const activeModels = createLanguageModels(aiKeys, 'active', demoted);
   const testModels = createLanguageModels(aiKeys, 'test', demoted);
   cachedProviders = {
-    jwtSecret: system.jwtSecret,
-    chatSettings: ChatSettingsSchema.parse(system),
+    jwtSecret: state.jwtSecret,
+    systemConfig: await loadSystemConfig(configRepository),
     activeModels,
     testModels,
     shopConfig: await loadShopSettings(configRepository),
