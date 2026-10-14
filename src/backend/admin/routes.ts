@@ -1,8 +1,6 @@
 import { Context, Hono } from 'hono';
-import { loadTelegramConfig } from '../app/config.ts';
 import { startOauthSession } from '../app/oauth-cookies.ts';
 import type { AppVariables } from '../app/services.ts';
-import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { ListModelsRequestSchema, RestoreDemotionRequestSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
@@ -172,57 +170,23 @@ adminRoutes.post('/customers/ai-pause', async (c) => {
 });
 
 adminRoutes.post('/telegram/test', async (c) => {
-  const { telegramClient } = c.var.services;
-  if (!telegramClient) return c.json(jsend.fail('Telegram 尚未設定，請先儲存設定'), 400);
-
-  // 這支端點的用途就是診斷,所以把 Telegram 的錯誤原文交給老闆,而不是丟給 error-handler 變成 500
-  try {
-    await telegramClient.sendText('SlotHelper 測試訊息\n\n恭喜你成功接通 Telegram !! 🥳🥳');
-  } catch (error) {
-    return c.json(jsend.fail(error instanceof Error ? error.message : '發送失敗'), 400);
-  }
+  const { telegramService } = c.var.services;
+  await telegramService.sendTest();
 
   return c.json(jsend.success(null));
 });
 
 adminRoutes.get('/telegram/webhook', async (c) => {
-  const { telegramClient } = c.var.services;
-  if (!telegramClient) return c.json(jsend.success(null));
+  const { telegramService } = c.var.services;
 
-  return c.json(jsend.success(await telegramClient.getWebhookInfo()));
+  return c.json(jsend.success(await telegramService.webhookInfo()));
 });
 
 adminRoutes.post('/telegram/webhook', async (c) => {
-  const { telegramClient, configRepository } = c.var.services;
-  const config = await loadTelegramConfig(configRepository);
-  if (!telegramClient || !config) {
-    return c.json(jsend.fail('Telegram 尚未設定，請先儲存設定'), 400);
-  }
-
-  // 網址由前端給。後端自己推導的話,反向代理會終止 TLS、內網後台的網域也不是對外網域,
-  // 都推不出正確的值;瀏覽器本來就知道自己連的是哪裡。
-  // 已登入者能把 webhook 指到任意網址,但他本來就能直接改密碼,不構成新的權限提升
+  const { telegramService } = c.var.services;
   const { url } = WebhookSchema.parse(await readJson(c));
 
-  // 純機器對機器的驗證碼,老闆不需要看到也不需要輸入,每次註冊都換新的
-  const webhookSecret = crypto.randomUUID();
-
-  // 先向 Telegram 註冊、成功才寫回設定。
-  // 反過來的話註冊失敗就會留下一個 Telegram 不知道的驗證碼,原本還能用的 webhook 會跟著壞掉
-  try {
-    await telegramClient.setWebhook(url, webhookSecret);
-  } catch (error) {
-    return c.json(jsend.fail(error instanceof Error ? error.message : '註冊失敗'), 400);
-  }
-
-  await configRepository.set('telegram', JSON.stringify({ ...config, webhookSecret }));
-
-  // 指令清單只影響「/」選單,失敗不該讓整個註冊算失敗
-  await telegramClient.setCommands(TELEGRAM_COMMANDS).catch((error) => {
-    console.error('設定 Telegram 指令清單失敗:', error);
-  });
-
-  return c.json(jsend.success(await telegramClient.getWebhookInfo()));
+  return c.json(jsend.success(await telegramService.registerWebhook(url)));
 });
 
 const TEST_CHANNEL = 'test';

@@ -42,6 +42,7 @@ import {
   loadWhatsappConfig,
 } from './config.ts';
 import { ensureInitialized } from './initialize.ts';
+import { createTelegramService, type TelegramService } from './telegram-service.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {
@@ -62,6 +63,7 @@ export interface Services {
   configService: ConfigService; // 後台通用設定端點
   aiService: AiService;
   calendarService: CalendarService;
+  telegramService: TelegramService;
   schedulingProvider: SchedulingProvider | null; // 日曆
   chatService: ChatService | null; // 核心處理訊息服務
   testChatService: ChatService | null; // 測試專用key
@@ -90,6 +92,7 @@ export async function createServices(database: Database): Promise<Services> {
   const aiStateStore = createAiStateStore(configRepository, clearCachedProviders);
   const aiService = createAiService(configRepository, aiStateStore);
   const calendarService = createCalendarService(configRepository, schedulingProvider);
+  const telegramService = createTelegramService(configRepository, cache.telegramClient);
   const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
@@ -110,6 +113,7 @@ export async function createServices(database: Database): Promise<Services> {
     configService,
     aiService,
     calendarService,
+    telegramService,
     schedulingProvider,
     chatService,
     testChatService,
