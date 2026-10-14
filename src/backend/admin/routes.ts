@@ -1,13 +1,8 @@
 import { Context, Hono } from 'hono';
-import { setCookie } from 'hono/cookie';
 import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
 import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
 import { createTokenStore, loadOutlookSettings, loadTelegramConfig } from '../app/config.ts';
-import {
-  OAUTH_COOKIE_PATH,
-  OAUTH_REDIRECT_COOKIE,
-  OAUTH_STATE_COOKIE,
-} from '../app/oauth-routes.ts';
+import { startOauthSession } from '../app/oauth-cookies.ts';
 import type { AppVariables } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
@@ -121,27 +116,17 @@ adminRoutes.get('/calendar/labels', async (c) => {
   return c.json(jsend.success(labels));
 });
 
-const OAUTH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true, // 同 admin cookie,本機用 http 開發要改 false
-  sameSite: 'Lax', // callback 是跨站頂層導覽,Strict 不會送出
-  path: OAUTH_COOKIE_PATH,
-  maxAge: 600, // 老闆同意的過程就10分鐘內
-} as const;
-
 // 取得微軟授權頁url，並預留cookies給callback頁，前端自己跳轉
 adminRoutes.post('/outlook/authorize', async (c) => {
   const { configRepository } = c.var.services;
+  const { redirectUri } = OutlookAuthorizeSchema.parse(await readJson(c));
+
   const settings = await loadOutlookSettings(configRepository);
   if (!settings) {
     return c.json(jsend.fail('請先儲存 Client ID 與用戶端密碼'), 400);
   }
 
-  const { redirectUri } = OutlookAuthorizeSchema.parse(await readJson(c));
-  const state = crypto.randomUUID();
-
-  setCookie(c, OAUTH_REDIRECT_COOKIE, redirectUri, OAUTH_COOKIE_OPTIONS);
-  setCookie(c, OAUTH_STATE_COOKIE, state, OAUTH_COOKIE_OPTIONS);
+  const state = startOauthSession(c, redirectUri);
 
   // 組同意授權頁的 url 給前端
   return c.json(jsend.success({ url: buildAuthorizeUrl(settings, redirectUri, state) }));
