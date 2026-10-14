@@ -1,5 +1,6 @@
 import { SignJWT, importPKCS8 } from 'jose';
 import z from 'zod';
+import { ExpectedError } from '../../core/app-error.ts';
 import { toAbsoluteTime } from '../../core/time.ts';
 import type {
   Event,
@@ -258,7 +259,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
 async function assertOk(response: Response, action: string): Promise<void> {
   if (response.ok) return;
   const body = (await response.text()).replace(/\s+/g, ' ').trim();
-  throw new Error(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
+  throw new ExpectedError(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
 }
 
 // 建立與更新的 body 完全相同(更新是 PUT 整筆取代)

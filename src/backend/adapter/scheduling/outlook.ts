@@ -227,7 +227,7 @@ export const outlookProvider: SchedulingProviderDefinition = {
 async function assertOk(response: Response, action: string): Promise<void> {
   if (response.ok) return;
   const body = (await response.text()).replace(/\s+/g, ' ').trim();
-  throw new Error(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
+  throw new ExpectedError(`Failed to ${action}: ${response.status} ${response.statusText} ${body}`);
 }
 
 // 建立與更新的 body 完全相同

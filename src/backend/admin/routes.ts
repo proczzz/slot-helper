@@ -114,9 +114,11 @@ adminRoutes.post('/ai/demotions/restore', async (c) => {
 
 adminRoutes.get('/calendar/labels', async (c) => {
   const { schedulingProvider } = c.var.services;
+
   if (!schedulingProvider) return c.json(jsend.success([]));
 
-  return c.json(jsend.success(await schedulingProvider.getLabels()));
+  const labels = await schedulingProvider.getLabels();
+  return c.json(jsend.success(labels));
 });
 
 const OAUTH_COOKIE_OPTIONS = {
@@ -164,15 +166,12 @@ adminRoutes.delete('/outlook/connection', async (c) => {
 // 診斷性質的端點,所以把 Graph 的錯誤原文交給老闆,而不是丟給 error-handler 變成 500
 adminRoutes.get('/outlook/calendars', async (c) => {
   const { configRepository } = c.var.services;
+
   const settings = await loadOutlookSettings(configRepository);
   if (!settings) return c.json(jsend.success([]));
 
-  try {
-    const calendars = await fetchOutlookCalendars(settings, createTokenStore(configRepository));
-    return c.json(jsend.success(calendars));
-  } catch (error) {
-    return c.json(jsend.fail(error instanceof Error ? error.message : '讀取日曆清單失敗'), 400);
-  }
+  const calendars = await fetchOutlookCalendars(settings, createTokenStore(configRepository));
+  return c.json(jsend.success(calendars));
 });
 
 adminRoutes.get('/customers', async (c) => {
