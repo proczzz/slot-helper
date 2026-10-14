@@ -53,13 +53,17 @@ export async function saveSection<T>(section: Section, data: T): Promise<void> {
   await assertOk(response);
 }
 
-// system 區塊的 VO 與 Request 形狀相同 —— jwtSecret 由後端的 mapper 擋住,
-// 前端從頭到尾不知道它存在
+// system 區塊沒有 mapper,VO 與 Request 形狀相同。
+// jwtSecret 在 system-state 那一列,前端讀不到也寫不到
 export interface SystemConfigVo {
   historyTurns: number;
   historyDays: number;
   maxSteps: number;
   fallbackReply: string;
+  limitPauseMinutes: number; // 0 代表關閉對話頻率上限
+  limitTurns: number;
+  limitWindowMinutes: number;
+  limitNotify: boolean;
 }
 
 // active 參與服務、test 只給後台測試、idle 僅保存
