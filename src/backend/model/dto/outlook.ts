@@ -35,7 +35,7 @@ export const outlookConfigMapper: ConfigMapper = {
     const settings = StoredSchema.parse(stored);
     return {
       clientId: settings.clientId,
-      clientSecretMask: settings.clientSecret ? `${settings.clientSecret.slice(0, 3)}••••••` : '',
+      clientSecretMask: settings.clientSecret ? `${settings.clientSecret.slice(0, 3)}****` : '',
       calendarId: settings.calendarId,
     };
   },

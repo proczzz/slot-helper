@@ -27,7 +27,7 @@ export const telegramConfigMapper: ConfigMapper = {
     const { accessToken, chatId } = parsed.data;
     // 通關密語不顯示
     return {
-      accessTokenMask: `••••••${accessToken.slice(-4)}`,
+      accessTokenMask: `****${accessToken.slice(-4)}`,
       chatId,
     };
   },

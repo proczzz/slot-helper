@@ -23,8 +23,8 @@ export const lineConfigMapper: ConfigMapper = {
 
     const { accessToken, webhookSecret } = parsed.data;
     return {
-      accessTokenMask: `••••••${accessToken.slice(-4)}`,
-      webhookSecretMask: `••••••${webhookSecret.slice(-4)}`,
+      accessTokenMask: `****${accessToken.slice(-4)}`,
+      webhookSecretMask: `****${webhookSecret.slice(-4)}`,
     };
   },
 };

@@ -25,8 +25,8 @@ export const whatsappConfigMapper: ConfigMapper = {
     const { accessToken, webhookSecret, phoneNumberId, challengeToken } = parsed.data;
     // challengeToken 不遮罩 —— 老闆要讀回來貼進 Meta 的表單
     return {
-      accessTokenMask: `••••••${accessToken.slice(-4)}`,
-      webhookSecretMask: `••••••${webhookSecret.slice(-4)}`,
+      accessTokenMask: `****${accessToken.slice(-4)}`,
+      webhookSecretMask: `****${webhookSecret.slice(-4)}`,
       phoneNumberId,
       challengeToken,
     };
