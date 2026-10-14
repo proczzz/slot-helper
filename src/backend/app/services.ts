@@ -52,7 +52,6 @@ export type AppVariables = {
 
 export interface Services {
   // 包含 Database ，不可放進快取跨請求共用
-  configRepository: ConfigRepository;
   adminAuth: AdminAuth; // 身分驗證模組
   configService: ConfigService; // 後台通用設定端點
   aiService: AiService;
@@ -64,7 +63,6 @@ export interface Services {
   // 從設定字串建立，可跨請求共用
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
-  telegramClient: TelegramClient | null; // 通知老闆,AI 處理不了時求助
   notifier: Notifier; // 通知模組
 }
 
@@ -76,6 +74,7 @@ export async function createServices(database: Database): Promise<Services> {
 
   const cache = await getSharedProviders(configRepository, userRepository);
 
+  const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
   const configService = createConfigService(configRepository, clearCachedProviders);
   const schedulingProvider = createSchedulingProvider(
     cache.schedulingConfig,
@@ -84,7 +83,7 @@ export async function createServices(database: Database): Promise<Services> {
   const aiStateStore = createAiStateStore(configRepository, clearCachedProviders);
   const aiService = createAiService(configRepository, aiStateStore);
   const calendarService = createCalendarService(configRepository, schedulingProvider);
-  const telegramService = createTelegramService(configRepository, cache.telegramClient);
+  const telegramService = createTelegramService(configRepository, cache.telegramClient, adminAuth);
   const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
@@ -100,10 +99,8 @@ export async function createServices(database: Database): Promise<Services> {
     chatService,
     cache.notifier,
   );
-  const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
 
   return {
-    configRepository,
     adminAuth,
     configService,
     aiService,
@@ -114,7 +111,6 @@ export async function createServices(database: Database): Promise<Services> {
 
     lineClient: cache.lineClient,
     whatsappClient: cache.whatsappClient,
-    telegramClient: cache.telegramClient,
     notifier: cache.notifier,
   };
   function buildChatService(models: ActiveModel[]) {
