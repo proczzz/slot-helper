@@ -1,5 +1,5 @@
 import { createLanguageModels } from '../adapter/ai/index.ts';
-import type { ActiveModel, AiStateStore } from '../adapter/ai/types.ts';
+import type { ActiveModel } from '../adapter/ai/types.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
@@ -27,6 +27,7 @@ import type {
 } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
 import { createAiService, type AiService } from './ai-service.ts';
+import { createCalendarService, type CalendarService } from './calendar-service.ts';
 import { createConfigService, type ConfigService } from './config-service.ts';
 import {
   createAiStateStore,
@@ -60,6 +61,7 @@ export interface Services {
   adminAuth: AdminAuth; // 身分驗證模組
   configService: ConfigService; // 後台通用設定端點
   aiService: AiService;
+  calendarService: CalendarService;
   schedulingProvider: SchedulingProvider | null; // 日曆
   chatService: ChatService | null; // 核心處理訊息服務
   testChatService: ChatService | null; // 測試專用key
@@ -87,6 +89,7 @@ export async function createServices(database: Database): Promise<Services> {
   );
   const aiStateStore = createAiStateStore(configRepository, clearCachedProviders);
   const aiService = createAiService(configRepository, aiStateStore);
+  const calendarService = createCalendarService(configRepository, schedulingProvider);
   const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
@@ -106,6 +109,7 @@ export async function createServices(database: Database): Promise<Services> {
     adminAuth,
     configService,
     aiService,
+    calendarService,
     schedulingProvider,
     chatService,
     testChatService,

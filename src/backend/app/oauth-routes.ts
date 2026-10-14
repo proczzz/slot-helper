@@ -1,10 +1,5 @@
 import { Hono } from 'hono';
-import {
-  exchangeCode,
-  fetchAccountEmail,
-  type OutlookState,
-} from '../adapter/scheduling/outlook-oauth.ts';
-import { createTokenStore, loadOutlookSettings } from './config.ts';
+import { ExpectedError } from '../core/app-error.ts';
 import { takeOauthSession } from './oauth-cookies.ts';
 import type { AppVariables } from './services.ts';
 
@@ -17,7 +12,7 @@ const oauthRoutes = new Hono<AppVariables>();
 // 這是跨站的頂層導覽,SameSite=Strict 的 admin cookie 不會送出。
 // 回應不是 JSend 而是 302,因為老闆看到的是一個頁面
 oauthRoutes.get('/outlook/callback', async (c) => {
-  const { configRepository } = c.var.services;
+  const { calendarService } = c.var.services;
   const code = c.req.query('code');
   const state = c.req.query('state');
 
@@ -28,18 +23,13 @@ oauthRoutes.get('/outlook/callback', async (c) => {
     return c.redirect(`${SETTINGS_PAGE}?oauth=invalid_state`);
   }
 
-  const settings = await loadOutlookSettings(configRepository);
-  if (!settings) return c.redirect(`${SETTINGS_PAGE}?oauth=not_configured`);
-
   try {
-    const tokens = await exchangeCode(settings, redirectUri, code);
-    const accountEmail = await fetchAccountEmail(tokens.accessToken);
-
-    const next: OutlookState = { refreshToken: tokens.refreshToken, accountEmail };
-    await createTokenStore(configRepository).set(JSON.stringify(next));
+    await calendarService.completeAuthorization(redirectUri, code);
   } catch (error) {
     console.error('Outlook 授權失敗:', error);
-    return c.redirect(`${SETTINGS_PAGE}?oauth=failed`);
+    // 設定沒填完和真的授權失敗要分開,老闆才知道該去補什麼
+    const reason = error instanceof ExpectedError ? 'not_configured' : 'failed';
+    return c.redirect(`${SETTINGS_PAGE}?oauth=${reason}`);
   }
 
   return c.redirect(`${SETTINGS_PAGE}?oauth=connected`);

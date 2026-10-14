@@ -1,7 +1,5 @@
 import { Context, Hono } from 'hono';
-import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
-import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
-import { createTokenStore, loadOutlookSettings, loadTelegramConfig } from '../app/config.ts';
+import { loadTelegramConfig } from '../app/config.ts';
 import { startOauthSession } from '../app/oauth-cookies.ts';
 import type { AppVariables } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
@@ -11,7 +9,7 @@ import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { AiPauseSchema, CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
-import { OutlookAuthorizeSchema } from '../model/dto/outlook.ts';
+import { OutlookAuthorizeRequestSchema } from '../model/dto/outlook.ts';
 import { ChangePasswordRequestSchema } from '../model/dto/password.ts';
 import { WebhookSchema } from '../model/dto/telegram.ts';
 import { clearSessionCookie, readSessionCookie, setSessionCookie } from './auth.ts';
@@ -108,55 +106,41 @@ adminRoutes.post('/ai/demotions/restore', async (c) => {
 });
 
 adminRoutes.get('/calendar/labels', async (c) => {
-  const { schedulingProvider } = c.var.services;
+  const { calendarService } = c.var.services;
 
-  if (!schedulingProvider) return c.json(jsend.success([]));
-
-  const labels = await schedulingProvider.getLabels();
+  const labels = await calendarService.labels();
   return c.json(jsend.success(labels));
 });
 
 // 取得微軟授權頁url，並預留cookies給callback頁，前端自己跳轉
 adminRoutes.post('/outlook/authorize', async (c) => {
-  const { configRepository } = c.var.services;
-  const { redirectUri } = OutlookAuthorizeSchema.parse(await readJson(c));
-
-  const settings = await loadOutlookSettings(configRepository);
-  if (!settings) {
-    return c.json(jsend.fail('請先儲存 Client ID 與用戶端密碼'), 400);
-  }
-
+  const { calendarService } = c.var.services;
+  const { redirectUri } = OutlookAuthorizeRequestSchema.parse(await readJson(c));
   const state = startOauthSession(c, redirectUri);
 
-  // 組同意授權頁的 url 給前端
-  return c.json(jsend.success({ url: buildAuthorizeUrl(settings, redirectUri, state) }));
+  return c.json(jsend.success({ url: await calendarService.authorizeUrl(redirectUri, state) }));
 });
 
-// 問:現在是否連結(有refresh token嗎)?
+// 問:現在是否連結(有 refresh token 嗎)?
 adminRoutes.get('/outlook/connection', async (c) => {
-  const { configRepository } = c.var.services;
-  const state = parseOutlookState(await createTokenStore(configRepository).get());
+  const { calendarService } = c.var.services;
 
-  return c.json(jsend.success({ connected: !!state, accountEmail: state?.accountEmail ?? '' }));
+  return c.json(jsend.success(await calendarService.connection()));
 });
 
-// 移除目前的連結(移除refresh token)
+// 移除目前的連結(移除 refresh token)
 adminRoutes.delete('/outlook/connection', async (c) => {
-  const { configRepository } = c.var.services;
-  await createTokenStore(configRepository).clear();
+  const { calendarService } = c.var.services;
 
+  await calendarService.disconnect();
   return c.json(jsend.success(null));
 });
 
-// 診斷性質的端點,所以把 Graph 的錯誤原文交給老闆,而不是丟給 error-handler 變成 500
+// 取得 outlook 日曆列表
 adminRoutes.get('/outlook/calendars', async (c) => {
-  const { configRepository } = c.var.services;
+  const { calendarService } = c.var.services;
 
-  const settings = await loadOutlookSettings(configRepository);
-  if (!settings) return c.json(jsend.success([]));
-
-  const calendars = await fetchOutlookCalendars(settings, createTokenStore(configRepository));
-  return c.json(jsend.success(calendars));
+  return c.json(jsend.success(await calendarService.calendars()));
 });
 
 adminRoutes.get('/customers', async (c) => {

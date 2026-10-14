@@ -15,7 +15,7 @@ const RequestSchema = z.object({
   calendarId: z.string().optional(),
 });
 
-export const OutlookAuthorizeSchema = z.object({
+export const OutlookAuthorizeRequestSchema = z.object({
   redirectUri: z.string().min(1),
 });
 
