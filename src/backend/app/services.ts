@@ -1,5 +1,5 @@
 import { createLanguageModels } from '../adapter/ai/index.ts';
-import type { ActiveModel } from '../adapter/ai/types.ts';
+import type { ActiveModel, AiStateStore } from '../adapter/ai/types.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
@@ -27,8 +27,10 @@ import type {
 } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
 import {
+  createAiStateStore,
   createTokenStore,
   loadAiKeys,
+  loadAiState,
   loadLineConfig,
   loadSchedulingConfig,
   loadShopSettings,
@@ -76,6 +78,7 @@ export async function createServices(database: Database): Promise<Services> {
     cache.schedulingConfig,
     createTokenStore(configRepository),
   );
+  const aiStateStore = withCacheReset(createAiStateStore(configRepository));
   const chatService = createChatService(
     cache.activeModels,
     cache.chatSettings,
@@ -83,6 +86,7 @@ export async function createServices(database: Database): Promise<Services> {
     conversationRepository,
     schedulingProvider,
     cache.notifier,
+    aiStateStore
   );
   const messageService = createMessageService(
     chatService,
@@ -131,11 +135,12 @@ async function getSharedProviders(
 
   const system = await ensureInitialized(configRepository, userRepository);
   const telegramClient = createTelegramClient(await loadTelegramConfig(configRepository));
+  const demoted = (await loadAiState(configRepository)).map((item) => item.name);
 
   cachedProviders = {
     jwtSecret: system.jwtSecret,
     chatSettings: ChatSettingsSchema.parse(system),
-    activeModels: createLanguageModels(await loadAiKeys(configRepository), 'active'),
+    activeModels: createLanguageModels(await loadAiKeys(configRepository), 'active', demoted),
     shopConfig: await loadShopSettings(configRepository),
     schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),
@@ -149,4 +154,20 @@ async function getSharedProviders(
 // 後台儲存設定後呼叫。Cloudflare 上只清得掉當前 isolate，其他 isolate 要等自己重建
 export function clearCachedProviders() {
   cachedProviders = undefined;
+}
+
+// 降級與解除都會改變候選清單,寫入後讓快取重建。
+// Cloudflare 上只清得掉當前 isolate,其他 isolate 要等自己重算
+function withCacheReset(store: AiStateStore): AiStateStore {
+  return {
+    get: () => store.get(),
+    async demote(name, reason) {// 降級
+      await store.demote(name, reason);
+      clearCachedProviders();
+    },
+    async restore(name) {// 復原降級
+      await store.restore(name);
+      clearCachedProviders();
+    },
+  };
 }

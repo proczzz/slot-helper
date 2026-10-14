@@ -1,5 +1,11 @@
 import z from 'zod';
-import { AiConfigSchema, type AiKey } from '../adapter/ai/types.ts';
+import {
+  AiConfigSchema,
+  AiStateSchema,
+  type AiKey,
+  type AiState,
+  type AiStateStore,
+} from '../adapter/ai/types.ts';
 import { LineConfigSchema, type LineConfig } from '../adapter/line/types.ts';
 import { GoogleCalendarSettingsSchema } from '../adapter/scheduling/google-calendar.ts';
 import { providers } from '../adapter/scheduling/index.ts';
@@ -51,6 +57,38 @@ export const SECTION_MAPPERS: Partial<Record<ConfigKey, ConfigMapper>> = {
 
 export function loadAiKeys(configRepository: ConfigRepository): Promise<AiKey[]> {
   return loadSection(configRepository, 'ai', AiConfigSchema, []);
+}
+
+export function loadAiState(configRepository: ConfigRepository): Promise<AiState> {
+  return loadSection(configRepository, 'ai-state', AiStateSchema, []);
+}
+
+// 把 key 綁死在 ai-state 的 ConfigRepository,對標 createTokenStore
+export function createAiStateStore(configRepository: ConfigRepository): AiStateStore {
+  return {
+    get() {
+      return loadAiState(configRepository);
+    },
+
+    async demote(name, reason) {
+      const current = await loadAiState(configRepository);
+      if (current.some((item) => item.name === name)) return; // 已經降級過
+
+      await saveAiState(configRepository, [...current, { name, reason, at: Date.now() }]);
+    },
+
+    async restore(name) {
+      const current = await loadAiState(configRepository);
+      await saveAiState(
+        configRepository,
+        current.filter((item) => item.name !== name),
+      );
+    },
+  };
+}
+
+function saveAiState(configRepository: ConfigRepository, state: AiState): Promise<void> {
+  return configRepository.set('ai-state', JSON.stringify(state));
 }
 
 export function loadLineConfig(configRepository: ConfigRepository): Promise<LineConfig | null> {

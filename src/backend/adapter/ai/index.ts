@@ -25,7 +25,11 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
 };
 
 // 依設定的順序建出候選模型,順序就是備援的先後
-export function createLanguageModels(keys: AiKey[], usage: AiUsage): ActiveModel[] {
+export function createLanguageModels(
+  keys: AiKey[],
+  usage: AiUsage,
+  demoted: string[],
+): ActiveModel[] {
   const models: ActiveModel[] = [];
 
   for (const key of keys) {

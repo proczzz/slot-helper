@@ -6,6 +6,7 @@ import type { User } from '../model/entity/user.ts';
 export type ConfigKey =
   | 'system'
   | 'ai'
+  | 'ai-state'
   | 'shop'
   | 'line'
   | 'telegram'

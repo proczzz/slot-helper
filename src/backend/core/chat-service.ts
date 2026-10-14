@@ -1,5 +1,5 @@
 import { generateText, stepCountIs } from 'ai';
-import type { ActiveModel } from '../adapter/ai/types.ts';
+import type { ActiveModel, AiStateStore } from '../adapter/ai/types.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
 import type { ChatResponse } from '../model/dto/chat.ts';
 import type { ConversationRepository } from '../repository/types.ts';
@@ -9,6 +9,7 @@ import { createSchedulingTools } from './scheduling-tools.ts';
 import type { ShopConfig } from './shop-config.ts';
 import { createSupportTools } from './support-tools.ts';
 import type { ChatSettings } from './system-config.ts';
+import { describeFailure, isPermanentFailure } from '../adapter/ai/errors.ts';
 
 export interface ChatService {
   handleChat(
@@ -27,6 +28,7 @@ export function createChatService(
   conversationRepository: ConversationRepository, // repository
   schedulingProvider: SchedulingProvider | null, // service
   notifier: Notifier, // service
+  aiState: AiStateStore, // service
 ): ChatService | null {
   if (activeModels.length === 0) return null;
   const supportTools = notifier.enabled ? createSupportTools(notifier) : {};
@@ -103,6 +105,10 @@ export function createChatService(
             });
             return { result, used: candidate };
           } catch (error) {
+            if (isPermanentFailure(error)) { // 等待後也無法復原的問題:降級key
+              await aiState.demote(candidate.name, describeFailure(error));
+            }
+
             if (touched || isLast) {
               if (isLast) await notifier.systemError('所有 AI 模型都無法使用', error);
               throw error;

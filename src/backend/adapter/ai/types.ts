@@ -22,6 +22,24 @@ export const AiConfigSchema = z
 export type AiConfig = z.infer<typeof AiConfigSchema>;
 export type AiKey = z.infer<typeof AiConfigSchema>[number];
 
+// 存 config table 的 ai-state:系統自己寫的降級名單
+export const AiStateSchema = z.array(
+  z.object({
+    name: z.string(),
+    reason: z.string(),
+    at: z.number(),
+  }),
+);
+
+export type AiState = z.infer<typeof AiStateSchema>;
+export type AiDemotion = AiState[number]; // 陣列裡的 item
+
+export interface AiStateStore {
+  get(): Promise<AiState>;
+  demote(name: string, reason: string): Promise<void>; // 已在名單裡的不重複追加
+  restore(name: string): Promise<void>;
+}
+
 // 存 service
 export interface ActiveModel {
   name: string; // 對應 ai 設定裡的名稱
