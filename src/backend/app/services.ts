@@ -41,6 +41,7 @@ import {
   loadTelegramConfig,
   loadWhatsappConfig,
 } from './config.ts';
+import { createCustomerService, type CustomerService } from './customer-service.ts';
 import { ensureInitialized } from './initialize.ts';
 import { createTelegramService, type TelegramService } from './telegram-service.ts';
 
@@ -64,6 +65,7 @@ export interface Services {
   aiService: AiService;
   calendarService: CalendarService;
   telegramService: TelegramService;
+  customerService: CustomerService;
   schedulingProvider: SchedulingProvider | null; // 日曆
   chatService: ChatService | null; // 核心處理訊息服務
   testChatService: ChatService | null; // 測試專用key
@@ -96,6 +98,11 @@ export async function createServices(database: Database): Promise<Services> {
   const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
+  const customerService = createCustomerService(
+    customerRepository,
+    conversationRepository,
+    testChatService,
+  );
   const messageService = createMessageService(
     cache.systemConfig,
     customerRepository,
@@ -114,6 +121,7 @@ export async function createServices(database: Database): Promise<Services> {
     aiService,
     calendarService,
     telegramService,
+    customerService,
     schedulingProvider,
     chatService,
     testChatService,

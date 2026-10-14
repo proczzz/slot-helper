@@ -4,7 +4,7 @@ import type { AppVariables } from '../app/services.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { ListModelsRequestSchema, RestoreDemotionRequestSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
-import { AiPauseSchema, CustomerQuerySchema } from '../model/dto/customer.ts';
+import { AiPauseSchema, CustomerQuerySchema, MessageRequestSchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import { LoginSchema } from '../model/dto/login.ts';
 import { OutlookAuthorizeRequestSchema } from '../model/dto/outlook.ts';
@@ -141,34 +141,6 @@ adminRoutes.get('/outlook/calendars', async (c) => {
   return c.json(jsend.success(await calendarService.calendars()));
 });
 
-adminRoutes.get('/customers', async (c) => {
-  const { customerRepository } = c.var.services;
-  const { limit, before, channel } = CustomerQuerySchema.parse(c.req.query());
-
-  return c.json(jsend.success(await customerRepository.list(limit, before, channel)));
-});
-
-adminRoutes.get('/customers/:id/messages', async (c) => {
-  const { conversationRepository } = c.var.services;
-  const id = decodeURIComponent(c.req.param('id'));
-  const before = c.req.query('before');
-
-  return c.json(
-    jsend.success(
-      await conversationRepository.listMessages(id, before ? Number(before) : null, 50),
-    ),
-  );
-});
-
-// 暫停 AI 回覆這位顧客，期間沉默。minutes 傳 0 代表恢復。到期時間由後端算
-adminRoutes.post('/customers/ai-pause', async (c) => {
-  const { customerRepository } = c.var.services;
-  const { customerId, minutes } = AiPauseSchema.parse(await readJson(c));
-
-  await customerRepository.pauseAi(customerId, minutes > 0 ? Date.now() + minutes * 60_000 : null);
-  return c.json(jsend.success(null));
-});
-
 adminRoutes.post('/telegram/test', async (c) => {
   const { telegramService } = c.var.services;
   await telegramService.sendTest();
@@ -189,37 +161,42 @@ adminRoutes.post('/telegram/webhook', async (c) => {
   return c.json(jsend.success(await telegramService.registerWebhook(url)));
 });
 
-const TEST_CHANNEL = 'test';
-// 建立或更新測試用的顧客
+adminRoutes.get('/customers', async (c) => {
+  const { customerService } = c.var.services;
+  const { limit, before, channel } = CustomerQuerySchema.parse(c.req.query());
+
+  return c.json(jsend.success(await customerService.list(limit, before, channel)));
+});
+
+adminRoutes.get('/customers/:id/messages', async (c) => {
+  const { customerService } = c.var.services;
+  const { before } = MessageRequestSchema.parse(c.req.query());
+
+  return c.json(jsend.success(await customerService.messages(c.req.param('id'), before ?? null)));
+});
+
+// 暫停 AI 回覆這位顧客，期間沉默。minutes 傳 0 代表恢復。到期時間由後端算
+adminRoutes.post('/customers/ai-pause', async (c) => {
+  const { customerService } = c.var.services;
+  const { customerId, minutes } = AiPauseSchema.parse(await readJson(c));
+
+  await customerService.pauseAi(customerId, minutes);
+  return c.json(jsend.success(null));
+});
+
 adminRoutes.post('/test-customers', async (c) => {
-  const { customerRepository } = c.var.services;
+  const { customerService } = c.var.services;
   const { id, name } = TestCustomerSchema.parse(await readJson(c));
 
-  await customerRepository.upsertProfile({
-    id: `${TEST_CHANNEL}:${id}`,
-    channel: TEST_CHANNEL,
-    name,
-    pictureUrl: null,
-  });
-
+  await customerService.upsertTestCustomer(id, name);
   return c.json(jsend.success(null));
 });
 
 adminRoutes.post('/test-chat', async (c) => {
-  const { customerRepository, testChatService } = c.var.services;
-  if (!testChatService) return c.json(jsend.error('AI 尚未設定'), 503); // 沒 AI 就沒 chatService
-
+  const { customerService } = c.var.services;
   const { sessionId, message } = ChatRequestSchema.parse(await readJson(c));
-  const id = `${TEST_CHANNEL}:${sessionId}`;
 
-  const customer = await customerRepository.findById(id);
-  if (!customer) return c.body(null, 404);
-
-  const result = await testChatService.handleChat(id, customer.name, message);
-
-  await customerRepository.updateLastMessage(id, message, Date.now());
-
-  return c.json(jsend.success(result));
+  return c.json(jsend.success(await customerService.testChat(sessionId, message)));
 });
 
 // Cloudflare 的 CF-Connecting-IP 由邊緣填入,可信;
