@@ -4,7 +4,9 @@ import { listAvailableModels } from '../adapter/ai/index.ts';
 import { buildAuthorizeUrl, parseOutlookState } from '../adapter/scheduling/outlook-oauth.ts';
 import { fetchOutlookCalendars } from '../adapter/scheduling/outlook.ts';
 import {
+  createAiStateStore,
   createTokenStore,
+  loadAiState,
   loadOutlookSettings,
   loadTelegramConfig,
   SECTION_MAPPERS,
@@ -19,7 +21,7 @@ import type { AppVariables } from '../app/services.ts';
 import { clearCachedProviders } from '../app/services.ts';
 import { TELEGRAM_COMMANDS } from '../app/telegram-routes.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import { ListModelsSchema } from '../model/dto/ai.ts';
+import { ListModelsSchema, RestoreDemotionSchema } from '../model/dto/ai.ts';
 import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
 import { CustomerQuerySchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
@@ -128,6 +130,24 @@ adminRoutes.put('/config/:section', async (c) => {
 adminRoutes.post('/ai/models', async (c) => {
   const { provider, apiKey } = ListModelsSchema.parse(await readJson(c));
   return c.json(jsend.success(await listAvailableModels(provider, apiKey)));
+});
+
+// 系統自動停用的 key:永久失效(401/402/400 這類)時寫入,老闆處理完再解除
+adminRoutes.get('/ai/demotions', async (c) => {
+  const { configRepository } = c.var.services;
+
+  return c.json(jsend.success(await loadAiState(configRepository)));
+});
+
+// 名稱是老闆自己取的字串,可能含斜線,所以放 body 不放路徑
+adminRoutes.post('/ai/demotions/restore', async (c) => {
+  const { configRepository } = c.var.services;
+  const { name } = RestoreDemotionSchema.parse(await readJson(c));
+
+  await createAiStateStore(configRepository).restore(name);
+  clearCachedProviders(); // 候選清單要重算
+
+  return c.json(jsend.success(null));
 });
 
 adminRoutes.get('/calendar/labels', async (c) => {

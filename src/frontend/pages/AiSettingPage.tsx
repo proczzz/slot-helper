@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
-import { getSection, listModels, saveSection, type AiKey, type AiUsage } from '../lib/admin.ts';
+import {
+  getAiDemotions,
+  getSection,
+  listModels,
+  restoreAiKey,
+  saveSection,
+  type AiDemotion,
+  type AiKey,
+  type AiUsage,
+} from '../lib/admin.ts';
 
 // 寫死的清單,要和後端 adapter/ai/index.ts 的 providers 表保持一致
 const PROVIDERS = [
@@ -31,6 +40,12 @@ export function AiSettingsPage() {
       (await getSection<AiKey[]>('ai'))?.map((key) => ({ ...EMPTY, ...key })) ?? [],
   });
 
+  // 讀不到只影響「已停用」的提示,不該擋住整頁設定
+  const demotions = useQuery({
+    queryKey: ['ai-demotions'],
+    queryFn: getAiDemotions,
+  });
+
   if (isPending) {
     return (
       <div className="grid place-items-center p-12">
@@ -47,10 +62,10 @@ export function AiSettingsPage() {
     );
   }
 
-  return <AiForm config={data} />;
+  return <AiForm config={data} demotions={demotions.data ?? []} />;
 }
 
-function AiForm({ config }: { config: AiKey[] }) {
+function AiForm({ config, demotions }: { config: AiKey[]; demotions: AiDemotion[] }) {
   const [keys, setKeys] = useState(config);
   const queryClient = useQueryClient();
 
@@ -102,6 +117,7 @@ function AiForm({ config }: { config: AiKey[] }) {
               key={index}
               index={index}
               value={key}
+              demotion={demotions.find((item) => item.name === key.name)}
               onChange={(next) => change(index, next)}
               onRemove={() => remove(index)}
             />
@@ -144,14 +160,25 @@ function AiForm({ config }: { config: AiKey[] }) {
 function AiKeyRow({
   index,
   value,
+  demotion,
   onChange,
   onRemove,
 }: {
   index: number;
   value: AiKey;
+  demotion: AiDemotion | undefined;
   onChange: (next: AiKey) => void;
   onRemove: () => void;
 }) {
+  const queryClient = useQueryClient();
+
+  const restore = useMutation({
+    mutationFn: () => restoreAiKey(value.name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['ai-demotions'] });
+    },
+  });
+
   // 要按按鈕才發生、而且得先填好 API key,所以是 mutation 不是 query。
   // 每一列各自一份,否則載入的清單會跑到別人的輸入框
   const models = useMutation({
@@ -167,6 +194,29 @@ function AiKeyRow({
 
   return (
     <div className="rounded-box border border-base-300 p-3">
+      {demotion && (
+        <div className="alert alert-warning mb-2 flex-col items-start gap-2 text-sm sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <p>這組金鑰失效後已自動停用，處理完再解除。</p>
+            <p className="mt-1 font-mono text-xs opacity-70">{demotion.reason}</p>
+            <p className="mt-1 text-xs opacity-60">
+              停用於 {new Date(demotion.at).toLocaleString()}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => restore.mutate()}
+            disabled={restore.isPending}
+          >
+            {restore.isPending && <span className="loading loading-spinner loading-xs" />}
+            解除停用
+          </button>
+        </div>
+      )}
+
+      {restore.isError && <p className="label text-error">{restore.error.message}</p>}
+
       <div className="flex flex-wrap items-end gap-2">
         <fieldset className="fieldset flex-1">
           <legend className="fieldset-legend">名稱</legend>

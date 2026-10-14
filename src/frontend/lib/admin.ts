@@ -279,6 +279,30 @@ export async function sendTelegramTest(): Promise<void> {
   await assertOk(response);
 }
 
+// 系統自動停用的 key,老闆解除之前不會再被選用
+export interface AiDemotion {
+  name: string;
+  reason: string;
+  at: number;
+}
+
+export async function getAiDemotions(): Promise<AiDemotion[]> {
+  const response = await request('/api/admin/ai/demotions');
+  const body = (await response.json()) as JSendBody<AiDemotion[]>;
+  if (body.status !== 'success') throw new Error('讀取 AI 停用紀錄失敗');
+  return body.data ?? [];
+}
+
+export async function restoreAiKey(name: string): Promise<void> {
+  const response = await request('/api/admin/ai/demotions/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+
+  await assertOk(response);
+}
+
 export async function listModels(provider: string, apiKey: string): Promise<string[]> {
   const response = await request('/api/admin/ai/models', {
     method: 'POST',
