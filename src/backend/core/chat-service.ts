@@ -21,14 +21,14 @@ export interface ChatService {
 const DAY_MS = 24 * 60 * 60_000;
 
 export function createChatService(
-  activeModel: ActiveModel | null, // lib & properties
+  activeModels: ActiveModel[], // lib & properties
   chatSettings: ChatSettings, // properties
   shopConfig: ShopConfig, // properties
   conversationRepository: ConversationRepository, // repository
   schedulingProvider: SchedulingProvider | null, // service
   notifier: Notifier, // service
 ): ChatService | null {
-  if (!activeModel) return null;
+  if (activeModels.length === 0) return null;
   const supportTools = notifier.enabled ? createSupportTools(notifier) : {};
 
   return {
@@ -60,17 +60,7 @@ export function createChatService(
       const tools = { ...supportTools, ...schedulingTools };
 
       // 實際呼叫 llm
-      const result = await generateText({
-        model: activeModel!.model,
-        system: buildSystemPrompt(shopConfig, customerName),
-        messages,
-        tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
-        stopWhen: stepCountIs(chatSettings.maxSteps), // 工具最多操作次數上限，超過時終止
-        onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
-          if (toolOutput.type === 'tool-error')
-            await notifier.systemError(`工具 ${toolCall.toolName}`, toolOutput.error);
-        },
-      });
+      const { result, used } = await generate();
 
       // 蒐集 AI 處理過程，存 DB
       const trace = collectTrace(result.steps);
@@ -83,13 +73,47 @@ export function createChatService(
           role: hasReply ? 'assistant' : 'fallback',
           content: hasReply ? result.text : chatSettings.fallbackReply,
           timestamp: Date.now(),
-          provider: activeModel!.provider,
-          model: activeModel!.modelName,
+          provider: used.provider,
+          model: used.modelName,
           trace: hasTrace ? JSON.stringify(trace) : null,
         },
       ]);
 
       return { reply: hasReply ? result.text : chatSettings.fallbackReply };
+
+      // 主要 key 失效就換下一組候選,但只在「還沒有工具執行過」的時候 ——
+      // 否則重跑會重放副作用,日曆上那筆預約已經存在了
+      async function generate() {
+        for (const [index, candidate] of activeModels.entries()) {
+          const isLast = index === activeModels.length - 1;
+          let touched = false;
+
+          try {
+            const result = await generateText({
+              model: candidate.model,
+              system: buildSystemPrompt(shopConfig, customerName),
+              messages,
+              tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
+              stopWhen: stepCountIs(chatSettings.maxSteps), // 工具最多操作次數上限，超過時終止
+              onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
+                touched = true;
+                if (toolOutput.type === 'tool-error')
+                  await notifier.systemError(`工具 ${toolCall.toolName}`, toolOutput.error);
+              },
+            });
+            return { result, used: candidate };
+          } catch (error) {
+            if (touched || isLast) {
+              if (isLast) await notifier.systemError('所有 AI 模型都無法使用', error);
+              throw error;
+            }
+            console.error(`AI 模型 ${candidate.name} 失敗，改用下一組:`, error);
+          }
+        }
+
+        // activeModels 在工廠就保證非空,這行只是讓 TS 知道函式一定有出口
+        throw new Error('沒有可用的 AI 模型');
+      }
     },
   };
 }

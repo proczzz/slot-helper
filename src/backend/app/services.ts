@@ -1,4 +1,4 @@
-import { createLanguageModel } from '../adapter/ai/index.ts';
+import { createLanguageModels } from '../adapter/ai/index.ts';
 import type { ActiveModel } from '../adapter/ai/types.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
@@ -77,7 +77,7 @@ export async function createServices(database: Database): Promise<Services> {
     createTokenStore(configRepository),
   );
   const chatService = createChatService(
-    cache.activeModel,
+    cache.activeModels,
     cache.chatSettings,
     cache.shopConfig,
     conversationRepository,
@@ -111,7 +111,7 @@ export async function createServices(database: Database): Promise<Services> {
 interface SharedProviders {
   jwtSecret: string;
   chatSettings: ChatSettings;
-  activeModel: ActiveModel | null;
+  activeModels: ActiveModel[];
   shopConfig: ShopConfig;
   schedulingConfig: SchedulingConfig | null;
   lineClient: LineClient | null;
@@ -135,7 +135,7 @@ async function getSharedProviders(
   cachedProviders = {
     jwtSecret: system.jwtSecret,
     chatSettings: ChatSettingsSchema.parse(system),
-    activeModel: createLanguageModel(await loadAiKeys(configRepository)),
+    activeModels: createLanguageModels(await loadAiKeys(configRepository), 'active'),
     shopConfig: await loadShopSettings(configRepository),
     schedulingConfig: await loadSchedulingConfig(configRepository),
     lineClient: createLineClient(await loadLineConfig(configRepository)),

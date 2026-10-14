@@ -8,7 +8,7 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { getSupportedProviders, listModels, type Provider } from 'llm-lister';
 import { ExpectedError } from '../../core/app-error.ts';
 import { fromCompatible, fromFactory } from './factory.ts';
-import type { ActiveModel, AiKey, LanguageModelProvider } from './types.ts';
+import type { ActiveModel, AiKey, AiUsage, LanguageModelProvider } from './types.ts';
 
 const providers: Partial<Record<string, LanguageModelProvider>> = {
   // 官方套件
@@ -24,19 +24,25 @@ const providers: Partial<Record<string, LanguageModelProvider>> = {
   nvidia: fromCompatible('nvidia', 'https://integrate.api.nvidia.com/v1'),
 };
 
-// 目前只用第一組 active,多組備援之後再做
-export function createLanguageModel(keys: AiKey[]): ActiveModel | null {
-  const key = keys.find((item) => item.usage === 'active');
-  if (!key) return null;
+// 依設定的順序建出候選模型,順序就是備援的先後
+export function createLanguageModels(keys: AiKey[], usage: AiUsage): ActiveModel[] {
+  const models: ActiveModel[] = [];
 
-  const provider = providers[key.provider];
-  if (!provider) return null;
+  for (const key of keys) {
+    if (key.usage !== usage) continue;
 
-  return {
-    model: provider.createModel(key.apiKey, key.model),
-    provider: key.provider,
-    modelName: key.model,
-  };
+    const provider = providers[key.provider];
+    if (!provider) continue; // 供應商名稱不認得,當成沒設定
+
+    models.push({
+      name: key.name,
+      model: provider.createModel(key.apiKey, key.model),
+      provider: key.provider,
+      modelName: key.model,
+    });
+  }
+
+  return models;
 }
 
 // 列出可用llm

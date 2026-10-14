@@ -3,6 +3,7 @@ import z from 'zod';
 
 // active 參與備援序列(順序決定先後)、test 只給後台測試、idle 僅保存
 export const AiUsageSchema = z.enum(['active', 'test', 'idle']);
+export type AiUsage = z.infer<typeof AiUsageSchema>;
 
 // 存 config table
 export const AiConfigSchema = z
@@ -23,6 +24,7 @@ export type AiKey = z.infer<typeof AiConfigSchema>[number];
 
 // 存 service
 export interface ActiveModel {
+  name: string; // 對應 ai 設定裡的名稱
   model: LanguageModel;
   provider: string;
   modelName: string; // 存進對話紀錄時分辨是哪個 llm 回覆使用
