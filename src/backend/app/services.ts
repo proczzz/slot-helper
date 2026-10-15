@@ -21,10 +21,10 @@ import { createUserRepository } from '../repository/user-repository.ts';
 import { createAiService, type AiService } from './ai-service.ts';
 import { createCalendarService, type CalendarService } from './calendar-service.ts';
 import { createConfigService, type ConfigService } from './config-service.ts';
-import { createAiStateStore, createTokenStore } from './config.ts';
 import { createCustomerService, type CustomerService } from './customer-service.ts';
 import { ensureInitialized } from './initialize.ts';
 import { loadProperties, type Properties } from './properties.ts';
+import { createAiStateStore, createTokenStore } from './state-store.ts';
 import { createTelegramService, type TelegramService } from './telegram-service.ts';
 
 // 放 Hono Context 裡
