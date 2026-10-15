@@ -120,11 +120,11 @@ function ShopForm({
   }
 
   function addService() {
-    setServices([...services, { name: '', minutes: 60, price: 0, labelId: '' }]);
+    setServices([...services, { name: '', minutes: 60, note: '', labelId: '' }]);
   }
 
   function changeService(index: number, field: keyof Service, value: string) {
-    const isNumber = field === 'minutes' || field === 'price';
+    const isNumber = field === 'minutes';
     setServices(
       services.map((service, i) =>
         i === index ? { ...service, [field]: isNumber ? Number(value) : value } : service,
@@ -217,14 +217,14 @@ function ShopForm({
                 />
               </fieldset>
 
-              <fieldset className="fieldset w-28">
-                <legend className="fieldset-legend">價格</legend>
+              <fieldset className="fieldset w-48">
+                <legend className="fieldset-legend">備註</legend>
                 <input
-                  type="number"
+                  type="text"
                   className="input w-full"
-                  value={service.price}
-                  onChange={(event) => changeService(index, 'price', event.target.value)}
-                  min={0}
+                  value={service.note}
+                  onChange={(event) => changeService(index, 'note', event.target.value)}
+                  placeholder="500~800 元"
                 />
               </fieldset>
 

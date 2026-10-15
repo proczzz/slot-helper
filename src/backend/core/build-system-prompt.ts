@@ -37,7 +37,7 @@ function formatServices(services: Service[]): string {
   if (services.length === 0) return '';
 
   const lines = services.map(
-    (service) => `${service.name} ${service.minutes} 分鐘 ${service.price} 元`,
+    (service) => `${service.name} ${service.minutes} 分鐘 ${service.note}`,
   );
   return `服務項目\n${lines.join('\n')}`;
 }

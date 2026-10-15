@@ -103,7 +103,7 @@ export type DayKey = keyof BusinessHours;
 export interface Service {
   name: string;
   minutes: number;
-  price: number;
+  note: string;
   labelId: string;
 }
 
