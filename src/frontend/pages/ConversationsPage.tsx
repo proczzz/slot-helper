@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ModelIcon } from '../components/BrandMark.tsx';
+import { CustomerAvatar } from '../components/CustomerAvatar.tsx';
 import { NewCustomerModal } from '../components/NewCustomerModal.tsx';
 import {
   customerDisplayName,
@@ -36,7 +38,32 @@ function formatTime(timestamp: number): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
+}
+
+// 清單用的短格式:越近的訊息給越細的資訊 —— 一行放得下才不會把名稱擠掉
+function formatListTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('zh-TW', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1); // 跨月跨年由 Date 自己處理
+  if (date.toDateString() === yesterday.toDateString()) return '昨天';
+
+  if (date.getFullYear() !== now.getFullYear()) {
+    return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' });
+  }
+
+  return date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
 }
 
 // 捲到底就載下一批。只收真正需要的三個欄位
@@ -153,37 +180,35 @@ export function ConversationsPage() {
         </div>
 
         <div
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-x-hidden overflow-y-auto"
           onScroll={(event) => onScrollNearBottom(event, customers)}
         >
           {customerList.length === 0 && !customers.isPending && (
             <p className="p-4 text-sm text-base-content/50">目前沒有對話</p>
           )}
 
-          <ul className="menu w-full gap-1 p-2">
+          <ul className="flex w-full flex-col gap-1 p-2">
             {customerList.map((customer) => (
-              <li key={customer.id}>
+              <li key={customer.id} className="min-w-0">
                 <button
                   type="button"
-                  className={`flex items-start gap-3 ${
-                    selectedId === customer.id ? 'menu-active' : ''
+                  className={`flex w-full min-w-0 items-start gap-3 rounded-box px-3 py-2 text-left hover:bg-base-200 ${
+                    selectedId === customer.id ? 'bg-base-300' : ''
                   }`}
                   onClick={() => select(customer.id)}
                 >
-                  <div className="avatar">
-                    <div className="size-9 rounded-full bg-base-300">
-                      {customer.pictureUrl && (
-                        <img src={customer.pictureUrl} alt="" referrerPolicy="no-referrer" />
-                      )}
-                    </div>
-                  </div>
+                  <CustomerAvatar customer={customer} />
 
-                  <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate font-medium">{customerDisplayName(customer)}</span>
                     <span className="truncate text-xs text-base-content/60">
                       {customer.lastMessage}
                     </span>
                   </div>
+
+                  <span className="w-12 shrink-0 text-right text-xs font-normal whitespace-nowrap text-base-content/50">
+                    {customer.lastMessageAt === null ? '' : formatListTime(customer.lastMessageAt)}
+                  </span>
                 </button>
               </li>
             ))}
@@ -215,7 +240,14 @@ export function ConversationsPage() {
               className="flex flex-1 flex-col-reverse gap-3 overflow-y-auto p-4"
               onScroll={(event) => onScrollNearBottom(event, messages)}
             >
-              {send.isPending && <Bubble role="user" content={send.variables ?? ''} pending />}
+              {send.isPending && (
+                <Bubble
+                  role="user"
+                  content={send.variables ?? ''}
+                  customer={selected}
+                  pending
+                />
+              )}
 
               {messageList.map((message) => (
                 <Bubble
@@ -223,6 +255,8 @@ export function ConversationsPage() {
                   role={message.role}
                   content={message.content}
                   at={message.timestamp}
+                  customer={selected}
+                  model={message.model}
                   onInspect={message.role === 'user' ? undefined : () => setInspected(message)}
                 />
               ))}
@@ -352,12 +386,16 @@ function Bubble({
   role,
   content,
   at,
+  customer,
+  model,
   pending,
   onInspect,
 }: {
   role: Message['role'];
   content: string;
   at?: number;
+  customer: Customer;
+  model?: string | null;
   pending?: boolean;
   onInspect?: () => void;
 }) {
@@ -371,6 +409,15 @@ function Bubble({
         pending ? 'opacity-50' : ''
       }`}
     >
+      <div className="chat-image">
+        {role === 'user' ? (
+          <CustomerAvatar customer={customer} className="size-8" />
+        ) : (
+          <div className="size-8 overflow-hidden rounded-full bg-base-200">
+            <ModelIcon model={model ?? ''} className="size-full" cover />
+          </div>
+        )}
+      </div>
       {at !== undefined && (
         <div className="chat-header text-xs opacity-60">
           {formatTime(at)}

@@ -1,3 +1,5 @@
+import testTube from '../assets/icon/test-tube.svg?raw';
+
 // SVG 是建置時打包進來的固定檔案,不是使用者輸入,所以 inline 進 DOM 是安全的。
 // inline 而不用 <img> 是為了讓沒指定顏色的單色 logo 能跟著主題變色
 const PROVIDER_FILES = import.meta.glob('../assets/brands/provider/*.svg', {
@@ -7,6 +9,12 @@ const PROVIDER_FILES = import.meta.glob('../assets/brands/provider/*.svg', {
 });
 
 const MODEL_FILES = import.meta.glob('../assets/brands/model/*.svg', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+});
+
+const CHANNEL_FILES = import.meta.glob('../assets/brands/channel/*.svg', {
   query: '?raw',
   eager: true,
   import: 'default',
@@ -23,6 +31,7 @@ function byName(files: Record<string, unknown>): Record<string, string> {
 
 const PROVIDERS = byName(PROVIDER_FILES);
 const MODELS = byName(MODEL_FILES);
+const CHANNELS = byName(CHANNEL_FILES);
 
 // 原樣在深色或淺色主題下會看不見的檔案。
 // fill-current:原檔沒指定顏色,交給主題的文字色
@@ -68,12 +77,29 @@ function findIcon(name: string): { file: string; svg: string } | undefined {
 }
 
 // 各家的 viewBox 比例從 1 到 8.8 都有,只鎖高度會讓橫幅比方形寬好幾倍。
-// 固定一個框、等比縮到塞滿,佔用的區塊才會一致
-function Svg({ name, svg, className }: { name: string; svg: string; className: string }) {
+// 固定一個框、等比縮到塞滿,佔用的區塊才會一致。
+// cover 則相反:填滿整個框、超出的部分裁掉,給切成圓形的頭像用
+function Svg({
+  name,
+  svg,
+  className,
+  cover,
+}: {
+  name: string;
+  svg: string;
+  className: string;
+  cover?: boolean;
+}) {
+  const fit = cover
+    ? '[&>svg]:h-full [&>svg]:w-full'
+    : '[&>svg]:h-auto [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:max-w-full';
+  // slice 讓比例不同的圖裁切而不是變形,原檔都沒有這個屬性
+  const html = cover ? svg.replace('<svg', '<svg preserveAspectRatio="xMidYMid slice"') : svg;
+
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center [&>svg]:h-auto [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:max-w-full ${TREATMENT[name] ?? ''} ${className}`}
-      dangerouslySetInnerHTML={{ __html: svg }}
+      className={`inline-flex shrink-0 items-center justify-center ${fit} ${TREATMENT[name] ?? ''} ${className}`}
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
@@ -119,18 +145,35 @@ export function ProviderMark({
 
 // 模型名稱是自由字串,靠關鍵字猜品牌,猜不到就是問號 ——
 // 不拿供應商的 logo 充數,那會讓一個不是模型的標誌出現在模型欄
-export function ModelMark({ model, className = 'h-4 w-4' }: { model: string; className?: string }) {
+export function ModelIcon({
+  model,
+  className = 'h-4 w-4',
+  cover,
+}: {
+  model: string;
+  className?: string;
+  cover?: boolean;
+}) {
   const matched = MODEL_PATTERNS.find((entry) => entry.pattern.test(model));
   const found = matched && findIcon(matched.icon);
 
+  if (!found) return <Unknown className={className} />;
+  return <Svg name={found.file} svg={found.svg} className={className} cover={cover} />;
+}
+
+export function ModelMark({ model, className = 'h-4 w-4' }: { model: string; className?: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      {found ? (
-        <Svg name={found.file} svg={found.svg} className={className} />
-      ) : (
-        <Unknown className={className} />
-      )}
+      <ModelIcon model={model} className={className} />
       <span className="font-mono text-xs">{model}</span>
     </span>
   );
+}
+
+// test 是我們自己造的管道,用通用圖示而不是品牌標
+export function ChannelMark({ channel, className = 'size-3' }: { channel: string; className?: string }) {
+  const svg = channel === 'test' ? testTube : CHANNELS[`${channel}-icon`];
+  if (!svg) return null;
+
+  return <Svg name={`${channel}-icon`} svg={svg} className={className} />;
 }
