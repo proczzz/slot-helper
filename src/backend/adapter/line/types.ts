@@ -9,17 +9,23 @@ export interface LineProfile {
   pictureUrl?: string;
 }
 
-export interface LineClient extends MessagingClient {
-  getProfile(userId: string): Promise<LineProfile | null>;
-}
+export interface LineClient extends MessagingClient {}
 
 export interface LineWebhookBody {
   events: LineEvent[];
 }
 
+// 所有 Lien 事件
 export interface LineEvent {
   type: string;
   replyToken?: string;
   source: { type: string; userId?: string };
   message?: { type: string; text?: string };
 }
+
+// 僅 Line 文字訊息事件
+export type LineTextEvent = LineEvent & {
+  replyToken: string;
+  source: { type: string; userId: string };
+  message: { type: string; text: string };
+};

@@ -1,5 +1,14 @@
-import type { LineClient, LineConfig, LineProfile } from './types.ts';
+import type { IncomingMessage } from '../types.ts';
+import type {
+  LineClient,
+  LineConfig,
+  LineEvent,
+  LineProfile,
+  LineTextEvent,
+  LineWebhookBody,
+} from './types.ts';
 
+const CHANNEL = 'line';
 const REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 const PROFILE_URL = 'https://api.line.me/v2/bot/profile';
 const SIGNATURE_HEADER = 'x-line-signature';
@@ -45,17 +54,52 @@ export function createLineClient(config: LineConfig | null): LineClient | null {
       }
     },
 
-    async getProfile(userId) {
+    async parseMessages(body) {
+      const { events } = JSON.parse(body) as LineWebhookBody;
+
+      // replyToken 一分鐘失效,profile 要併發查
+      return Promise.all(events.filter(isTextEvent).map(toIncoming));
+    },
+  };
+
+  async function toIncoming(event: LineTextEvent): Promise<IncomingMessage> {
+    const userId = event.source.userId;
+    const profile = await getProfile(userId);
+
+    return {
+      channel: CHANNEL,
+      customerId: `${CHANNEL}:${userId}`,
+      name: profile?.displayName ?? null,
+      pictureUrl: profile?.pictureUrl ?? null,
+      text: event.message.text,
+      replyTo: event.replyToken,
+    };
+  }
+
+  async function getProfile(userId: string): Promise<LineProfile | null> {
+    try {
       const response = await fetch(`${PROFILE_URL}/${encodeURIComponent(userId)}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
       if (!response.ok) {
         console.error(`取得 LINE 顧客資料失敗: ${response.status}`);
         return null;
       }
 
       return (await response.json()) as LineProfile;
-    },
-  };
+    } catch (error) {
+      console.error('取得 LINE 顧客資料失敗:', error); // 查不到名稱不影響回覆
+      return null;
+    }
+  }
+}
+
+function isTextEvent(event: LineEvent): event is LineTextEvent {
+  return (
+    event.type === 'message' &&
+    event.message?.type === 'text' &&
+    !!event.message.text &&
+    !!event.replyToken &&
+    !!event.source.userId
+  );
 }
