@@ -1,13 +1,10 @@
-import type { Context } from 'hono';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { jwtVerify, SignJWT } from 'jose';
+import { hashPassword, verifyPassword } from '../core/password.ts';
 import type { UserRepository } from '../repository/types.ts';
-import { hashPassword, verifyPassword } from './password.ts';
 
-const JWT_COOKIE_NAME = 'admin_token';
 const JWT_ISSUER = 'slot-helper';
 // 秒。cookie 的 maxAge 與 jwt 的 exp 共用
-const JWT_AGE = 60 * 60 * 6;
+export const SESSION_AGE = 60 * 60 * 6;
 
 export interface AdminAuth {
   authenticate(username: string, password: string): Promise<boolean>;
@@ -48,7 +45,7 @@ export function createAdminAuth(userRepository: UserRepository, jwtSecret: strin
         .setSubject(username)
         .setIssuer(JWT_ISSUER)
         .setIssuedAt()
-        .setExpirationTime(`${JWT_AGE}s`)
+        .setExpirationTime(`${SESSION_AGE}s`)
         .sign(secretKey);
     },
     // 驗 jwt 若成功將回傳用戶身份
@@ -61,24 +58,6 @@ export function createAdminAuth(userRepository: UserRepository, jwtSecret: strin
       }
     },
   };
-}
-
-export function setSessionCookie(c: Context, token: string) {
-  setCookie(c, JWT_COOKIE_NAME, token, {
-    httpOnly: true, // JS 無法讀取此 cookie
-    secure: true, // 正式環境必須 true，本機 http 開發測試才能 false
-    sameSite: 'Strict', // 只有從本站發起的請求才會帶上
-    path: '/',
-    maxAge: JWT_AGE,
-  });
-}
-
-export function readSessionCookie(c: Context) {
-  return getCookie(c, JWT_COOKIE_NAME);
-}
-
-export function clearSessionCookie(c: Context) {
-  deleteCookie(c, JWT_COOKIE_NAME, { path: '/' });
 }
 
 // 去掉 0O1lI 這類看錯機率高的字

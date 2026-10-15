@@ -1,4 +1,4 @@
-import type { BusinessHours, DayKey, Service, ShopConfig } from './shop-config.ts';
+import type { BusinessHours, DayKey, Service, ShopConfig } from '../model/shop-config.ts';
 import { toLocalTime, toLocalWeekday } from './time.ts';
 
 const DAY_LABELS: Record<DayKey, string> = {

@@ -1,6 +1,5 @@
 import { Context, Hono } from 'hono';
-import { startOauthSession } from '../app/oauth-cookies.ts';
-import type { AppVariables } from '../app/services.ts';
+import type { AppVariables } from '../boot/services.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { ListModelsReqSchema, RestoreDemotionReqSchema } from '../model/dto/ai.ts';
 import { ChatReqSchema, TestCustomerReqSchema } from '../model/dto/chat.ts';
@@ -14,7 +13,8 @@ import { LoginReqSchema } from '../model/dto/login.ts';
 import { OutlookAuthReqSchema } from '../model/dto/outlook.ts';
 import { ChangePasswordReqSchema } from '../model/dto/password.ts';
 import { WebhookReqSchema } from '../model/dto/telegram.ts';
-import { clearSessionCookie, readSessionCookie, setSessionCookie } from './auth.ts';
+import { startOauthSession } from './oauth-cookies.ts';
+import { clearSessionCookie, readSessionCookie, setSessionCookie } from './session-cookies.ts';
 
 type AdminVariables = {
   Variables: AppVariables['Variables'] & { username: string };

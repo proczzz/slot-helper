@@ -7,8 +7,6 @@ import { SchedulingSelectionSchema } from '../adapter/scheduling/types.ts';
 import { TelegramConfigSchema } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema } from '../adapter/whatsapp/types.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import { ShopConfigSchema } from '../core/shop-config.ts';
-import { SystemConfigSchema } from '../core/system-config.ts';
 import { aiConfigMapper } from '../model/dto/ai.ts';
 import { googleCalendarConfigMapper } from '../model/dto/google-calendar.ts';
 import { lineConfigMapper } from '../model/dto/line.ts';
@@ -16,6 +14,8 @@ import { outlookConfigMapper } from '../model/dto/outlook.ts';
 import { telegramConfigMapper } from '../model/dto/telegram.ts';
 import type { ConfigMapper } from '../model/dto/types.ts';
 import { whatsappConfigMapper } from '../model/dto/whatsapp.ts';
+import { ShopConfigSchema } from '../model/shop-config.ts';
+import { SystemConfigSchema } from '../model/system-config.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 export interface ConfigService {

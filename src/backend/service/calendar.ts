@@ -7,8 +7,8 @@ import {
 } from '../adapter/scheduling/outlook-oauth.ts';
 import { fetchOutlookCalendars, type OutlookCalendar } from '../adapter/scheduling/outlook.ts';
 import type { EventLabel, SchedulingProvider, TokenStore } from '../adapter/scheduling/types.ts';
+import type { Properties } from '../boot/properties.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import type { Properties } from './properties.ts';
 
 export interface OutlookConnection {
   connected: boolean;

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { TelegramUpdate } from '../adapter/telegram/types.ts';
-import type { AppVariables } from './services.ts';
+import type { AppVariables } from '../boot/services.ts';
 
 const telegramRoutes = new Hono<AppVariables>();
 

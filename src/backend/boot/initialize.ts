@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { hashPassword } from '../admin/password.ts';
+import { hashPassword } from '../core/password.ts';
 import type { ConfigRepository, UserRepository } from '../repository/types.ts';
 
 export const ADMIN_USERNAME = 'admin';

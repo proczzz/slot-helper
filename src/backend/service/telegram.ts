@@ -4,11 +4,11 @@ import type {
   TelegramUpdate,
   WebhookInfo,
 } from '../adapter/telegram/types.ts';
-import type { AdminAuth } from '../admin/auth.ts';
+import { ADMIN_USERNAME } from '../boot/initialize.ts';
+import type { Properties } from '../boot/properties.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import type { ConfigRepository } from '../repository/types.ts';
-import { ADMIN_USERNAME } from './initialize.ts';
-import type { Properties } from './properties.ts';
+import type { AdminAuth } from './auth.ts';
 
 // 會顯示在 Telegram 的「/」選單裡,註冊 webhook 時一併送給 Telegram
 const COMMANDS: BotCommand[] = [{ command: 'reset', description: '重設後台登入密碼' }];

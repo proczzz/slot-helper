@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import { handleBackgroundFailure } from '../app/error-handler.ts';
-import { routes } from '../app/routes.ts';
-import type { AppVariables } from '../app/services.ts';
-import { createServices } from '../app/services.ts';
+import { handleBackgroundFailure } from '../boot/error-handler.ts';
+import type { AppVariables } from '../boot/services.ts';
+import { createServices } from '../boot/services.ts';
 import { createD1Database } from '../db/d1.ts';
+import { routes } from '../routes/index.ts';
 
 const app = new Hono<{ Bindings: CloudflareBindings } & AppVariables>();
 

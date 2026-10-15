@@ -2,16 +2,16 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { mkdirSync } from 'node:fs';
-import { handleBackgroundFailure } from '../app/error-handler.ts';
-import { routes } from '../app/routes.ts';
-import type { AppVariables } from '../app/services.ts';
-import { createServices } from '../app/services.ts';
+import { handleBackgroundFailure } from '../boot/error-handler.ts';
+import type { AppVariables } from '../boot/services.ts';
+import { createServices } from '../boot/services.ts';
 import { createSqliteDatabase } from '../db/sqlite.ts';
 import type { Statement } from '../db/types.ts';
 import { CREATE_CONFIG_TABLE } from '../repository/config-repository.ts';
 import { CREATE_MESSAGES_TABLE } from '../repository/conversation-repository.ts';
 import { CREATE_CUSTOMERS_TABLE } from '../repository/customer-repository.ts';
 import { CREATE_USERS_TABLE } from '../repository/user-repository.ts';
+import { routes } from '../routes/index.ts';
 
 mkdirSync('./data', { recursive: true });
 const database = createSqliteDatabase('./data/slot-helper.db'); // 初始化資料庫

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
+import type { AppVariables } from '../boot/services.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { takeOauthSession } from './oauth-cookies.ts';
-import type { AppVariables } from './services.ts';
 
 // 授權結束後導回的後台頁面
 const SETTINGS_PAGE = '/settings/calendar';

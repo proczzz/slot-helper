@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isValidTimeZone } from './time.ts';
+import { isValidTimeZone } from '../core/time.ts';
 
 const PeriodSchema = z.tuple([z.string(), z.string()]);
 

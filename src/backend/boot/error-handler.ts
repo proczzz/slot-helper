@@ -1,8 +1,8 @@
 import type { Context } from 'hono';
 import { ZodError } from 'zod';
 import { ExpectedError } from '../core/app-error.ts';
-import type { Notifier } from '../core/notifications.ts';
 import { jsend } from '../model/dto/jsend.ts';
+import type { Notifier } from '../service/notifier.ts';
 import type { AppVariables } from './services.ts';
 
 // http 框架層級錯誤處理

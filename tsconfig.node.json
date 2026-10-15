@@ -6,13 +6,14 @@
   },
   "include": [
     "src/backend/adapter/**/*.ts",
-    "src/backend/admin/**/*.ts",
-    "src/backend/app/**/*.ts",
+    "src/backend/boot/*.ts",
     "src/backend/core/**/*.ts",
     "src/backend/db/sqlite.ts",
     "src/backend/db/types.ts",
     "src/backend/infra/node.ts",
     "src/backend/model/**/*.ts",
-    "src/backend/repository/*.ts"
+    "src/backend/repository/*.ts",
+    "src/backend/routes/*.ts",
+    "src/backend/service/*ts"
   ]
 }

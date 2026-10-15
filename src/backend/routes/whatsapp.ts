@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AppVariables } from './services.ts';
+import type { AppVariables } from '../boot/services';
 
 const whatsappRoutes = new Hono<AppVariables>();
 

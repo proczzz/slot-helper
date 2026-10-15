@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { Notifier } from './notifications';
+import type { Notifier } from '../service/notifier';
 
 export function createSupportTools(notifier: Notifier) {
   return {

@@ -1,8 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { Event, SchedulingProvider, TimePeriod } from '../adapter/scheduling/types.ts';
+import type { Service, ShopConfig } from '../model/shop-config.ts';
 import { freeSlots } from './availability.ts';
-import type { Service, ShopConfig } from './shop-config.ts';
 import { toAbsoluteTime, toLocalTime, toLocalWeekday } from './time.ts';
 
 const MAX_APPOINTMENTS = 20;

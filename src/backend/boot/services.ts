@@ -7,25 +7,25 @@ import { createTelegramClient } from '../adapter/telegram/telegram-client.ts';
 import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
 import { createWhatsappClient } from '../adapter/whatsapp/whatsapp-client.ts';
-import type { AdminAuth } from '../admin/auth.ts';
-import { createAdminAuth } from '../admin/auth.ts';
-import { createChatService } from '../core/chat-service.ts';
-import { createMessageService, type MessageService } from '../core/message-service.ts';
-import { createNotifier, type Notifier } from '../core/notifications.ts';
 import type { Database } from '../db/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
 import { createCustomerRepository } from '../repository/customer-repository.ts';
 import type { ConfigRepository, UserRepository } from '../repository/types.ts';
 import { createUserRepository } from '../repository/user-repository.ts';
-import { createAiService, type AiService } from './ai-service.ts';
-import { createCalendarService, type CalendarService } from './calendar-service.ts';
-import { createConfigService, type ConfigService } from './config-service.ts';
-import { createCustomerService, type CustomerService } from './customer-service.ts';
+import { createAiService, type AiService } from '../service/ai.ts';
+import type { AdminAuth } from '../service/auth.ts';
+import { createAdminAuth } from '../service/auth.ts';
+import { createCalendarService, type CalendarService } from '../service/calendar.ts';
+import { createChatService } from '../service/chat.ts';
+import { createConfigService, type ConfigService } from '../service/config.ts';
+import { createCustomerService, type CustomerService } from '../service/customer.ts';
+import { createMessageService, type MessageService } from '../service/message.ts';
+import { createNotifier, type Notifier } from '../service/notifier.ts';
+import { createTelegramService, type TelegramService } from '../service/telegram.ts';
 import { ensureInitialized } from './initialize.ts';
 import { loadProperties, type Properties } from './properties.ts';
 import { createAiStateStore, createTokenStore } from './state-store.ts';
-import { createTelegramService, type TelegramService } from './telegram-service.ts';
 
 // 放 Hono Context 裡
 export type AppVariables = {

@@ -1,5 +1,5 @@
 import type { TimePeriod } from '../adapter/scheduling/types.ts';
-import type { BusinessHours, DayKey } from './shop-config.ts';
+import type { BusinessHours, DayKey } from '../model/shop-config.ts';
 import { toAbsoluteTime, toLocalTime } from './time.ts';
 
 const DAY_MINUTES = 24 * 60;

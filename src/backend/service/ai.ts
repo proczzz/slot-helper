@@ -1,7 +1,7 @@
 import { listAvailableModels } from '../adapter/ai/index.ts';
 import type { AiState, AiStateStore } from '../adapter/ai/types.ts';
+import type { Properties } from '../boot/properties.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import type { Properties } from './properties.ts';
 
 export interface AiService {
   listModels(request: { provider: string; apiKey?: string; name?: string }): Promise<string[]>;

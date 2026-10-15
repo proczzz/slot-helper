@@ -9,8 +9,8 @@ import {
 import { SchedulingSelectionSchema, type SchedulingConfig } from '../adapter/scheduling/types.ts';
 import { TelegramConfigSchema, type TelegramConfig } from '../adapter/telegram/types.ts';
 import { WhatsappConfigSchema, type WhatsappConfig } from '../adapter/whatsapp/types.ts';
-import { ShopConfigSchema, type ShopConfig } from '../core/shop-config.ts';
-import { SystemConfigSchema, type SystemConfig } from '../core/system-config.ts';
+import { ShopConfigSchema, type ShopConfig } from '../model/shop-config.ts';
+import { SystemConfigSchema, type SystemConfig } from '../model/system-config.ts';
 import type { ConfigKey, ConfigRepository } from '../repository/types.ts';
 
 // config 表的快照。欄位名對應 config 表的 key

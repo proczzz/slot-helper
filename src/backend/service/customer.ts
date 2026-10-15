@@ -1,9 +1,9 @@
 import { ExpectedError } from '../core/app-error.ts';
-import type { ChatService } from '../core/chat-service.ts';
+import type { ChatResponse } from '../model/dto/chat.ts';
 import type { Customer } from '../model/entity/customer.ts';
 import type { Message } from '../model/entity/message.ts';
-import type { ChatResponse } from '../model/dto/chat.ts';
 import type { ConversationRepository, CustomerRepository } from '../repository/types.ts';
+import type { ChatService } from './chat.ts';
 
 // 測試顧客用這個 channel 與其他管道隔開
 const TEST_CHANNEL = 'test';

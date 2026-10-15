@@ -1,8 +1,8 @@
 import type { IncomingMessage, MessagingClient } from '../adapter/types.ts';
+import type { SystemConfig } from '../model/system-config.ts';
 import type { ConversationRepository, CustomerRepository } from '../repository/types.ts';
-import type { ChatService } from './chat-service.ts';
-import type { Notifier } from './notifications.ts';
-import type { SystemConfig } from './system-config.ts';
+import type { ChatService } from './chat.ts';
+import type { Notifier } from './notifier.ts';
 
 export interface MessageService {
   handleWebhook(client: MessagingClient, body: string): Promise<void>;

@@ -2,14 +2,14 @@ import { generateText, stepCountIs } from 'ai';
 import { describeFailure, isPermanentFailure } from '../adapter/ai/errors.ts';
 import type { ActiveModel, AiStateStore } from '../adapter/ai/types.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
+import { buildSystemPrompt } from '../core/build-system-prompt.ts';
+import { createSchedulingTools } from '../core/scheduling-tools.ts';
+import { createSupportTools } from '../core/support-tools.ts';
 import type { ChatResponse } from '../model/dto/chat.ts';
+import type { ShopConfig } from '../model/shop-config.ts';
+import type { SystemConfig } from '../model/system-config.ts';
 import type { ConversationRepository } from '../repository/types.ts';
-import { buildSystemPrompt } from './build-system-prompt.ts';
-import type { Notifier } from './notifications.ts';
-import { createSchedulingTools } from './scheduling-tools.ts';
-import type { ShopConfig } from './shop-config.ts';
-import { createSupportTools } from './support-tools.ts';
-import type { SystemConfig } from './system-config.ts';
+import type { Notifier } from './notifier.ts';
 
 export interface ChatService {
   handleChat(

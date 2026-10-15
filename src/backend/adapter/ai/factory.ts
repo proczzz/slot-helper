@@ -1,6 +1,6 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import type { LanguageModelProvider } from './types';
 import type { LanguageModel } from 'ai';
+import type { LanguageModelProvider } from './types';
 
 // 各家套件的形狀一致:工廠收 apiKey,回傳的物件可以直接當函式呼叫、收模型名稱
 type ProviderFactory = (options: { apiKey: string }) => (model: string) => LanguageModel;
