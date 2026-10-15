@@ -50,7 +50,7 @@ export interface Services {
   // 從設定字串建立，可跨請求共用
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
-  notifier: Notifier; // 通知模組
+  notifier: Notifier;
 }
 
 export async function createServices(database: Database): Promise<Services> {
@@ -59,15 +59,19 @@ export async function createServices(database: Database): Promise<Services> {
   const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
-  const cache = await getSharedProviders(configRepository, userRepository);
-
-  const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
-  const configService = createConfigService(configRepository, clearCachedProviders);
+  const cache = await getSharedCache(configRepository, userRepository);
+  // ---內部底層依賴---
+  const aiStateStore = createAiStateStore(configRepository, clearSharedCache);
   const schedulingProvider = createSchedulingProvider(
     cache.properties.scheduling,
     createTokenStore(configRepository),
   );
-  const aiStateStore = createAiStateStore(configRepository, clearCachedProviders);
+  const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
+  const testChatService = buildChatService(testModels);
+  const chatService = buildChatService(cache.activeModels);
+  // ---controller 調用---
+  const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
+  const configService = createConfigService(configRepository, clearSharedCache);
   const aiService = createAiService(cache.properties, aiStateStore);
   const calendarService = createCalendarService(
     cache.properties,
@@ -79,11 +83,8 @@ export async function createServices(database: Database): Promise<Services> {
     configRepository,
     cache.telegramClient,
     adminAuth,
-    clearCachedProviders,
+    clearSharedCache,
   );
-  const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
-  const chatService = buildChatService(cache.activeModels);
-  const testChatService = buildChatService(testModels);
   const customerService = createCustomerService(
     customerRepository,
     conversationRepository,
@@ -124,7 +125,7 @@ export async function createServices(database: Database): Promise<Services> {
 }
 
 // 快取不能包含資料庫
-interface SharedProviders {
+interface SharedCache {
   jwtSecret: string;
   properties: Properties;
   activeModels: ActiveModel[];
@@ -132,23 +133,23 @@ interface SharedProviders {
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null;
-  notifier: Notifier; // 通知模組
+  notifier: Notifier;
 }
 
 // Node 上等同啟動時建一次;Cloudflare 上 warm isolate 內重用，cold start 就重算。
-let cachedProviders: SharedProviders | undefined;
+let sharedCache: SharedCache | undefined;
 
-async function getSharedProviders(
+async function getSharedCache(
   configRepository: ConfigRepository,
   userRepository: UserRepository,
-): Promise<SharedProviders> {
-  if (cachedProviders) return cachedProviders;
+): Promise<SharedCache> {
+  if (sharedCache) return sharedCache;
 
   const state = await ensureInitialized(configRepository, userRepository);
   const properties = await loadProperties(configRepository);
   const telegramClient = createTelegramClient(properties.telegram);
   const demoted = properties.aiState.map((item) => item.name);
-  cachedProviders = {
+  sharedCache = {
     jwtSecret: state.jwtSecret,
     properties,
     activeModels: createLanguageModels(properties.ai, 'active', demoted),
@@ -158,10 +159,10 @@ async function getSharedProviders(
     telegramClient,
     notifier: createNotifier(telegramClient),
   };
-  return cachedProviders;
+  return sharedCache;
 }
 
 // 後台儲存設定後呼叫。Cloudflare 上只清得掉當前 isolate，其他 isolate 要等自己重建
-export function clearCachedProviders() {
-  cachedProviders = undefined;
+export function clearSharedCache() {
+  sharedCache = undefined;
 }

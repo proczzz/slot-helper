@@ -71,8 +71,7 @@ adminRoutes.get('/config/:section', async (c) => {
   const { configService } = c.var.services;
   const section = c.req.param('section');
 
-  const config = await configService.read(section);
-  return c.json(jsend.success(config));
+  return c.json(jsend.success(await configService.read(section)));
 });
 
 adminRoutes.put('/config/:section', async (c) => {
@@ -88,30 +87,26 @@ adminRoutes.post('/ai/models', async (c) => {
   const { aiService } = c.var.services;
   const request = ListModelsReqSchema.parse(await readJson(c));
 
-  const models = await aiService.listModels(request);
-  return c.json(jsend.success(models));
+  return c.json(jsend.success(await aiService.listModels(request)));
 });
 
 adminRoutes.get('/ai/demotions', async (c) => {
   const { aiService } = c.var.services;
 
-  const demotions = await aiService.demotions();
-  return c.json(jsend.success(demotions));
+  return c.json(jsend.success(await aiService.demotions()));
 });
 
 adminRoutes.post('/ai/demotions/restore', async (c) => {
   const { aiService } = c.var.services;
   const { keyName } = RestoreDemotionReqSchema.parse(await readJson(c));
 
-  await aiService.restore(keyName);
-  return c.json(jsend.success(null));
+  return c.json(jsend.success(await aiService.restore(keyName)));
 });
 
 adminRoutes.get('/calendar/labels', async (c) => {
   const { calendarService } = c.var.services;
 
-  const labels = await calendarService.labels();
-  return c.json(jsend.success(labels));
+  return c.json(jsend.success(await calendarService.labels()));
 });
 
 // 取得微軟授權頁url，並預留cookies給callback頁，前端自己跳轉

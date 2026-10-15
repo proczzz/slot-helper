@@ -5,24 +5,24 @@ import z from 'zod';
 export const AiUsageSchema = z.enum(['active', 'test', 'idle']);
 export type AiUsage = z.infer<typeof AiUsageSchema>;
 
-// 存 config table
+// 存 config table 的 ai
 export const AiConfigSchema = z
   .array(
     z.object({
       name: z.string().min(1, '請輸入名稱'),
       provider: z.string().min(1, '請選擇供應商'),
-      apiKey: z.string().min(1, '請輸入 API key'),
       model: z.string().min(1, '請輸入模型名稱'),
+      apiKey: z.string().min(1, '請輸入 API key'),
       usage: AiUsageSchema.default('active'),
     }),
   )
-  // name 是降級名單指向這一組的唯一識別,不能用陣列索引(老闆刪掉中間一筆就會配錯)
+  // name 必須唯一
   .refine((keys) => new Set(keys.map((key) => key.name)).size === keys.length, '名稱不可重複');
 
 export type AiConfig = z.infer<typeof AiConfigSchema>;
 export type AiKey = z.infer<typeof AiConfigSchema>[number];
 
-// 存 config table 的 ai-state:系統自己寫的降級名單
+// 存 config table 的 ai-state: 系統自己寫的降級名單
 export const AiStateSchema = z.array(
   z.object({
     name: z.string(),
@@ -40,12 +40,12 @@ export interface AiStateStore {
   restore(name: string): Promise<void>;
 }
 
-// 存 service
+// 放 c.var.service
 export interface ActiveModel {
-  name: string; // 對應 ai 設定裡的名稱
+  name: string;
   model: LanguageModel;
-  provider: string;
-  modelName: string; // 存進對話紀錄時分辨是哪個 llm 回覆使用
+  provider: string; // 辨識用
+  modelName: string; // 辨識用
 }
 
 export interface LanguageModelProvider {

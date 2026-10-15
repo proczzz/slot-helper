@@ -4,11 +4,6 @@ import { MessagingConfigSchema, type MessagingClient } from '../types';
 export const LineConfigSchema = MessagingConfigSchema;
 export type LineConfig = z.infer<typeof LineConfigSchema>;
 
-export interface LineProfile {
-  displayName: string;
-  pictureUrl?: string;
-}
-
 export interface LineClient extends MessagingClient {}
 
 export interface LineWebhookBody {
@@ -29,3 +24,8 @@ export type LineTextEvent = LineEvent & {
   source: { type: string; userId: string };
   message: { type: string; text: string };
 };
+
+export interface LineProfile {
+  displayName: string;
+  pictureUrl?: string;
+}
