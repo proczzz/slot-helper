@@ -63,7 +63,7 @@ export function ShopSettingsPage() {
 
   if (shop.isError) {
     return (
-      <div className="alert alert-error max-w-3xl">
+      <div className="alert alert-error mx-auto w-full max-w-3xl">
         <span>{shop.error.message}</span>
       </div>
     );
@@ -151,7 +151,7 @@ function ShopForm({
   );
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex mx-auto w-full max-w-3xl flex-col gap-6">
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body gap-4">
           <h2 className="card-title">AI 指示</h2>

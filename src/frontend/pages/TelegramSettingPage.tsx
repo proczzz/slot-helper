@@ -31,7 +31,7 @@ export function TelegramSettingsPage() {
 
   if (isError) {
     return (
-      <div className="alert alert-error max-w-2xl">
+      <div className="alert alert-error mx-auto w-full max-w-3xl">
         <span>{error.message}</span>
       </div>
     );
@@ -69,7 +69,7 @@ function TelegramForm({ config }: { config: TelegramConfigVo }) {
   const incomplete = accessToken === '' || !chatId;
 
   return (
-    <div className="card max-w-2xl bg-base-100 shadow-sm">
+    <div className="card mx-auto w-full max-w-3xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">Telegram 設定</h2>
         <p className="text-sm opacity-70">AI 遇到無法處理的顧客需求時，會透過這個機器人通知你。</p>

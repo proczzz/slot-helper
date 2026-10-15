@@ -25,7 +25,7 @@ export function AccountPage() {
     currentPassword.length > 0 && newPassword.length >= 8 && newPassword === confirmPassword;
 
   return (
-    <div className="card max-w-md bg-base-100 shadow-sm">
+    <div className="card mx-auto w-full max-w-3xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">修改密碼</h2>
 

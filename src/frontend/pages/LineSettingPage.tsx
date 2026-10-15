@@ -27,7 +27,7 @@ export function LineSettingsPage() {
 
   if (isError) {
     return (
-      <div className="alert alert-error max-w-2xl">
+      <div className="alert alert-error mx-auto w-full max-w-3xl">
         <span>{error.message}</span>
       </div>
     );
@@ -66,7 +66,7 @@ function LineForm({ config }: { config: LineConfigVo }) {
   const incomplete = accessToken === '' || webhookSecret === '';
 
   return (
-    <div className="card max-w-2xl bg-base-100 shadow-sm">
+    <div className="card mx-auto w-full max-w-3xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">LINE 設定</h2>
 

@@ -40,7 +40,8 @@ export function AdminLayout() {
       />
 
       <div className="drawer-content flex min-h-dvh flex-col bg-base-200">
-        <div className="navbar bg-base-100 shadow-sm">
+        {/* 設定頁內容變長時整頁會捲動,頂欄要釘住才不會跟著消失 */}
+        <div className="navbar sticky top-0 z-10 bg-base-100 shadow-sm">
           <label
             htmlFor="admin-drawer"
             className="btn btn-ghost btn-square lg:hidden"

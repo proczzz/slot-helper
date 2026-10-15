@@ -39,7 +39,7 @@ export function SystemSettingsPage() {
 
   if (isError) {
     return (
-      <div className="alert alert-error max-w-2xl">
+      <div className="alert alert-error mx-auto w-full max-w-3xl">
         <span>{error.message}</span>
       </div>
     );
@@ -96,7 +96,7 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
     windowMinutes > WINDOW_RANGE.max;
 
   return (
-    <div className="card max-w-2xl bg-base-100 shadow-sm">
+    <div className="card mx-auto w-full max-w-3xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">系統設定</h2>
 
