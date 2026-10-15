@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { listModels, restoreAiKey, type AiDemotion, type AiKeyVo, type AiUsage } from '../lib/admin.ts';
+import { ModelMark, ProviderMark } from './BrandMark.tsx';
 import { SecretField } from './SecretField.tsx';
 
 // 寫死的清單,要和後端 adapter/ai/index.ts 的 providers 表保持一致
@@ -80,6 +81,12 @@ export function AiKeyModal({
     setDraft({ ...draft, [field]: next });
   }
 
+  // dropdown 靠 focus 開合,所以選完要主動移除焦點才會收起來
+  function pick(provider: string) {
+    update('provider', provider);
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-xl">
@@ -131,18 +138,44 @@ export function AiKeyModal({
           <div className="flex flex-wrap gap-3">
             <fieldset className="fieldset flex-1">
               <legend className="fieldset-legend">供應商</legend>
-              <select
-                className="select w-full"
-                value={draft.provider}
-                onChange={(event) => update('provider', event.target.value)}
-              >
-                <option value="">請選擇</option>
-                {PROVIDERS.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+              {/* <option> 放不了圖,所以用 dropdown 自己做 */}
+              <div className="dropdown w-full">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-block relative justify-center px-3 font-normal"
+                >
+                  {draft.provider ? (
+                    <ProviderMark provider={draft.provider} className="h-6 w-28" />
+                  ) : (
+                    <span className="opacity-50">請選擇</span>
+                  )}
+                  {/* 絕對定位,標記才能在按鈕正中間而不被箭頭推歪 */}
+                  <svg
+                    className="absolute right-3 size-4 opacity-50"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="m4 6 4 4 4-4" />
+                  </svg>
+                </div>
+
+                <ul className="dropdown-content menu z-10 mt-1 max-h-72 w-full flex-nowrap overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg">
+                  {PROVIDERS.map((name) => (
+                    <li key={name}>
+                      <button
+                        type="button"
+                        className="justify-center py-2"
+                        onClick={() => pick(name)}
+                      >
+                        <ProviderMark provider={name} className="h-6 w-28" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </fieldset>
 
             <fieldset className="fieldset flex-1">
@@ -195,6 +228,12 @@ export function AiKeyModal({
                 <option key={model} value={model} />
               ))}
             </datalist>
+
+            {draft.model && (
+              <div className="label">
+                <ModelMark model={draft.model} />
+              </div>
+            )}
 
             {models.isError ? (
               <p className="label text-error">{models.error.message}</p>

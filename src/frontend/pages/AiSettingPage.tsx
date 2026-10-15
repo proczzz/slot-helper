@@ -6,6 +6,7 @@ import {
   USAGES,
   type AiKeyDraft,
 } from '../components/AiKeyModal.tsx';
+import { ModelMark, ProviderMark } from '../components/BrandMark.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getAiDemotions,
@@ -28,7 +29,7 @@ export function AiSettingsPage() {
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'ai'],
-    queryFn: async () =>
+    queryFn: async (): Promise<AiKeyDraft[]> =>
       (await getSection<AiKeyVo[]>('ai'))?.map((key) => ({ ...key, apiKey: undefined })) ?? [],
   });
 
@@ -157,13 +158,17 @@ export function AiSettingsPage() {
                       )}
                     </td>
 
-                    <td className="whitespace-nowrap">{key.provider}</td>
+                    <td className="whitespace-nowrap" title={key.provider}>
+                      <ProviderMark provider={key.provider} />
+                    </td>
 
                     <td>
                       <code className="font-mono text-xs opacity-70">{key.apiKeyMask}</code>
                     </td>
 
-                    <td className="whitespace-nowrap">{key.model}</td>
+                    <td className="whitespace-nowrap">
+                      <ModelMark model={key.model} />
+                    </td>
 
                     <td>
                       <span className={`badge badge-sm whitespace-nowrap ${usage?.badge ?? ''}`}>
