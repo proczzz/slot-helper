@@ -98,9 +98,9 @@ adminRoutes.get('/ai/demotions', async (c) => {
 
 adminRoutes.post('/ai/demotions/restore', async (c) => {
   const { aiService } = c.var.services;
-  const { keyName } = RestoreDemotionReqSchema.parse(await readJson(c));
+  const { name } = RestoreDemotionReqSchema.parse(await readJson(c));
 
-  return c.json(jsend.success(await aiService.restore(keyName)));
+  return c.json(jsend.success(await aiService.restore(name)));
 });
 
 adminRoutes.get('/calendar/labels', async (c) => {

@@ -22,7 +22,7 @@ export const ListModelsReqSchema = z
 
 // 復原停用 aikey 請求
 export const RestoreDemotionReqSchema = z.object({
-  keyName: z.string().min(1, '請指定要解除的名稱'),
+  name: z.string().min(1, '請指定要解除的名稱'),
 });
 
 export const aiConfigMapper: ConfigMapper = {

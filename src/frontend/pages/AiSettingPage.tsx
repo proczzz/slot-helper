@@ -3,10 +3,11 @@ import { useState } from 'react';
 import {
   AiKeyModal,
   EMPTY_KEY,
-  USAGES,
+  UsageIcon,
+  usageLabel,
   type AiKeyDraft,
 } from '../components/AiKeyModal.tsx';
-import { ModelMark, ProviderMark } from '../components/BrandMark.tsx';
+import { Icon, ModelMark, ProviderMark } from '../components/BrandMark.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getAiDemotions,
@@ -107,7 +108,7 @@ export function AiSettingsPage() {
                 <th>供應商</th>
                 <th>API key</th>
                 <th>模型</th>
-                <th>用途</th>
+                <th>狀態</th>
                 <th />
               </tr>
             </thead>
@@ -122,7 +123,6 @@ export function AiSettingsPage() {
 
               {keys.map((key, index) => {
                 const demotion = demotions.data?.find((item) => item.name === key.name);
-                const usage = USAGES.find((item) => item.value === key.usage);
 
                 return (
                   <tr key={key.name} className="hover:bg-base-200/40">
@@ -149,14 +149,7 @@ export function AiSettingsPage() {
                       </div>
                     </td>
 
-                    <td className="font-medium whitespace-nowrap">
-                      {key.name}
-                      {demotion && (
-                        <span className="badge badge-warning badge-sm ml-2" title={demotion.reason}>
-                          已停用
-                        </span>
-                      )}
-                    </td>
+                    <td className="font-medium whitespace-nowrap">{key.name}</td>
 
                     <td className="whitespace-nowrap" title={key.provider}>
                       <ProviderMark provider={key.provider} />
@@ -170,10 +163,12 @@ export function AiSettingsPage() {
                       <ModelMark model={key.model} />
                     </td>
 
-                    <td>
-                      <span className={`badge badge-sm whitespace-nowrap ${usage?.badge ?? ''}`}>
-                        {usage?.label ?? key.usage}
-                      </span>
+                    <td title={demotion ? '失效' : usageLabel(key.usage)}>
+                      {demotion ? (
+                        <Icon name="warning" className="size-8 text-error" />
+                      ) : (
+                        <UsageIcon usage={key.usage} live className="size-8" />
+                      )}
                     </td>
 
                     <td>
