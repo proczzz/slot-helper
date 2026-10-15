@@ -1,8 +1,7 @@
 import { listAvailableModels } from '../adapter/ai/index.ts';
 import type { AiState, AiStateStore } from '../adapter/ai/types.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import type { ConfigRepository } from '../repository/types.ts';
-import { loadAiKeys } from './config.ts';
+import type { Properties } from './properties.ts';
 
 export interface AiService {
   listModels(request: { provider: string; apiKey?: string; name?: string }): Promise<string[]>;
@@ -11,7 +10,7 @@ export interface AiService {
 }
 
 export function createAiService(
-  configRepository: ConfigRepository, // repository
+  properties: Properties,
   aiState: AiStateStore, // service
 ): AiService {
   return {
@@ -20,8 +19,7 @@ export function createAiService(
 
       // 前端手上只有遮罩時會送 name，由後端自己讀出那把 key
       if (!key) {
-        const keys = await loadAiKeys(configRepository);
-        key = keys.find((item) => item.name === name)?.apiKey;
+        key = properties.ai.find((item) => item.name === name)?.apiKey;
       }
 
       if (!key) throw new ExpectedError('找不到這組 API key，請先儲存設定或重新輸入');

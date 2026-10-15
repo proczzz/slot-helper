@@ -1,5 +1,5 @@
 import type { Database, Statement } from '../db/types.ts';
-import type { ConfigRepository } from './types.ts';
+import type { ConfigKey, ConfigRepository } from './types.ts';
 
 // !!! 內容需與 migrations/0002_create_config_table.sql 保持一致
 export const CREATE_CONFIG_TABLE: Statement[] = [
@@ -24,6 +24,14 @@ export function createConfigRepository(database: Database): ConfigRepository {
         params: [key],
       });
       return rows[0]?.value ?? null;
+    },
+
+    async getAll() {
+      const rows = await database.query<{ key: ConfigKey; value: string }>({
+        sql: 'SELECT key, value FROM config',
+        params: [],
+      });
+      return new Map(rows.map((row) => [row.key, row.value]));
     },
 
     async set(key, value) {

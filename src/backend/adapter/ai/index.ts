@@ -34,6 +34,7 @@ export function createLanguageModels(
 
   for (const key of keys) {
     if (key.usage !== usage) continue;
+    if (demoted.includes(key.name)) continue;
 
     const provider = providers[key.provider];
     if (!provider) continue; // 供應商名稱不認得,當成沒設定

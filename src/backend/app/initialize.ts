@@ -39,7 +39,7 @@ async function initialize(
     initializedAt: new Date().toISOString(),
   });
 
-  await configRepository.set('system', JSON.stringify(system));
+  await configRepository.set('system-state', JSON.stringify(system));
 
   console.log('─'.repeat(50));
   console.log(`SlotHelper 已初始化，管理帳號: ${ADMIN_USERNAME}`);

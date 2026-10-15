@@ -7,8 +7,8 @@ import type {
 import type { AdminAuth } from '../admin/auth.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import type { ConfigRepository } from '../repository/types.ts';
-import { loadTelegramConfig } from './config.ts';
 import { ADMIN_USERNAME } from './initialize.ts';
+import type { Properties } from './properties.ts';
 
 // 會顯示在 Telegram 的「/」選單裡,註冊 webhook 時一併送給 Telegram
 const COMMANDS: BotCommand[] = [{ command: 'reset', description: '重設後台登入密碼' }];
@@ -28,9 +28,11 @@ const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 const RESET_COMMAND = '/reset';
 
 export function createTelegramService(
+  properties: Properties, // properties
   configRepository: ConfigRepository, // repository
   telegramClient: TelegramClient | null, // service
   adminAuth: AdminAuth, // service
+  onChange: () => void, // 寫入 webhookSecret 後快取要重算
 ): TelegramService {
   return {
     async sendTest() {
@@ -50,7 +52,7 @@ export function createTelegramService(
     },
 
     async registerWebhook(url) {
-      const config = await loadTelegramConfig(configRepository);
+      const config = properties.telegram;
       if (!telegramClient || !config) throw new ExpectedError(NOT_CONFIGURED);
 
       // 純機器對機器的驗證碼,老闆不需要看到也不需要輸入,每次註冊都換新的
@@ -64,6 +66,7 @@ export function createTelegramService(
         throw new ExpectedError(error instanceof Error ? error.message : '註冊失敗');
       }
       await configRepository.set('telegram', JSON.stringify({ ...config, webhookSecret }));
+      onChange();
 
       // 指令清單只影響「/」選單,失敗不該讓整個註冊算失敗
       await telegramClient.setCommands(COMMANDS).catch((error) => {
@@ -73,7 +76,7 @@ export function createTelegramService(
       return telegramClient.getWebhookInfo();
     },
     async verifyRequest(headers) {
-      const config = await loadTelegramConfig(configRepository);
+      const config = properties.telegram;
       if (!config?.webhookSecret) return false; // 還沒註冊過 webhook
 
       return headers.get(SECRET_HEADER) === config.webhookSecret;
@@ -82,7 +85,7 @@ export function createTelegramService(
     async handleUpdate(update) {
       if (!telegramClient) return;
 
-      const config = await loadTelegramConfig(configRepository);
+      const config = properties.telegram;
       const { message } = update;
       // 只處理老闆本人的文字訊息
       if (!message?.text || String(message.chat.id) !== config?.chatId) return;

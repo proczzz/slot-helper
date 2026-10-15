@@ -19,6 +19,7 @@ export type ConfigKey =
 
 export interface ConfigRepository {
   get(key: ConfigKey): Promise<string | null>;
+  getAll(): Promise<Map<ConfigKey, string>>;
   set(key: ConfigKey, value: string): Promise<void>;
   setMany(entries: { key: ConfigKey; value: string }[]): Promise<void>;
   remove(key: ConfigKey): Promise<void>;

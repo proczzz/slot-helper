@@ -3,7 +3,6 @@ import type { ActiveModel } from '../adapter/ai/types.ts';
 import { createLineClient } from '../adapter/line/line-client.ts';
 import type { LineClient } from '../adapter/line/types.ts';
 import { createSchedulingProvider } from '../adapter/scheduling/index.ts';
-import type { SchedulingConfig } from '../adapter/scheduling/types.ts';
 import { createTelegramClient } from '../adapter/telegram/telegram-client.ts';
 import type { TelegramClient } from '../adapter/telegram/types.ts';
 import type { WhatsappClient } from '../adapter/whatsapp/types.ts';
@@ -13,8 +12,6 @@ import { createAdminAuth } from '../admin/auth.ts';
 import { createChatService } from '../core/chat-service.ts';
 import { createMessageService, type MessageService } from '../core/message-service.ts';
 import { createNotifier, type Notifier } from '../core/notifications.ts';
-import type { ShopConfig } from '../core/shop-config.ts';
-import type { SystemConfig } from '../core/system-config.ts';
 import type { Database } from '../db/types.ts';
 import { createConfigRepository } from '../repository/config-repository.ts';
 import { createConversationRepository } from '../repository/conversation-repository.ts';
@@ -24,20 +21,10 @@ import { createUserRepository } from '../repository/user-repository.ts';
 import { createAiService, type AiService } from './ai-service.ts';
 import { createCalendarService, type CalendarService } from './calendar-service.ts';
 import { createConfigService, type ConfigService } from './config-service.ts';
-import {
-  createAiStateStore,
-  createTokenStore,
-  loadAiKeys,
-  loadAiState,
-  loadLineConfig,
-  loadSchedulingConfig,
-  loadShopSettings,
-  loadSystemConfig,
-  loadTelegramConfig,
-  loadWhatsappConfig,
-} from './config.ts';
+import { createAiStateStore, createTokenStore } from './config.ts';
 import { createCustomerService, type CustomerService } from './customer-service.ts';
 import { ensureInitialized } from './initialize.ts';
+import { loadProperties, type Properties } from './properties.ts';
 import { createTelegramService, type TelegramService } from './telegram-service.ts';
 
 // 放 Hono Context 裡
@@ -77,13 +64,23 @@ export async function createServices(database: Database): Promise<Services> {
   const adminAuth = createAdminAuth(userRepository, cache.jwtSecret);
   const configService = createConfigService(configRepository, clearCachedProviders);
   const schedulingProvider = createSchedulingProvider(
-    cache.schedulingConfig,
+    cache.properties.scheduling,
     createTokenStore(configRepository),
   );
   const aiStateStore = createAiStateStore(configRepository, clearCachedProviders);
-  const aiService = createAiService(configRepository, aiStateStore);
-  const calendarService = createCalendarService(configRepository, schedulingProvider);
-  const telegramService = createTelegramService(configRepository, cache.telegramClient, adminAuth);
+  const aiService = createAiService(cache.properties, aiStateStore);
+  const calendarService = createCalendarService(
+    cache.properties,
+    createTokenStore(configRepository),
+    schedulingProvider,
+  );
+  const telegramService = createTelegramService(
+    cache.properties,
+    configRepository,
+    cache.telegramClient,
+    adminAuth,
+    clearCachedProviders,
+  );
   const testModels = cache.testModels.length > 0 ? cache.testModels : cache.activeModels;
   const chatService = buildChatService(cache.activeModels);
   const testChatService = buildChatService(testModels);
@@ -93,7 +90,7 @@ export async function createServices(database: Database): Promise<Services> {
     testChatService,
   );
   const messageService = createMessageService(
-    cache.systemConfig,
+    cache.properties.system,
     customerRepository,
     conversationRepository,
     chatService,
@@ -116,8 +113,8 @@ export async function createServices(database: Database): Promise<Services> {
   function buildChatService(models: ActiveModel[]) {
     return createChatService(
       models,
-      cache.systemConfig,
-      cache.shopConfig,
+      cache.properties.system,
+      cache.properties.shop,
       conversationRepository,
       schedulingProvider,
       cache.notifier,
@@ -129,11 +126,9 @@ export async function createServices(database: Database): Promise<Services> {
 // 快取不能包含資料庫
 interface SharedProviders {
   jwtSecret: string;
-  systemConfig: SystemConfig;
+  properties: Properties;
   activeModels: ActiveModel[];
   testModels: ActiveModel[];
-  shopConfig: ShopConfig;
-  schedulingConfig: SchedulingConfig | null;
   lineClient: LineClient | null;
   whatsappClient: WhatsappClient | null;
   telegramClient: TelegramClient | null;
@@ -150,20 +145,16 @@ async function getSharedProviders(
   if (cachedProviders) return cachedProviders;
 
   const state = await ensureInitialized(configRepository, userRepository);
-  const telegramClient = createTelegramClient(await loadTelegramConfig(configRepository));
-  const demoted = (await loadAiState(configRepository)).map((item) => item.name);
-  const aiKeys = await loadAiKeys(configRepository);
-  const activeModels = createLanguageModels(aiKeys, 'active', demoted);
-  const testModels = createLanguageModels(aiKeys, 'test', demoted);
+  const properties = await loadProperties(configRepository);
+  const telegramClient = createTelegramClient(properties.telegram);
+  const demoted = properties.aiState.map((item) => item.name);
   cachedProviders = {
     jwtSecret: state.jwtSecret,
-    systemConfig: await loadSystemConfig(configRepository),
-    activeModels,
-    testModels,
-    shopConfig: await loadShopSettings(configRepository),
-    schedulingConfig: await loadSchedulingConfig(configRepository),
-    lineClient: createLineClient(await loadLineConfig(configRepository)),
-    whatsappClient: createWhatsappClient(await loadWhatsappConfig(configRepository)),
+    properties,
+    activeModels: createLanguageModels(properties.ai, 'active', demoted),
+    testModels: createLanguageModels(properties.ai, 'test', demoted),
+    lineClient: createLineClient(properties.line),
+    whatsappClient: createWhatsappClient(properties.whatsapp),
     telegramClient,
     notifier: createNotifier(telegramClient),
   };
