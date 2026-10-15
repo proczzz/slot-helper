@@ -3,10 +3,10 @@ import { startOauthSession } from '../app/oauth-cookies.ts';
 import type { AppVariables } from '../app/services.ts';
 import { ExpectedError } from '../core/app-error.ts';
 import { ListModelsRequestSchema, RestoreDemotionRequestSchema } from '../model/dto/ai.ts';
-import { ChatRequestSchema, TestCustomerSchema } from '../model/dto/chat.ts';
-import { AiPauseSchema, CustomerQuerySchema, MessageRequestSchema } from '../model/dto/customer.ts';
+import { ChatRequestSchema, TestCustomerRequestSchema } from '../model/dto/chat.ts';
+import { AiPauseRequestSchema, CustomerRequestSchema, MessageRequestSchema } from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
-import { LoginSchema } from '../model/dto/login.ts';
+import { LoginRequestSchema } from '../model/dto/login.ts';
 import { OutlookAuthorizeRequestSchema } from '../model/dto/outlook.ts';
 import { ChangePasswordRequestSchema } from '../model/dto/password.ts';
 import { WebhookSchema } from '../model/dto/telegram.ts';
@@ -20,7 +20,7 @@ const adminRoutes = new Hono<AdminVariables>();
 
 adminRoutes.post('/login', async (c) => {
   const { adminAuth, notifier } = c.var.services;
-  const { username, password } = LoginSchema.parse(await readJson(c));
+  const { username, password } = LoginRequestSchema.parse(await readJson(c));
   // 驗證密碼
   const authenticated = await adminAuth.authenticate(username, password);
   // [背景] 登入通知
@@ -163,7 +163,7 @@ adminRoutes.post('/telegram/webhook', async (c) => {
 
 adminRoutes.get('/customers', async (c) => {
   const { customerService } = c.var.services;
-  const { limit, before, channel } = CustomerQuerySchema.parse(c.req.query());
+  const { limit, before, channel } = CustomerRequestSchema.parse(c.req.query());
 
   return c.json(jsend.success(await customerService.list(limit, before, channel)));
 });
@@ -178,7 +178,7 @@ adminRoutes.get('/customers/:id/messages', async (c) => {
 // 暫停 AI 回覆這位顧客，期間沉默。minutes 傳 0 代表恢復。到期時間由後端算
 adminRoutes.post('/customers/ai-pause', async (c) => {
   const { customerService } = c.var.services;
-  const { customerId, minutes } = AiPauseSchema.parse(await readJson(c));
+  const { customerId, minutes } = AiPauseRequestSchema.parse(await readJson(c));
 
   await customerService.pauseAi(customerId, minutes);
   return c.json(jsend.success(null));
@@ -186,7 +186,7 @@ adminRoutes.post('/customers/ai-pause', async (c) => {
 
 adminRoutes.post('/test-customers', async (c) => {
   const { customerService } = c.var.services;
-  const { id, name } = TestCustomerSchema.parse(await readJson(c));
+  const { id, name } = TestCustomerRequestSchema.parse(await readJson(c));
 
   await customerService.upsertTestCustomer(id, name);
   return c.json(jsend.success(null));

@@ -3,7 +3,7 @@ import { AiConfigSchema, AiUsageSchema } from '../../adapter/ai/types.ts';
 import type { ConfigMapper } from './types.ts';
 
 // 儲存AI配置請求 (apiKey 沒輸入時代表沿用舊設定)
-const AiKeyRequestSchema = z.object({
+const SaveAiRequestSchema = z.object({
   name: z.string().min(1, '請輸入名稱'),
   provider: z.string().min(1, '請選擇供應商'),
   model: z.string().min(1, '請輸入模型名稱'),
@@ -27,7 +27,7 @@ export const RestoreDemotionRequestSchema = z.object({
 
 export const aiConfigMapper: ConfigMapper = {
   toConfig(body, stored) {
-    const input = z.array(AiKeyRequestSchema).parse(body);
+    const input = z.array(SaveAiRequestSchema).parse(body);
     const parsed = AiConfigSchema.safeParse(stored);
     const current = parsed.success ? parsed.data : [];
 
