@@ -1,5 +1,3 @@
-import testTube from '../assets/icon/test-tube.svg?raw';
-
 // SVG 是建置時打包進來的固定檔案,不是使用者輸入,所以 inline 進 DOM 是安全的。
 // inline 而不用 <img> 是為了讓沒指定顏色的單色 logo 能跟著主題變色
 const PROVIDER_FILES = import.meta.glob('../assets/brands/provider/*.svg', {
@@ -20,6 +18,19 @@ const CHANNEL_FILES = import.meta.glob('../assets/brands/channel/*.svg', {
   import: 'default',
 });
 
+const CALENDAR_FILES = import.meta.glob('../assets/brands/calendar/*.svg', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+});
+
+// 不是品牌,是我們自己指定含義的通用圖示
+const ICON_FILES = import.meta.glob('../assets/icon/*.svg', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+});
+
 function byName(files: Record<string, unknown>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(files).map(([path, svg]) => [
@@ -32,6 +43,8 @@ function byName(files: Record<string, unknown>): Record<string, string> {
 const PROVIDERS = byName(PROVIDER_FILES);
 const MODELS = byName(MODEL_FILES);
 const CHANNELS = byName(CHANNEL_FILES);
+const CALENDARS = byName(CALENDAR_FILES);
+const ICONS = byName(ICON_FILES);
 
 // 原樣在深色或淺色主題下會看不見的檔案。
 // fill-current:原檔沒指定顏色,交給主題的文字色
@@ -170,9 +183,33 @@ export function ModelMark({ model, className = 'h-4 w-4' }: { model: string; cla
   );
 }
 
+// 日曆服務的選項是寫死的,所以直接給檔名而不是用後端的 key 推導
+export function CalendarMark({ name, className = 'size-8' }: { name: string; className?: string }) {
+  const svg = CALENDARS[`${name}-icon`];
+  if (!svg) return null;
+
+  return <Svg name={`${name}-icon`} svg={svg} className={className} />;
+}
+
+// assets/icon/ 底下的檔名,例如 disable、test-tube
+export function Icon({ name, className = 'size-5' }: { name: string; className?: string }) {
+  const svg = ICONS[name];
+  if (!svg) return null;
+
+  return <Svg name={name} svg={svg} className={className} />;
+}
+
 // test 是我們自己造的管道,用通用圖示而不是品牌標
-export function ChannelMark({ channel, className = 'size-3' }: { channel: string; className?: string }) {
-  const svg = channel === 'test' ? testTube : CHANNELS[`${channel}-icon`];
+export function ChannelMark({
+  channel,
+  className = 'size-3',
+}: {
+  channel: string;
+  className?: string;
+}) {
+  if (channel === 'test') return <Icon name="test-tube" className={className} />;
+
+  const svg = CHANNELS[`${channel}-icon`];
   if (!svg) return null;
 
   return <Svg name={`${channel}-icon`} svg={svg} className={className} />;

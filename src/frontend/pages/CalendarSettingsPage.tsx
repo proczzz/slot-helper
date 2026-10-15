@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { CalendarMark, Icon } from '../components/BrandMark.tsx';
 import { GoogleCalendarForm } from '../components/GoogleCalendarForm.tsx';
 import { OutlookForm } from '../components/OutlookForm.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
@@ -15,10 +16,12 @@ import {
 const GOOGLE = 'google-calendar';
 const OUTLOOK = 'outlook';
 
-// 新增供應商 = 這裡加一行 + 下面多掛一個設定表單,並和後端的 providers 表保持一致
-const PROVIDERS = [
-  { value: GOOGLE, label: 'Google 日曆' },
-  { value: OUTLOOK, label: 'Outlook 日曆' },
+// 新增供應商 = 這裡加一行 + 下面多掛一個設定表單,並和後端的 providers 表保持一致。
+// icon 是 assets/brands/calendar/ 底下的檔名
+const PROVIDERS: { value: string | null; label: string; icon: string | null }[] = [
+  { value: null, label: '不使用', icon: null },
+  { value: GOOGLE, label: 'Google 日曆', icon: 'google-calendar' },
+  { value: OUTLOOK, label: 'Outlook 行事曆', icon: 'outlook-calendar' },
 ];
 
 // 後端回的是原樣存進去的 JSON,schema 新增欄位後舊資料會缺欄位,所以用常數補齊
@@ -138,19 +141,31 @@ function CalendarSettings({
 
         <fieldset className="fieldset">
           <legend className="fieldset-legend">使用的日曆服務</legend>
-          <select
-            className="select w-full"
-            value={provider ?? ''}
-            disabled={save.isPending}
-            onChange={(event) => changeProvider(event.target.value || null)}
-          >
-            <option value="">不啟用預約功能</option>
+
+          <div className="grid grid-cols-3 gap-3">
             {PROVIDERS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
+              <button
+                key={item.value ?? 'none'}
+                type="button"
+                className={`flex flex-col items-center gap-2 rounded-box border-2 p-4 ${
+                  provider === item.value
+                    ? 'border-primary bg-primary/5'
+                    : 'border-base-300 hover:bg-base-200'
+                }`}
+                aria-pressed={provider === item.value}
+                disabled={save.isPending}
+                onClick={() => changeProvider(item.value)}
+              >
+                {item.icon ? (
+                  <CalendarMark name={item.icon} className="size-10" />
+                ) : (
+                  <Icon name="disable" className="size-10 text-base-content/40" />
+                )}
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
             ))}
-          </select>
+          </div>
+
           <p className="label">選了就立即生效。下面的設定各自有儲存按鈕</p>
         </fieldset>
 
