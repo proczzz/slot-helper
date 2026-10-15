@@ -227,7 +227,9 @@ function AiKeyRow({
           <div className="flex-1">
             <p>這組金鑰失效後已自動停用，處理完再解除。</p>
             <p className="mt-1 font-mono text-xs opacity-70">{demotion.reason}</p>
-            <p className="mt-1 text-xs opacity-60">停用於 {new Date(demotion.at).toLocaleString()}</p>
+            <p className="mt-1 text-xs opacity-60">
+              停用於 {new Date(demotion.at).toLocaleString()}
+            </p>
           </div>
           <button
             type="button"

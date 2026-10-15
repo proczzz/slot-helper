@@ -1,5 +1,5 @@
-import type { Context } from "hono";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import type { Context } from 'hono';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 
 const STATE = 'oauth_state';
 const REDIRECT = 'oauth_redirect';

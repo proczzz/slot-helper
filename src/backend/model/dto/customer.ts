@@ -8,7 +8,11 @@ export const CustomerQuerySchema = z.object({
 
 export const AiPauseReqSchema = z.object({
   customerId: z.string().min(1),
-  minutes: z.number().int().min(0).max(60 * 24 * 30), // 0 代表立即恢復
+  minutes: z
+    .number()
+    .int()
+    .min(0)
+    .max(60 * 24 * 30), // 0 代表立即恢復
 });
 
 export const MessageQuerySchema = z.object({

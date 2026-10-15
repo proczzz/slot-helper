@@ -74,8 +74,7 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
   const steps = Number(maxSteps);
   const historyInvalid =
     !Number.isInteger(turns) || turns < HISTORY_RANGE.min || turns > HISTORY_RANGE.max;
-  const daysInvalid =
-    !Number.isInteger(days) || days < DAYS_RANGE.min || days > DAYS_RANGE.max;
+  const daysInvalid = !Number.isInteger(days) || days < DAYS_RANGE.min || days > DAYS_RANGE.max;
   const stepsInvalid =
     !Number.isInteger(steps) || steps < STEPS_RANGE.min || steps > STEPS_RANGE.max;
   const replyInvalid = fallbackReply.trim().length === 0;
