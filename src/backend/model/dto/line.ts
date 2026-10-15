@@ -3,14 +3,14 @@ import { LineConfigSchema } from '../../adapter/line/types.ts';
 import type { ConfigMapper } from './types.ts';
 
 // 可選欄位沒輸入時代表沿用舊設定
-const LineConfigRequestSchema = z.object({
+const LineConfigReqSchema = z.object({
   accessToken: z.string().min(1, '請輸入 Channel access token').optional(),
   webhookSecret: z.string().min(1, '請輸入 Channel secret').optional(),
 });
 
 export const lineConfigMapper: ConfigMapper = {
   toConfig(body, stored) {
-    const input = LineConfigRequestSchema.parse(body);
+    const input = LineConfigReqSchema.parse(body);
     const current = LineConfigSchema.partial().parse(stored ?? {});
 
     // 有送的覆蓋、沒送的保留。合併完再嚴格驗一次，首次設定沒填齊會在這裡被擋下

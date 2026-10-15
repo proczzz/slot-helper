@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ChatRequestSchema = z.object({
+export const ChatReqSchema = z.object({
   sessionId: z.string().min(1, '請輸入測試身分'),
   message: z.string().min(1, '請輸入訊息'),
 });
@@ -9,7 +9,7 @@ export interface ChatResponse {
   reply: string;
 }
 
-export const TestCustomerRequestSchema = z.object({
+export const TestCustomerReqSchema = z.object({
   id: z
     .string()
     .min(1, '請輸入識別碼')

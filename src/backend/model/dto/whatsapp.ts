@@ -3,7 +3,7 @@ import { WhatsappConfigSchema } from '../../adapter/whatsapp/types.ts';
 import type { ConfigMapper } from './types.ts';
 
 // 可選欄位沒輸入時代表沿用舊設定
-const WhatsappConfigRequestSchema = z.object({
+const WhatsappConfigReqSchema = z.object({
   accessToken: z.string().min(1, '請輸入存取權杖').optional(),
   webhookSecret: z.string().min(1, '請輸入 App secret').optional(),
   phoneNumberId: z.string().min(1, '請輸入 Phone number ID'),
@@ -12,7 +12,7 @@ const WhatsappConfigRequestSchema = z.object({
 
 export const whatsappConfigMapper: ConfigMapper = {
   toConfig(body, stored) {
-    const input = WhatsappConfigRequestSchema.parse(body);
+    const input = WhatsappConfigReqSchema.parse(body);
     const current = WhatsappConfigSchema.partial().parse(stored ?? {});
 
     return WhatsappConfigSchema.parse({ ...current, ...input });

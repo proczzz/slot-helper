@@ -3,7 +3,7 @@ import { AiConfigSchema, AiUsageSchema } from '../../adapter/ai/types.ts';
 import type { ConfigMapper } from './types.ts';
 
 // 儲存AI配置請求 (apiKey 沒輸入時代表沿用舊設定)
-const SaveAiRequestSchema = z.object({
+const AiConfigReqSchema = z.object({
   name: z.string().min(1, '請輸入名稱'),
   provider: z.string().min(1, '請選擇供應商'),
   model: z.string().min(1, '請輸入模型名稱'),
@@ -12,7 +12,7 @@ const SaveAiRequestSchema = z.object({
 });
 
 // 列出可用AI模型請求 (沒送 apiKey 時用 name 去找已儲存的那把)
-export const ListModelsRequestSchema = z
+export const ListModelsReqSchema = z
   .object({
     provider: z.string().min(1, '請選擇供應商'),
     apiKey: z.string().min(1).optional(),
@@ -21,13 +21,13 @@ export const ListModelsRequestSchema = z
   .refine((input) => input.apiKey ?? input.name, '請提供 API key 或名稱');
 
 // 復原停用 aikey 請求
-export const RestoreDemotionRequestSchema = z.object({
+export const RestoreDemotionReqSchema = z.object({
   keyName: z.string().min(1, '請指定要解除的名稱'),
 });
 
 export const aiConfigMapper: ConfigMapper = {
   toConfig(body, stored) {
-    const input = z.array(SaveAiRequestSchema).parse(body);
+    const input = z.array(AiConfigReqSchema).parse(body);
     const parsed = AiConfigSchema.safeParse(stored);
     const current = parsed.success ? parsed.data : [];
 

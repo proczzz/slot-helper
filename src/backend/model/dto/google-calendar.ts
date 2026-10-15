@@ -1,7 +1,7 @@
 import z from 'zod';
 import type { ConfigMapper } from './types.ts';
 
-const StoredSchema = z
+const GoogleCalendarStoredSchema = z
   .object({
     serviceAccountEmail: z.string().default(''),
     privateKey: z.string().default(''),
@@ -9,7 +9,7 @@ const StoredSchema = z
   })
   .prefault({});
 
-const RequestSchema = z.object({
+const GoogleCalendarConfigReqSchema = z.object({
   serviceAccountEmail: z.string().optional(),
   privateKey: z.string().optional(),
   calendarId: z.string().optional(),
@@ -17,8 +17,8 @@ const RequestSchema = z.object({
 
 export const googleCalendarConfigMapper: ConfigMapper = {
   toConfig(body, stored) {
-    const input = RequestSchema.parse(body);
-    const previous = StoredSchema.parse(stored ?? undefined);
+    const input = GoogleCalendarConfigReqSchema.parse(body);
+    const previous = GoogleCalendarStoredSchema.parse(stored ?? undefined);
 
     return { ...previous, ...input };
   },
@@ -26,7 +26,7 @@ export const googleCalendarConfigMapper: ConfigMapper = {
   toVo(stored) {
     if (stored === null) return null;
 
-    const settings = StoredSchema.parse(stored);
+    const settings = GoogleCalendarStoredSchema.parse(stored);
     return {
       serviceAccountEmail: settings.serviceAccountEmail,
       hasPrivateKey: settings.privateKey.length > 0,

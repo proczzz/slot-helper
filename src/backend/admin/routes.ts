@@ -2,14 +2,18 @@ import { Context, Hono } from 'hono';
 import { startOauthSession } from '../app/oauth-cookies.ts';
 import type { AppVariables } from '../app/services.ts';
 import { ExpectedError } from '../core/app-error.ts';
-import { ListModelsRequestSchema, RestoreDemotionRequestSchema } from '../model/dto/ai.ts';
-import { ChatRequestSchema, TestCustomerRequestSchema } from '../model/dto/chat.ts';
-import { AiPauseRequestSchema, CustomerRequestSchema, MessageRequestSchema } from '../model/dto/customer.ts';
+import { ListModelsReqSchema, RestoreDemotionReqSchema } from '../model/dto/ai.ts';
+import { ChatReqSchema, TestCustomerReqSchema } from '../model/dto/chat.ts';
+import {
+  AiPauseReqSchema,
+  CustomerQuerySchema,
+  MessageQuerySchema,
+} from '../model/dto/customer.ts';
 import { jsend } from '../model/dto/jsend.ts';
-import { LoginRequestSchema } from '../model/dto/login.ts';
-import { OutlookAuthorizeRequestSchema } from '../model/dto/outlook.ts';
-import { ChangePasswordRequestSchema } from '../model/dto/password.ts';
-import { WebhookSchema } from '../model/dto/telegram.ts';
+import { LoginReqSchema } from '../model/dto/login.ts';
+import { OutlookAuthReqSchema } from '../model/dto/outlook.ts';
+import { ChangePasswordReqSchema } from '../model/dto/password.ts';
+import { WebhookReqSchema } from '../model/dto/telegram.ts';
 import { clearSessionCookie, readSessionCookie, setSessionCookie } from './auth.ts';
 
 type AdminVariables = {
@@ -20,7 +24,7 @@ const adminRoutes = new Hono<AdminVariables>();
 
 adminRoutes.post('/login', async (c) => {
   const { adminAuth, notifier } = c.var.services;
-  const { username, password } = LoginRequestSchema.parse(await readJson(c));
+  const { username, password } = LoginReqSchema.parse(await readJson(c));
   // 驗證密碼
   const authenticated = await adminAuth.authenticate(username, password);
   // [背景] 登入通知
@@ -54,7 +58,7 @@ adminRoutes.get('/me', (c) => c.json(jsend.success({ username: c.var.username })
 
 adminRoutes.post('/me/password', async (c) => {
   const { adminAuth } = c.var.services;
-  const { currentPassword, newPassword } = ChangePasswordRequestSchema.parse(await readJson(c));
+  const { currentPassword, newPassword } = ChangePasswordReqSchema.parse(await readJson(c));
   // 驗證密碼
   const changed = await adminAuth.changePassword(c.var.username, currentPassword, newPassword);
 
@@ -82,7 +86,7 @@ adminRoutes.put('/config/:section', async (c) => {
 
 adminRoutes.post('/ai/models', async (c) => {
   const { aiService } = c.var.services;
-  const request = ListModelsRequestSchema.parse(await readJson(c));
+  const request = ListModelsReqSchema.parse(await readJson(c));
 
   const models = await aiService.listModels(request);
   return c.json(jsend.success(models));
@@ -97,7 +101,7 @@ adminRoutes.get('/ai/demotions', async (c) => {
 
 adminRoutes.post('/ai/demotions/restore', async (c) => {
   const { aiService } = c.var.services;
-  const { keyName } = RestoreDemotionRequestSchema.parse(await readJson(c));
+  const { keyName } = RestoreDemotionReqSchema.parse(await readJson(c));
 
   await aiService.restore(keyName);
   return c.json(jsend.success(null));
@@ -113,7 +117,7 @@ adminRoutes.get('/calendar/labels', async (c) => {
 // 取得微軟授權頁url，並預留cookies給callback頁，前端自己跳轉
 adminRoutes.post('/outlook/authorize', async (c) => {
   const { calendarService } = c.var.services;
-  const { redirectUri } = OutlookAuthorizeRequestSchema.parse(await readJson(c));
+  const { redirectUri } = OutlookAuthReqSchema.parse(await readJson(c));
   const state = startOauthSession(c, redirectUri);
 
   return c.json(jsend.success({ url: await calendarService.authorizeUrl(redirectUri, state) }));
@@ -156,21 +160,21 @@ adminRoutes.get('/telegram/webhook', async (c) => {
 
 adminRoutes.post('/telegram/webhook', async (c) => {
   const { telegramService } = c.var.services;
-  const { url } = WebhookSchema.parse(await readJson(c));
+  const { url } = WebhookReqSchema.parse(await readJson(c));
 
   return c.json(jsend.success(await telegramService.registerWebhook(url)));
 });
 
 adminRoutes.get('/customers', async (c) => {
   const { customerService } = c.var.services;
-  const { limit, before, channel } = CustomerRequestSchema.parse(c.req.query());
+  const { limit, before, channel } = CustomerQuerySchema.parse(c.req.query());
 
   return c.json(jsend.success(await customerService.list(limit, before, channel)));
 });
 
 adminRoutes.get('/customers/:id/messages', async (c) => {
   const { customerService } = c.var.services;
-  const { before } = MessageRequestSchema.parse(c.req.query());
+  const { before } = MessageQuerySchema.parse(c.req.query());
 
   return c.json(jsend.success(await customerService.messages(c.req.param('id'), before ?? null)));
 });
@@ -178,7 +182,7 @@ adminRoutes.get('/customers/:id/messages', async (c) => {
 // 暫停 AI 回覆這位顧客，期間沉默。minutes 傳 0 代表恢復。到期時間由後端算
 adminRoutes.post('/customers/ai-pause', async (c) => {
   const { customerService } = c.var.services;
-  const { customerId, minutes } = AiPauseRequestSchema.parse(await readJson(c));
+  const { customerId, minutes } = AiPauseReqSchema.parse(await readJson(c));
 
   await customerService.pauseAi(customerId, minutes);
   return c.json(jsend.success(null));
@@ -186,7 +190,7 @@ adminRoutes.post('/customers/ai-pause', async (c) => {
 
 adminRoutes.post('/test-customers', async (c) => {
   const { customerService } = c.var.services;
-  const { id, name } = TestCustomerRequestSchema.parse(await readJson(c));
+  const { id, name } = TestCustomerReqSchema.parse(await readJson(c));
 
   await customerService.upsertTestCustomer(id, name);
   return c.json(jsend.success(null));
@@ -194,7 +198,7 @@ adminRoutes.post('/test-customers', async (c) => {
 
 adminRoutes.post('/test-chat', async (c) => {
   const { customerService } = c.var.services;
-  const { sessionId, message } = ChatRequestSchema.parse(await readJson(c));
+  const { sessionId, message } = ChatReqSchema.parse(await readJson(c));
 
   return c.json(jsend.success(await customerService.testChat(sessionId, message)));
 });
