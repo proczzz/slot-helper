@@ -1,63 +1,50 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { SecretField } from '../components/SecretField.tsx';
+import {
+  AiKeyModal,
+  EMPTY_KEY,
+  USAGES,
+  type AiKeyDraft,
+} from '../components/AiKeyModal.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getAiDemotions,
   getSection,
-  listModels,
-  restoreAiKey,
   saveSection,
-  type AiDemotion,
   type AiKeyRequest,
   type AiKeyVo,
-  type AiUsage,
 } from '../lib/admin.ts';
 
-// 寫死的清單,要和後端 adapter/ai/index.ts 的 providers 表保持一致
-const PROVIDERS = [
-  'anthropic',
-  'deepseek',
-  'google',
-  'groq',
-  'nvidia',
-  'openai',
-  'openrouter',
-  'xai',
-];
-
-const USAGES: { value: AiUsage; label: string }[] = [
-  { value: 'active', label: '使用中' },
-  { value: 'test', label: '僅後台測試' },
-  { value: 'idle', label: '保留不使用' },
-];
-
-// apiKey 的 undefined 代表「沒在編輯」,送出時就不會放進 payload
-interface AiKeyDraft extends AiKeyVo {
-  apiKey: string | undefined;
+// 編輯中的那一列。index 等於長度代表新增
+interface Editing {
+  index: number;
+  value: AiKeyDraft;
 }
 
-const EMPTY: AiKeyDraft = {
-  name: '',
-  provider: '',
-  model: '',
-  usage: 'active',
-  apiKeyMask: '',
-  apiKey: '',
-};
-
 export function AiSettingsPage() {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [removing, setRemoving] = useState<number | null>(null);
+
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['config', 'ai'],
     queryFn: async () =>
       (await getSection<AiKeyVo[]>('ai'))?.map((key) => ({ ...key, apiKey: undefined })) ?? [],
   });
 
-  // 讀不到只影響「已停用」的提示,不該擋住整頁設定
-  const demotions = useQuery({
-    queryKey: ['ai-demotions'],
-    queryFn: getAiDemotions,
+  // 讀不到只影響「已停用」的提示,不該擋住整頁
+  const demotions = useQuery({ queryKey: ['ai-demotions'], queryFn: getAiDemotions });
+
+  const save = useMutation({
+    mutationFn: (next: AiKeyDraft[]) => saveSection('ai', toRequest(next)),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['config', 'ai'] });
+      setEditing(null);
+      setRemoving(null);
+    },
   });
+
+  useAutoReset(save);
 
   if (isPending) {
     return (
@@ -75,272 +62,198 @@ export function AiSettingsPage() {
     );
   }
 
-  return <AiForm config={data} demotions={demotions.data ?? []} />;
-}
+  const keys = data;
 
-function AiForm({ config, demotions }: { config: AiKeyDraft[]; demotions: AiDemotion[] }) {
-  const [keys, setKeys] = useState(config);
-  const queryClient = useQueryClient();
-
-  const save = useMutation({
-    mutationFn: (next: AiKeyRequest[]) => saveSection('ai', next),
-    onSuccess: () => {
-      // 存完就回到遮罩狀態。這是事件而不是同步,所以不需要 useEffect
-      setKeys(keys.map((key) => ({ ...key, apiKey: undefined })));
-      void queryClient.invalidateQueries({ queryKey: ['config', 'ai'] });
-    },
-  });
-
-  useAutoReset(save);
-
-  function add() {
-    setKeys([...keys, EMPTY]);
+  function move(index: number, step: number) {
+    const next = [...keys];
+    const [moved] = next.splice(index, 1);
+    next.splice(index + step, 0, moved!);
+    save.mutate(next);
   }
 
-  function change(index: number, next: AiKeyDraft) {
-    setKeys(keys.map((key, i) => (i === index ? next : key)));
-  }
-
-  function remove(index: number) {
-    setKeys(keys.filter((_, i) => i !== index));
-  }
-
-  const incomplete = keys.some(
-    (key) => !key.name || !key.provider || !key.model || (!key.apiKeyMask && !key.apiKey),
-  );
-  const duplicated = new Set(keys.map((key) => key.name)).size !== keys.length;
-
-  return (
-    <div className="card max-w-3xl bg-base-100 shadow-sm">
-      <div className="card-body gap-4">
-        <h2 className="card-title">AI 模型</h2>
-        <p className="text-sm text-base-content/60">
-          顧客的訊息由第一組「使用中」回覆，它失效時會自動換下一組。
-        </p>
-
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-
-            // 只送有改過的 apiKey,後端靠「欄位不存在」判斷沿用舊的
-            save.mutate(
-              keys.map(({ apiKeyMask: _mask, apiKey, ...rest }) =>
-                apiKey === undefined ? rest : { ...rest, apiKey },
-              ),
-            );
-          }}
-        >
-          {keys.length === 0 && (
-            <span className="text-sm text-base-content/50">尚未新增任何 AI 模型</span>
-          )}
-
-          {keys.map((key, index) => (
-            <AiKeyRow
-              key={index}
-              index={index}
-              value={key}
-              demotion={demotions.find((item) => item.name === key.name)}
-              onChange={(next) => change(index, next)}
-              onRemove={() => remove(index)}
-            />
-          ))}
-
-          <div>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={add}>
-              ＋ 新增模型
-            </button>
-          </div>
-
-          {duplicated && <p className="label text-error">名稱不可重複</p>}
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={save.isPending || incomplete || duplicated}
-          >
-            {save.isPending && <span className="loading loading-spinner" />}
-            儲存
-          </button>
-        </form>
-
-        {save.isSuccess && (
-          <div className="toast toast-end">
-            <div className="alert alert-success">已儲存</div>
-          </div>
-        )}
-
-        {save.isError && (
-          <div className="toast toast-end">
-            <div className="alert alert-error">{save.error.message}</div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AiKeyRow({
-  index,
-  value,
-  demotion,
-  onChange,
-  onRemove,
-}: {
-  index: number;
-  value: AiKeyDraft;
-  demotion: AiDemotion | undefined;
-  onChange: (next: AiKeyDraft) => void;
-  onRemove: () => void;
-}) {
-  const queryClient = useQueryClient();
-
-  const restore = useMutation({
-    mutationFn: () => restoreAiKey(value.name),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['ai-demotions'] });
-    },
-  });
-
-  // 要按按鈕才發生、而且得先有 key,所以是 mutation 不是 query。
-  // 每一列各自一份,否則載入的清單會跑到別人的輸入框
-  const models = useMutation({
-    mutationFn: () =>
-      listModels(
-        value.apiKey
-          ? { provider: value.provider, apiKey: value.apiKey }
-          : { provider: value.provider, name: value.name },
-      ),
-  });
-
-  const optionsId = `model-options-${index}`;
-  const hasKey = !!value.apiKey || !!value.apiKeyMask;
-
-  function update(field: 'name' | 'provider' | 'model' | 'usage', next: string) {
-    onChange({ ...value, [field]: next });
+  function submit(draft: AiKeyDraft) {
+    const next = [...keys];
+    next[editing!.index] = draft;
+    save.mutate(next);
   }
 
   return (
-    <div className="rounded-box border border-base-300 p-3">
-      {demotion && (
-        <div className="alert alert-warning mb-2 flex-col items-start gap-2 text-sm sm:flex-row sm:items-center">
-          <div className="flex-1">
-            <p>這組金鑰失效後已自動停用，處理完再解除。</p>
-            <p className="mt-1 font-mono text-xs opacity-70">{demotion.reason}</p>
-            <p className="mt-1 text-xs opacity-60">
-              停用於 {new Date(demotion.at).toLocaleString()}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => restore.mutate()}
-            disabled={restore.isPending}
-          >
-            {restore.isPending && <span className="loading loading-spinner loading-xs" />}
-            解除停用
-          </button>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">AI 模型</h2>
+          <p className="mt-1 text-sm text-base-content/60">
+            顧客的訊息由最上面那組「使用中」回覆，它失效時會自動往下換。
+          </p>
         </div>
-      )}
-
-      {restore.isError && <p className="label text-error">{restore.error.message}</p>}
-
-      <div className="flex flex-wrap items-end gap-2">
-        <fieldset className="fieldset flex-1">
-          <legend className="fieldset-legend">名稱</legend>
-          <input
-            type="text"
-            className="input w-full"
-            value={value.name}
-            onChange={(event) => update('name', event.target.value)}
-            placeholder="自己辨識用，例如「主力」"
-          />
-        </fieldset>
-
-        <fieldset className="fieldset w-36">
-          <legend className="fieldset-legend">用途</legend>
-          <select
-            className="select w-full"
-            value={value.usage}
-            onChange={(event) => update('usage', event.target.value)}
-          >
-            {USAGES.map((usage) => (
-              <option key={usage.value} value={usage.value}>
-                {usage.label}
-              </option>
-            ))}
-          </select>
-        </fieldset>
-
-        <fieldset className="fieldset w-40">
-          <legend className="fieldset-legend">供應商</legend>
-          <select
-            className="select w-full"
-            value={value.provider}
-            onChange={(event) => update('provider', event.target.value)}
-          >
-            <option value="">請選擇</option>
-            {PROVIDERS.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </fieldset>
 
         <button
           type="button"
-          className="btn btn-ghost btn-square mb-1"
-          onClick={onRemove}
-          aria-label={`移除第 ${index + 1} 組模型`}
+          className="btn btn-primary"
+          onClick={() => setEditing({ index: keys.length, value: EMPTY_KEY })}
         >
-          ✕
+          ＋ API key
         </button>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="flex-1">
-          <SecretField
-            label="API key"
-            mask={value.apiKeyMask}
-            value={value.apiKey}
-            onChange={(next) => onChange({ ...value, apiKey: next })}
-          />
+      <div className="card bg-base-100 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th className="w-20">順序</th>
+                <th>名稱</th>
+                <th>供應商</th>
+                <th>API key</th>
+                <th>模型</th>
+                <th>用途</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {keys.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-base-content/50">
+                    尚未新增任何 API key
+                  </td>
+                </tr>
+              )}
+
+              {keys.map((key, index) => {
+                const demotion = demotions.data?.find((item) => item.name === key.name);
+                const usage = USAGES.find((item) => item.value === key.usage);
+
+                return (
+                  <tr key={key.name} className="hover:bg-base-200/40">
+                    <td>
+                      <div className="join">
+                        <button
+                          type="button"
+                          className="btn btn-xs join-item"
+                          onClick={() => move(index, -1)}
+                          disabled={index === 0 || save.isPending}
+                          aria-label={`${key.name} 往上移`}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-xs join-item"
+                          onClick={() => move(index, 1)}
+                          disabled={index === keys.length - 1 || save.isPending}
+                          aria-label={`${key.name} 往下移`}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </td>
+
+                    <td className="font-medium whitespace-nowrap">
+                      {key.name}
+                      {demotion && (
+                        <span className="badge badge-warning badge-sm ml-2" title={demotion.reason}>
+                          已停用
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="whitespace-nowrap">{key.provider}</td>
+
+                    <td>
+                      <code className="font-mono text-xs opacity-70">{key.apiKeyMask}</code>
+                    </td>
+
+                    <td className="whitespace-nowrap">{key.model}</td>
+
+                    <td>
+                      <span className={`badge badge-sm whitespace-nowrap ${usage?.badge ?? ''}`}>
+                        {usage?.label ?? key.usage}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setEditing({ index, value: key })}
+                        >
+                          編輯
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm text-error"
+                          onClick={() => setRemoving(index)}
+                        >
+                          移除
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-
-        <fieldset className="fieldset flex-1">
-          <legend className="fieldset-legend">模型</legend>
-          <div className="join w-full">
-            <input
-              type="text"
-              className="input join-item w-full"
-              value={value.model}
-              onChange={(event) => update('model', event.target.value)}
-              placeholder="deepseek-chat"
-              list={optionsId}
-            />
-            <button
-              type="button"
-              className="btn join-item"
-              onClick={() => models.mutate()}
-              disabled={models.isPending || !value.provider || !hasKey}
-            >
-              {models.isPending && <span className="loading loading-spinner loading-xs" />}
-              載入
-            </button>
-          </div>
-
-          <datalist id={optionsId}>
-            {models.data?.map((model) => (
-              <option key={model} value={model} />
-            ))}
-          </datalist>
-
-          {models.isError && <p className="label text-error">{models.error.message}</p>}
-
-          {models.data && <p className="label">共 {models.data.length} 個模型，點輸入框可以選擇</p>}
-        </fieldset>
       </div>
+
+      {editing && (
+        <AiKeyModal
+          value={editing.value}
+          takenNames={keys.filter((_, i) => i !== editing.index).map((key) => key.name)}
+          demotion={demotions.data?.find((item) => item.name === editing.value.name)}
+          pending={save.isPending}
+          error={save.isError ? save.error.message : undefined}
+          onClose={() => setEditing(null)}
+          onSubmit={submit}
+        />
+      )}
+
+      {removing !== null && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-sm">
+            <h3 className="text-lg font-bold">移除 API key</h3>
+            <p className="py-4">
+              確定要移除「{keys[removing]!.name}」嗎？金鑰會一併刪除，無法復原。
+            </p>
+
+            <div className="modal-action">
+              <button type="button" className="btn btn-ghost" onClick={() => setRemoving(null)}>
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn-error"
+                onClick={() => save.mutate(keys.filter((_, i) => i !== removing))}
+                disabled={save.isPending}
+              >
+                {save.isPending && <span className="loading loading-spinner loading-xs" />}
+                移除
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setRemoving(null)} />
+        </div>
+      )}
+
+      {save.isSuccess && (
+        <div className="toast toast-end">
+          <div className="alert alert-success">已儲存</div>
+        </div>
+      )}
+
+      {save.isError && !editing && (
+        <div className="toast toast-end">
+          <div className="alert alert-error">{save.error.message}</div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// 只送有改過的 apiKey,後端靠「欄位不存在」判斷沿用舊的
+function toRequest(keys: AiKeyDraft[]): AiKeyRequest[] {
+  return keys.map(({ apiKeyMask: _mask, apiKey, ...rest }) =>
+    apiKey === undefined ? rest : { ...rest, apiKey },
   );
 }
