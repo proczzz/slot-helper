@@ -1,7 +1,7 @@
 import type { IncomingMessage, MessagingClient } from '../adapter/types.ts';
 import type { SystemConfig } from '../model/system-config.ts';
 import type { ConversationRepository, CustomerRepository } from '../repository/types.ts';
-import type { ChatService } from './chat.ts';
+import type { ChatResult, ChatService } from './chat.ts';
 import type { Notifier } from './notifier.ts';
 
 export interface MessageResult {
@@ -54,27 +54,15 @@ export function createMessageService(
         if (await pauseIfTooFrequent(customerId, name)) return { reply: null };
 
         // 沒有可用的 AI(全部降級、或還沒設定)。不能沉默,顧客在等回應
-        if (!chatService) {
-          return { reply: systemConfig.fallbackReply };
-        }
+        const result = chatService
+          ? await chatService.ask(customerId, name, text, await loadHistory(customerId))
+          : null;
 
-        const result = await chatService.ask(customerId, name, text, await loadHistory(customerId));
+        // AI 沒產出內容時改用保底訊息
+        const reply = result?.reply || systemConfig.fallbackReply;
 
-        // AI 沒產出內容時改用保底訊息。這個決定在這裡,chatService 只負責誠實回報
-        const reply = result.reply || systemConfig.fallbackReply;
+        await saveTurn(customerId, text, receivedAt, reply, result);
 
-        await conversationRepository.appendMessages(customerId, [
-          { role: 'user', content: text, timestamp: receivedAt },
-          {
-            role: result.reply ? 'assistant' : 'fallback',
-            content: reply,
-            timestamp: Date.now(),
-            provider: result.provider,
-            model: result.model,
-            trace: result.trace ? JSON.stringify(result.trace) : null,
-          },
-        ]);
-        await customerRepository.updateLastMessage(customerId, text, Date.now());
         return { reply };
       } catch (error) {
         console.error(`處理 ${channel} 訊息失敗:`, error);
@@ -95,6 +83,28 @@ export function createMessageService(
       historyTurns * 2,
       Date.now() - historyDays * DAY_MS,
     );
+  }
+
+    // 顧客的話與我們的回覆一起寫,沒有 result 就是保底訊息
+  async function saveTurn(
+    customerId: string,
+    text: string,
+    receivedAt: number,
+    reply: string,
+    result: ChatResult | null,
+  ) {
+    await conversationRepository.appendMessages(customerId, [
+      { role: 'user', content: text, timestamp: receivedAt },
+      {
+        role: result?.reply ? 'assistant' : 'fallback',
+        content: reply,
+        timestamp: Date.now(),
+        provider: result?.provider,
+        model: result?.model,
+        trace: result?.trace ? JSON.stringify(result.trace) : null,
+      },
+    ]);
+    await customerRepository.updateLastMessage(customerId, text, Date.now());
   }
 
   // 回 true 代表這次不該交給 AI。關閉時連查詢都不發
