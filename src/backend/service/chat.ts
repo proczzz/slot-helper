@@ -56,6 +56,7 @@ export function createChatService(
         : {};
       const tools = { ...supportTools, ...schedulingTools };
 
+      let remaining = activeModels.length; // 剩下的可用模型數量
       // 實際呼叫 llm
       const { result, used } = await generate();
 
@@ -75,7 +76,7 @@ export function createChatService(
       async function generate() {
         for (const [index, candidate] of activeModels.entries()) {
           const isLast = index === activeModels.length - 1;
-          let touched = false;
+          let touched: string[] = []; // AI 已經操作過工具
 
           try {
             const result = await generateText({
@@ -85,7 +86,7 @@ export function createChatService(
               tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
               stopWhen: stepCountIs(systemConfig.maxSteps), // 工具最多操作次數上限，超過時終止
               onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
-                touched = true;
+                touched.push(toolCall.toolName);
                 if (toolOutput.type === 'tool-error')
                   await notifier.systemError(`工具 ${toolCall.toolName}`, toolOutput.error);
               },
@@ -95,14 +96,19 @@ export function createChatService(
             if (isPermanentFailure(error)) {
               // 等待後也無法復原的問題:降級key。只有第一次降級才通知,否則每則訊息都會發一次
               if (await aiState.demote(candidate.name, describeFailure(error))) {
-                await notifier.aiDemoted(candidate.name, describeFailure(error));
+                remaining -= 1;
+                await notifier.aiDemoted(candidate.name, describeFailure(error), remaining);
               }
             }
 
-            if (touched || isLast) {
-              if (isLast) await notifier.systemError('所有 AI 模型都無法使用', error);
+            // 操作過工具後，繼續呼叫 AI 時拋錯
+            if (touched.length > 0) {
+              await notifier.toolInterrupted(touched, describeFailure(error));
               throw error;
             }
+            // 已經是最後一個模型
+            if (isLast) throw error;
+            // AI拋錯，沒操作工具 且 還有備用 key 可用
             console.error(`AI 模型 ${candidate.name} 失敗，改用下一組:`, error);
           }
         }

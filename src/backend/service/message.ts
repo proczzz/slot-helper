@@ -78,6 +78,7 @@ export function createMessageService(
         return { reply };
       } catch (error) {
         console.error(`處理 ${channel} 訊息失敗:`, error);
+        await notifier.systemError(`處理 ${channel} 訊息`, error);
 
         return { reply: systemConfig.fallbackReply, failed: error };
       }
