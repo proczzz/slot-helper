@@ -84,6 +84,7 @@ export function ConversationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [channel, setChannel] = useState<ChannelFilter>('all');
   const [input, setInput] = useState('');
+  const [note, setNote] = useState<string | null>(null);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   // 點開 AI 回覆要看是哪個模型產生的。先用 modal,未來 UI 再調整
   const [inspected, setInspected] = useState<Message | null>(null);
@@ -122,7 +123,9 @@ export function ConversationsPage() {
 
   const send = useMutation({
     mutationFn: (text: string) => sendTestMessage(selectedId!.slice(TEST_PREFIX.length), text),
-    onSuccess: () => {
+    onSuccess: (reply) => {
+      // null = 後端刻意不回應,對話紀錄也不會有這一則
+      if (reply === null) setNote('AI 暫停中，這則訊息沒有送進對話');
       void queryClient.invalidateQueries({ queryKey: ['messages', selectedId] });
       // 後端存完訊息會更新 last_message,左側清單要跟著重抓
       void queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -137,6 +140,7 @@ export function ConversationsPage() {
   function select(customerId: string) {
     setSelectedId(customerId);
     setInput('');
+    setNote(null);
     send.reset();
   }
 
@@ -150,6 +154,7 @@ export function ConversationsPage() {
     const text = input.trim();
     if (!text) return;
     setInput('');
+    setNote(null);
     send.mutate(text);
   }
 
@@ -271,6 +276,12 @@ export function ConversationsPage() {
                 <p className="py-2 text-center text-xs text-base-content/40">沒有更早的訊息了</p>
               )}
             </div>
+
+            {note && (
+              <p className="border-t border-base-200 px-3 pt-2 text-center text-xs text-warning">
+                {note}
+              </p>
+            )}
 
             {selected.channel === 'test' && (
               <form

@@ -436,16 +436,20 @@ export async function createTestCustomer(id: string, name: string): Promise<void
   await assertOk(response);
 }
 
-export async function sendTestMessage(sessionId: string, message: string): Promise<string> {
+// 回 null 代表後端刻意不回應(AI 暫停中)
+export async function sendTestMessage(
+  sessionId: string,
+  message: string,
+): Promise<string | null> {
   const response = await request('/api/admin/test-chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId, message }),
   });
 
-  const body = (await response.json()) as JSendBody<{ reply: string }>;
+  const body = (await response.json()) as JSendBody<{ reply: string | null }>;
   if (body.status !== 'success') throw new Error(toErrorMessage(body));
-  return body.data?.reply ?? '';
+  return body.data?.reply ?? null;
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
