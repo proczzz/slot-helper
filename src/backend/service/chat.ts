@@ -5,18 +5,25 @@ import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
 import { buildSystemPrompt } from '../core/build-system-prompt.ts';
 import { createSchedulingTools } from '../core/scheduling-tools.ts';
 import { createSupportTools } from '../core/support-tools.ts';
-import type { ChatResponse } from '../model/dto/chat.ts';
+import type { Message } from '../model/entity/message.ts';
 import type { ShopConfig } from '../model/shop-config.ts';
 import type { SystemConfig } from '../model/system-config.ts';
-import type { ConversationRepository } from '../repository/types.ts';
 import type { Notifier } from './notifier.ts';
 
+export interface ChatResult {
+  reply: string; // AI 沒產出內容時是空字串,要不要換成保底訊息由呼叫端決定
+  provider: string;
+  model: string; // 實際用的那組,可能是備援
+  trace: ReplyTrace | null;
+}
+
 export interface ChatService {
-  handleChat(
-    customerId: string,
+  ask(
+    customerId: string, // 日曆事件的 ownerId
     customerName: string | null,
     message: string,
-  ): Promise<ChatResponse>;
+    history: Message[],
+  ): Promise<ChatResult>;
 }
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -25,7 +32,6 @@ export function createChatService(
   activeModels: ActiveModel[], // lib & properties
   systemConfig: SystemConfig, // properties
   shopConfig: ShopConfig, // properties
-  conversationRepository: ConversationRepository, // repository
   schedulingProvider: SchedulingProvider | null, // service
   notifier: Notifier, // service
   aiState: AiStateStore, // service
@@ -34,20 +40,9 @@ export function createChatService(
   const supportTools = notifier.enabled ? createSupportTools(notifier) : {};
 
   return {
-    async handleChat(customerId, customerName, message) {
-      const receivedAt = Date.now(); // 收到用戶訊息時間
-
-      // Step1. 讀歷史對話(限制訊息輪數&過濾太久的訊息)。設定0輪代表停用，不查資料庫
-      const history =
-        systemConfig.historyTurns !== 0
-          ? await conversationRepository.getMessages(
-              customerId,
-              systemConfig.historyTurns * 2,
-              receivedAt - systemConfig.historyDays * DAY_MS,
-            )
-          : [];
+    async ask(customerId, customerName, message, history) {
       const messages = [
-        // 騙 AI 哈哈~ 保底訊息(如果有)是他說過的話
+        // 準備歷史訊息。騙 AI 哈哈~ 保底訊息(如果有)是他說過的話
         ...history.map((m) => ({
           role: m.role === 'fallback' ? ('assistant' as const) : m.role,
           content: m.content,
@@ -66,22 +61,14 @@ export function createChatService(
 
       // 蒐集 AI 處理過程，存 DB
       const trace = collectTrace(result.steps);
-      const hasReply = result.text.length > 0;
       const hasTrace = trace.tools.length > 0 || trace.reasoning !== undefined;
 
-      await conversationRepository.appendMessages(customerId, [
-        { role: 'user', content: message, timestamp: receivedAt },
-        {
-          role: hasReply ? 'assistant' : 'fallback',
-          content: hasReply ? result.text : systemConfig.fallbackReply,
-          timestamp: Date.now(),
-          provider: used.provider,
-          model: used.modelName,
-          trace: hasTrace ? JSON.stringify(trace) : null,
-        },
-      ]);
-
-      return { reply: hasReply ? result.text : systemConfig.fallbackReply };
+      return {
+        reply: result.text,
+        provider: used.provider,
+        model: used.modelName,
+        trace: hasTrace ? trace : null,
+      };
 
       // 主要 key 失效就換下一組候選,但只在「還沒有工具執行過」的時候 ——
       // 否則重跑會重放副作用,日曆上那筆預約已經存在了

@@ -4,9 +4,17 @@ import type { ConversationRepository, CustomerRepository } from '../repository/t
 import type { ChatService } from './chat.ts';
 import type { Notifier } from './notifier.ts';
 
+export interface MessageResult {
+  reply: string | null; // null = 刻意不回應(AI 暫停、超過頻率上限)
+  failed?: unknown; // 處理失敗的原文。顧客已經收到保底訊息,這是給診斷用的
+}
+
 export interface MessageService {
   handleWebhook(client: MessagingClient, body: string): Promise<void>;
+  handleMessage(incoming: IncomingMessage): Promise<MessageResult>;
 }
+
+const DAY_MS = 24 * 60 * 60_000;
 
 export function createMessageService(
   systemConfig: SystemConfig, // properties
@@ -14,45 +22,78 @@ export function createMessageService(
   conversationRepository: ConversationRepository, // repository
   chatService: ChatService | null, // service
   notifier: Notifier, // service
-): MessageService | null {
-  if (!chatService) return null; // 沒有可用的 AI
-  const chat = chatService;
+): MessageService {
   return {
     async handleWebhook(client, body) {
       const messages = await client.parseMessages(body);
 
-      await Promise.all(messages.map((message) => handleMessage(client, message)));
+      await Promise.all(
+        messages.map(async (message) => {
+          const { reply } = await this.handleMessage(message);
+          if (reply === null) return;
+
+          await client.reply(message.replyTo, reply).catch((error) => {
+            console.error(`${message.channel} 回復失敗:`, error);
+          });
+        }),
+      );
+    },
+    async handleMessage(incoming: IncomingMessage): Promise<MessageResult> {
+      const { channel, customerId, name, pictureUrl, text } = incoming;
+      const receivedAt = Date.now();
+
+      try {
+        // 老闆接手中:沉默，連訊息都不存
+        const customer = await customerRepository.findById(customerId);
+        if (customer?.aiPausedUntil && customer.aiPausedUntil > receivedAt) return { reply: null };
+
+        // 更新用戶資料
+        await customerRepository.upsertProfile({ id: customerId, channel, name, pictureUrl });
+
+        // 太頻繁就暫停他,這次也不回應
+        if (await pauseIfTooFrequent(customerId, name)) return { reply: null };
+
+        // 沒有可用的 AI(全部降級、或還沒設定)。不能沉默,顧客在等回應
+        if (!chatService) {
+          return { reply: systemConfig.fallbackReply };
+        }
+
+        const result = await chatService.ask(customerId, name, text, await loadHistory(customerId));
+
+        // AI 沒產出內容時改用保底訊息。這個決定在這裡,chatService 只負責誠實回報
+        const reply = result.reply || systemConfig.fallbackReply;
+
+        await conversationRepository.appendMessages(customerId, [
+          { role: 'user', content: text, timestamp: receivedAt },
+          {
+            role: result.reply ? 'assistant' : 'fallback',
+            content: reply,
+            timestamp: Date.now(),
+            provider: result.provider,
+            model: result.model,
+            trace: result.trace ? JSON.stringify(result.trace) : null,
+          },
+        ]);
+        await customerRepository.updateLastMessage(customerId, text, Date.now());
+        return { reply };
+      } catch (error) {
+        console.error(`處理 ${channel} 訊息失敗:`, error);
+
+        return { reply: systemConfig.fallbackReply, failed: error };
+      }
     },
   };
 
-  async function handleMessage(client: MessagingClient, incoming: IncomingMessage) {
-    const { channel, customerId, name, pictureUrl, text, replyTo } = incoming;
+  // 限制輪數並過濾太舊的訊息。設 0 輪代表停用記憶,不查資料庫
+  function loadHistory(customerId: string) {
+    const { historyTurns, historyDays } = systemConfig;
+    if (historyTurns === 0) return Promise.resolve([]);
 
-    try {
-      // 老闆接手中:沉默，連訊息都不存
-      const customer = await customerRepository.findById(customerId);
-      if (customer?.aiPausedUntil && customer.aiPausedUntil > Date.now()) return;
-
-      // 更新用戶資料
-      await customerRepository.upsertProfile({ id: customerId, channel, name, pictureUrl });
-
-      // 太頻繁就暫停他,這次也不回應
-      if (await pauseIfTooFrequent(customerId, name)) return;
-
-      // ai 處理訊息
-      const result = await chat.handleChat(customerId, name, text);
-
-      // 更新用戶資料中的最後訊息時間
-      await customerRepository.updateLastMessage(customerId, text, Date.now());
-
-      // 回覆客戶訊息
-      await client.reply(replyTo, result.reply || systemConfig.fallbackReply);
-    } catch (error) {
-      console.error(`處理 ${channel} 訊息失敗:`, error);
-      await client.reply(replyTo, systemConfig.fallbackReply).catch((replyError) => {
-        console.error(`${channel} 回覆失敗:`, replyError);
-      });
-    }
+    return conversationRepository.getMessages(
+      customerId,
+      historyTurns * 2,
+      Date.now() - historyDays * DAY_MS,
+    );
   }
 
   // 回 true 代表這次不該交給 AI。關閉時連查詢都不發

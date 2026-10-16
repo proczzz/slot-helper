@@ -45,7 +45,8 @@ export interface Services {
   calendarService: CalendarService;
   telegramService: TelegramService;
   customerService: CustomerService;
-  messageService: MessageService | null;
+  messageService: MessageService;
+  testMessageService: MessageService;
 
   // 從設定字串建立，可跨請求共用
   lineClient: LineClient | null;
@@ -88,13 +89,19 @@ export async function createServices(database: Database): Promise<Services> {
   const customerService = createCustomerService(
     customerRepository,
     conversationRepository,
-    testChatService,
   );
   const messageService = createMessageService(
     cache.properties.system,
     customerRepository,
     conversationRepository,
     chatService,
+    cache.notifier,
+  );
+  const testMessageService = createMessageService(
+    cache.properties.system,
+    customerRepository,
+    conversationRepository,
+    testChatService,
     cache.notifier,
   );
 
@@ -106,6 +113,7 @@ export async function createServices(database: Database): Promise<Services> {
     telegramService,
     customerService,
     messageService,
+    testMessageService,
 
     lineClient: cache.lineClient,
     whatsappClient: cache.whatsappClient,
@@ -116,7 +124,6 @@ export async function createServices(database: Database): Promise<Services> {
       models,
       cache.properties.system,
       cache.properties.shop,
-      conversationRepository,
       schedulingProvider,
       cache.notifier,
       aiStateStore,

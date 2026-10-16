@@ -5,10 +5,6 @@ export const ChatReqSchema = z.object({
   message: z.string().min(1, '請輸入訊息'),
 });
 
-export interface ChatResponse {
-  reply: string;
-}
-
 export const TestCustomerReqSchema = z.object({
   id: z
     .string()

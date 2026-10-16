@@ -19,3 +19,6 @@ export interface MessagingClient {
   parseMessages(body: string): Promise<IncomingMessage[]>;
   reply(replyTo: string, text: string): Promise<void>;
 }
+
+// 測試用的假 client 不需要驗簽
+export type MessageSource = Pick<MessagingClient, 'parseMessages' | 'reply'>;

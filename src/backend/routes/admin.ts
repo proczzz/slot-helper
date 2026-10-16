@@ -192,10 +192,20 @@ adminRoutes.post('/test-customers', async (c) => {
 });
 
 adminRoutes.post('/test-chat', async (c) => {
-  const { customerService } = c.var.services;
+  const { testMessageService } = c.var.services;
   const { sessionId, message } = ChatReqSchema.parse(await readJson(c));
+  const result = await testMessageService.handleMessage(
+    {
+      channel: 'test',
+      customerId: 'test:' + sessionId,
+      name: null,
+      pictureUrl: null,
+      text: message,
+      replyTo: '',
+    },
+  );
 
-  return c.json(jsend.success(await customerService.testChat(sessionId, message)));
+  return c.json(jsend.success(result.reply));
 });
 
 // Cloudflare 的 CF-Connecting-IP 由邊緣填入,可信;

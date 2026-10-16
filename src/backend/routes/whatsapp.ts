@@ -30,7 +30,6 @@ whatsappRoutes.post('/webhook', async (c) => {
   if (!(await whatsappClient.verifyRequest(body, c.req.raw.headers))) {
     return c.text('Invalid signature', 401);
   }
-  if (!messageService) return c.text('OK'); // 有設定 WhatsApp 但沒 AI，回平台200
 
   // Step2. 處理訊息與回應(非阻塞)
   c.var.runInBackground(messageService.handleWebhook(whatsappClient, body));
