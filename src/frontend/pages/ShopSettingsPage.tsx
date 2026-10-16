@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { CalendarMark, Icon } from '../components/BrandMark.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
   getCalendarLabels,
@@ -8,6 +9,7 @@ import {
   type DayKey,
   type EventLabel,
   type Period,
+  type SchedulingSelection,
   type Service,
   type ShopConfig,
 } from '../lib/admin.ts';
@@ -53,6 +55,12 @@ export function ShopSettingsPage() {
     queryFn: getCalendarLabels,
   });
 
+  // 只為了在「日曆標籤」欄位旁邊顯示是哪一家的日曆
+  const scheduling = useQuery({
+    queryKey: ['config', 'scheduling'],
+    queryFn: () => getSection<SchedulingSelection>('scheduling'),
+  });
+
   if (shop.isPending) {
     return (
       <div className="grid place-items-center p-12">
@@ -69,19 +77,29 @@ export function ShopSettingsPage() {
     );
   }
 
-  return <ShopForm config={shop.data} labels={labels.data ?? []} labelsFailed={labels.isError} />;
+  return (
+    <ShopForm
+      config={shop.data}
+      labels={labels.data ?? []}
+      labelsFailed={labels.isError}
+      calendar={labels.isError ? null : (scheduling.data?.provider ?? null)}
+    />
+  );
 }
 
 function ShopForm({
   config,
   labels,
   labelsFailed,
+  calendar,
 }: {
   config: ShopConfig;
   labels: EventLabel[];
   labelsFailed: boolean;
+  calendar: string | null; // 連得上日曆時才有值
 }) {
   const [instructions, setInstructions] = useState(config.instructions);
+  const [expanded, setExpanded] = useState(false);
   const [timeZone, setTimeZone] = useState(config.timeZone);
   const [hours, setHours] = useState(config.businessHours);
   const [services, setServices] = useState(config.services);
@@ -152,25 +170,64 @@ function ShopForm({
 
   return (
     <div className="flex mx-auto w-full max-w-3xl flex-col gap-6">
+      {expanded && (
+        <div className="modal modal-open">
+          <div className="modal-box flex h-[85vh] max-w-5xl flex-col">
+            <h3 className="text-lg font-bold">AI 指示</h3>
+
+            <div className="relative mt-4 flex-1">
+              <textarea
+                className="textarea textarea-bordered size-full resize-none leading-relaxed"
+                value={instructions}
+                onChange={(event) => setInstructions(event.target.value)}
+                spellCheck={false}
+                autoFocus
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-square absolute right-6 bottom-4"
+                title="結束放大"
+                aria-label="結束放大"
+                onClick={() => setExpanded(false)}
+              >
+                <Icon name="material/fullscreen-exit" className="size-5" />
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setExpanded(false)} />
+        </div>
+      )}
+
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body gap-4">
           <h2 className="card-title">AI 指示</h2>
           <p className="text-sm text-base-content/60">描述 AI 的身分、說話方式與服務規則。</p>
 
-          <textarea
-            className="textarea textarea-bordered w-full resize-none leading-relaxed"
-            rows={16}
-            value={instructions}
-            onChange={(event) => setInstructions(event.target.value)}
-            placeholder="例如：你是「小花美甲」的預約助理，語氣親切簡短⋯⋯"
-            spellCheck={false}
-          />
+          <div className="relative">
+            <textarea
+              className="textarea textarea-bordered w-full resize-none leading-relaxed"
+              rows={16}
+              value={instructions}
+              onChange={(event) => setInstructions(event.target.value)}
+              placeholder="例如：你是「小花美甲」的預約助理，語氣親切簡短⋯⋯"
+              spellCheck={false}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-square absolute right-6 bottom-4"
+              title="放大編輯"
+              aria-label="放大編輯"
+              onClick={() => setExpanded(true)}
+            >
+              <Icon name="material/fullscreen" className="size-5" />
+            </button>
+          </div>
 
           <div className="rounded-box bg-base-200 p-4 text-sm">
             <p className="mb-2 font-medium">系統會自動附加以下內容，不需要自己寫</p>
             <ul className="list-inside list-disc text-base-content/70">
               <li>服務項目與營業時間（下方設定）</li>
-              <li>目前時間（台北時區）</li>
+              <li>目前時間</li>
             </ul>
           </div>
         </div>
@@ -196,7 +253,7 @@ function ShopForm({
           {services.map((service, index) => (
             <div key={index} className="flex flex-wrap items-end gap-2">
               <fieldset className="fieldset flex-1">
-                <legend className="fieldset-legend">名稱</legend>
+                {index === 0 && <legend className="fieldset-legend">名稱</legend>}
                 <input
                   type="text"
                   className="input w-full"
@@ -207,7 +264,7 @@ function ShopForm({
               </fieldset>
 
               <fieldset className="fieldset w-28">
-                <legend className="fieldset-legend">分鐘</legend>
+                {index === 0 && <legend className="fieldset-legend">分鐘</legend>}
                 <input
                   type="number"
                   className="input w-full"
@@ -218,7 +275,7 @@ function ShopForm({
               </fieldset>
 
               <fieldset className="fieldset w-48">
-                <legend className="fieldset-legend">備註</legend>
+                {index === 0 && <legend className="fieldset-legend">備註</legend>}
                 <input
                   type="text"
                   className="input w-full"
@@ -229,7 +286,12 @@ function ShopForm({
               </fieldset>
 
               <fieldset className="fieldset w-40">
-                <legend className="fieldset-legend">日曆標籤</legend>
+                {index === 0 && (
+                  <legend className="fieldset-legend">
+                    {calendar && <CalendarMark provider={calendar} className="size-4" />}
+                    日曆標籤
+                  </legend>
+                )}
                 <LabelPicker
                   labels={labels}
                   value={service.labelId}
@@ -239,17 +301,18 @@ function ShopForm({
 
               <button
                 type="button"
-                className="btn btn-ghost btn-square mb-1"
-                onClick={() => removeService(index)}
+                className="btn btn-sm btn-square self-center text-error"
+                title="移除"
                 aria-label={`移除第 ${index + 1} 個服務`}
+                onClick={() => removeService(index)}
               >
-                ✕
+                <Icon name="material/delete" className="size-5" />
               </button>
             </div>
           ))}
 
-          <div>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={addService}>
+          <div className="flex justify-end">
+            <button type="button" className="btn btn-sm" onClick={addService}>
               ＋ 新增服務
             </button>
           </div>
@@ -341,11 +404,12 @@ function ShopForm({
 
                         <button
                           type="button"
-                          className="btn btn-ghost btn-sm btn-square"
-                          onClick={() => removePeriod(key, index)}
+                          className="btn btn-sm btn-square text-error"
+                          title="移除"
                           aria-label={`移除${label}的第 ${index + 1} 個時段`}
+                          onClick={() => removePeriod(key, index)}
                         >
-                          ✕
+                          <Icon name="material/delete" className="size-5" />
                         </button>
 
                         {dayErrors.periods[index] && (
@@ -361,7 +425,7 @@ function ShopForm({
 
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm shrink-0"
+                    className="btn btn-sm shrink-0"
                     onClick={() => addPeriod(key)}
                   >
                     ＋ 時段

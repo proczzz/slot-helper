@@ -38,7 +38,7 @@ export function UsageIcon({
 }) {
   if (usage === 'test') return <Icon name="test-tube" className={className} />;
   if (usage === 'idle') {
-    return <Icon name="disable" className={`${className} text-base-content/40`} />;
+    return <Icon name="material/do-not-disturb" className={`${className} text-base-content/40`} />;
   }
 
   return (

@@ -205,6 +205,13 @@ export async function getOutlookCalendars(): Promise<OutlookCalendar[]> {
   return body.data ?? [];
 }
 
+export async function getMe(): Promise<string> {
+  const response = await request('/api/admin/me');
+  const body = (await response.json()) as JSendBody<{ username: string }>;
+  if (body.status !== 'success') throw new Error('讀取帳號資訊失敗');
+  return body.data?.username ?? '';
+}
+
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   const response = await request('/api/admin/me/password', {
     method: 'POST',

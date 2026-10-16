@@ -24,8 +24,8 @@ const CALENDAR_FILES = import.meta.glob('../assets/brands/calendar/*.svg', {
   import: 'default',
 });
 
-// 不是品牌,是我們自己指定含義的通用圖示
-const ICON_FILES = import.meta.glob('../assets/icon/*.svg', {
+// 不是品牌,是我們自己指定含義的通用圖示。含子目錄,所以 key 會是 material/edit 這種
+const ICON_FILES = import.meta.glob('../assets/icon/**/*.svg', {
   query: '?raw',
   eager: true,
   import: 'default',
@@ -44,7 +44,13 @@ const PROVIDERS = byName(PROVIDER_FILES);
 const MODELS = byName(MODEL_FILES);
 const CHANNELS = byName(CHANNEL_FILES);
 const CALENDARS = byName(CALENDAR_FILES);
-const ICONS = byName(ICON_FILES);
+// icon/ 底下保留路徑,否則 icon/delete.svg 與 icon/material/delete.svg 會互相覆蓋
+const ICONS = Object.fromEntries(
+  Object.entries(ICON_FILES).map(([path, svg]) => [
+    path.replace('../assets/icon/', '').replace('.svg', ''),
+    svg as string,
+  ]),
+);
 
 // 原樣在深色或淺色主題下會看不見的檔案。
 // fill-current:原檔沒指定顏色,交給主題的文字色
@@ -183,12 +189,24 @@ export function ModelMark({ model, className = 'h-4 w-4' }: { model: string; cla
   );
 }
 
-// 日曆服務的選項是寫死的,所以直接給檔名而不是用後端的 key 推導
-export function CalendarMark({ name, className = 'size-8' }: { name: string; className?: string }) {
-  const svg = CALENDARS[`${name}-icon`];
+// 後端的 provider key 對應到檔名 —— outlook 那個檔名多了 -calendar
+const CALENDAR_ICONS: Record<string, string> = {
+  'google-calendar': 'google-calendar-icon',
+  outlook: 'outlook-calendar-icon',
+};
+
+export function CalendarMark({
+  provider,
+  className = 'size-8',
+}: {
+  provider: string;
+  className?: string;
+}) {
+  const file = CALENDAR_ICONS[provider];
+  const svg = file && CALENDARS[file];
   if (!svg) return null;
 
-  return <Svg name={`${name}-icon`} svg={svg} className={className} />;
+  return <Svg name={file!} svg={svg} className={className} />;
 }
 
 // assets/icon/ 底下的檔名,例如 disable、test-tube
@@ -199,18 +217,22 @@ export function Icon({ name, className = 'size-5' }: { name: string; className?:
   return <Svg name={name} svg={svg} className={className} />;
 }
 
+// mono 是跟著文字走的單色版(側邊欄用),預設是彩色的品牌標。
 // test 是我們自己造的管道,用通用圖示而不是品牌標
 export function ChannelMark({
   channel,
   className = 'size-3',
+  mono,
 }: {
   channel: string;
   className?: string;
+  mono?: boolean;
 }) {
   if (channel === 'test') return <Icon name="test-tube" className={className} />;
 
-  const svg = CHANNELS[`${channel}-icon`];
+  const file = mono ? channel : `${channel}-icon`;
+  const svg = CHANNELS[file];
   if (!svg) return null;
 
-  return <Svg name={`${channel}-icon`} svg={svg} className={className} />;
+  return <Svg name={file} svg={svg} className={className} />;
 }

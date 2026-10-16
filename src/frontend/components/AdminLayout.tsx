@@ -1,19 +1,21 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
+import { ChannelMark, Icon } from './BrandMark.tsx';
 import { logout } from '../lib/admin.ts';
 
-const MENU = [
-  { to: '/', label: '總覽', end: true },
-  { to: '/conversations', label: 'AI 記憶' },
-  { to: '/settings/shop', label: '店家資訊' },
-  { to: '/settings/ai', label: 'AI 模型' },
-  { to: '/settings/calendar', label: '日曆' },
-  { to: '/settings/line', label: 'LINE' },
-  { to: '/settings/whatsapp', label: 'WhatsApp' },
-  { to: '/settings/telegram', label: 'Telegram' },
-  { to: '/settings/system', label: '系統設定' },
-  { to: '/settings/account', label: '帳號' },
+// channel 的是品牌單色標,其餘走 assets/icon/
+const MENU: { to: string; label: string; end?: boolean; icon?: string; channel?: string }[] = [
+  { to: '/', label: '總覽', end: true, icon: 'material/home' },
+  { to: '/conversations', label: 'AI 記憶', icon: 'material/chat' },
+  { to: '/settings/shop', label: '店家資訊', icon: 'material/description' },
+  { to: '/settings/ai', label: 'AI 模型', icon: 'ai' },
+  { to: '/settings/calendar', label: '日曆', icon: 'material/calendar' },
+  { to: '/settings/line', label: 'LINE', channel: 'line' },
+  { to: '/settings/whatsapp', label: 'WhatsApp', channel: 'whatsapp' },
+  { to: '/settings/telegram', label: 'Telegram', channel: 'telegram' },
+  { to: '/settings/system', label: '系統設定', icon: 'material/settings' },
+  { to: '/settings/account', label: '帳號', icon: 'material/account' },
 ];
 
 export function AdminLayout() {
@@ -82,6 +84,11 @@ export function AdminLayout() {
             {MENU.map((item) => (
               <li key={item.to}>
                 <NavLink to={item.to} end={item.end} onClick={() => setOpen(false)}>
+                  {item.channel ? (
+                    <ChannelMark channel={item.channel} mono className="size-5" />
+                  ) : (
+                    <Icon name={item.icon!} className="size-5" />
+                  )}
                   {item.label}
                 </NavLink>
               </li>

@@ -125,7 +125,16 @@ export function AiSettingsPage() {
                 const demotion = demotions.data?.find((item) => item.name === key.name);
 
                 return (
-                  <tr key={key.name} className="hover:bg-base-200/40">
+                  <tr
+                    key={key.name}
+                    // 上下靠邊泛紅。用垂直漸層而不是內陰影 ——
+                    // 陰影在每個儲存格的左右邊緣會散掉,整列看起來會有一節一節的接縫
+                    className={
+                      demotion
+                        ? '[&>td]:bg-[linear-gradient(to_bottom,color-mix(in_oklch,var(--color-error)_30%,transparent),transparent_30%,transparent_70%,color-mix(in_oklch,var(--color-error)_30%,transparent))]'
+                        : 'hover:bg-base-200/40'
+                    }
+                  >
                     <td>
                       <div className="join">
                         <button
@@ -165,27 +174,31 @@ export function AiSettingsPage() {
 
                     <td title={demotion ? '失效' : usageLabel(key.usage)}>
                       {demotion ? (
-                        <Icon name="warning" className="size-8 text-error" />
+                        <Icon name="material/report" className="size-8 text-error" />
                       ) : (
                         <UsageIcon usage={key.usage} live className="size-8" />
                       )}
                     </td>
 
                     <td>
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          className="btn btn-ghost btn-sm"
+                          className="btn btn-sm btn-square"
+                          title="編輯"
+                          aria-label={`編輯 ${key.name}`}
                           onClick={() => setEditing({ index, value: key })}
                         >
-                          編輯
+                          <Icon name="material/edit" className="size-5" />
                         </button>
                         <button
                           type="button"
-                          className="btn btn-ghost btn-sm text-error"
+                          className="btn btn-sm btn-square text-error"
+                          title="移除"
+                          aria-label={`移除 ${key.name}`}
                           onClick={() => setRemoving(index)}
                         >
-                          移除
+                          <Icon name="material/delete" className="size-5" />
                         </button>
                       </div>
                     </td>

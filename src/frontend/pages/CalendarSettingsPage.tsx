@@ -16,12 +16,11 @@ import {
 const GOOGLE = 'google-calendar';
 const OUTLOOK = 'outlook';
 
-// 新增供應商 = 這裡加一行 + 下面多掛一個設定表單,並和後端的 providers 表保持一致。
-// icon 是 assets/brands/calendar/ 底下的檔名
-const PROVIDERS: { value: string | null; label: string; icon: string | null }[] = [
-  { value: null, label: '不使用', icon: null },
-  { value: GOOGLE, label: 'Google 日曆', icon: 'google-calendar' },
-  { value: OUTLOOK, label: 'Outlook 行事曆', icon: 'outlook-calendar' },
+// 新增供應商 = 這裡加一行 + 下面多掛一個設定表單,並和後端的 providers 表保持一致
+const PROVIDERS: { value: string | null; label: string }[] = [
+  { value: null, label: '不使用' },
+  { value: GOOGLE, label: 'Google 日曆' },
+  { value: OUTLOOK, label: 'Outlook 行事曆' },
 ];
 
 // 後端回的是原樣存進去的 JSON,schema 新增欄位後舊資料會缺欄位,所以用常數補齊
@@ -156,10 +155,10 @@ function CalendarSettings({
                 disabled={save.isPending}
                 onClick={() => changeProvider(item.value)}
               >
-                {item.icon ? (
-                  <CalendarMark name={item.icon} className="size-10" />
+                {item.value ? (
+                  <CalendarMark provider={item.value} className="size-10" />
                 ) : (
-                  <Icon name="disable" className="size-10 text-base-content/40" />
+                  <Icon name="material/block" className="size-10 text-base-content/40" />
                 )}
                 <span className="text-sm font-medium">{item.label}</span>
               </button>
