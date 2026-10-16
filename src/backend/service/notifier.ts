@@ -5,6 +5,7 @@ export interface Notifier {
   login(details: { success: boolean; ip: string }): Promise<void>;
   systemError(where: string, error: unknown): Promise<void>;
   reportAgentIssue(message: string): Promise<void>;
+  aiDemoted(name: string, reason: string): Promise<void>;
   customerPaused(customer: string, minutes: number): Promise<void>;
 }
 
@@ -36,6 +37,11 @@ export function createNotifier(telegramClient: TelegramClient | null): Notifier 
     },
     reportAgentIssue(message) {
       return send(`🤖: ${message}`);
+    },
+    aiDemoted(name, reason) {
+      return send(
+        `🔑 AI 金鑰「${name}」已停用\n\n原因: ${reason}\n\n已自動改用下一組。處理完請到後台解除停用`,
+      );
     },
     customerPaused(customer, minutes) {
       return send(

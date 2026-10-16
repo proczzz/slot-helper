@@ -36,7 +36,7 @@ export type AiDemotion = AiState[number]; // 陣列裡的 item
 
 export interface AiStateStore {
   get(): Promise<AiState>;
-  demote(name: string, reason: string): Promise<void>; // 已在名單裡的不重複追加
+  demote(name: string, reason: string): Promise<boolean>; // 已在名單裡的不重複追加
   restore(name: string): Promise<void>;
 }
 

@@ -106,8 +106,10 @@ export function createChatService(
             return { result, used: candidate };
           } catch (error) {
             if (isPermanentFailure(error)) {
-              // 等待後也無法復原的問題:降級key
-              await aiState.demote(candidate.name, describeFailure(error));
+              // 等待後也無法復原的問題:降級key。只有第一次降級才通知,否則每則訊息都會發一次
+              if (await aiState.demote(candidate.name, describeFailure(error))) {
+                await notifier.aiDemoted(candidate.name, describeFailure(error));
+              }
             }
 
             if (touched || isLast) {

@@ -12,9 +12,10 @@ export function createAiStateStore(
 
     async demote(name, reason) {
       const current = await read();
-      if (current.some((item) => item.name === name)) return; // 已經降級過
+      if (current.some((item) => item.name === name)) return false; // 已經降級過
 
       await write([...current, { name, reason, at: Date.now() }]);
+      return true;
     },
 
     async restore(name) {
