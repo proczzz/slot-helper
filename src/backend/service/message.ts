@@ -58,6 +58,9 @@ export function createMessageService(
           ? await chatService.ask(customerId, name, text, await loadHistory(customerId))
           : null;
 
+        if (result?.failed && !result.reported) {
+          await notifier.systemError('AI 無法回應', result.failed);
+        }
         // AI 沒產出內容時改用保底訊息
         const reply = result?.reply || systemConfig.fallbackReply;
 
@@ -85,7 +88,7 @@ export function createMessageService(
     );
   }
 
-    // 顧客的話與我們的回覆一起寫,沒有 result 就是保底訊息
+  // 顧客的話與我們的回覆一起寫,沒有 result 就是保底訊息
   async function saveTurn(
     customerId: string,
     text: string,

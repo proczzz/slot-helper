@@ -15,6 +15,8 @@ export interface ChatResult {
   provider: string;
   model: string; // 實際用的那組,可能是備援
   trace: ReplyTrace | null;
+  failed?: unknown; // 所有候選都失敗,reply 必定是空字串
+  reported?: boolean; // chat 已經發過更具體的通知了,呼叫端不用再發
 }
 
 export interface ChatService {
@@ -25,8 +27,6 @@ export interface ChatService {
     history: Message[],
   ): Promise<ChatResult>;
 }
-
-const DAY_MS = 24 * 60 * 60_000;
 
 export function createChatService(
   activeModels: ActiveModel[], // lib & properties
@@ -56,27 +56,40 @@ export function createChatService(
         : {};
       const tools = { ...supportTools, ...schedulingTools };
 
-      let remaining = activeModels.length; // 剩下的可用模型數量
       // 實際呼叫 llm
-      const { result, used } = await generate();
+      const attempt = await generate();
 
-      // 蒐集 AI 處理過程，存 DB
-      const trace = collectTrace(result.steps);
+      // -- 失敗分支 -- 沒有產出結果。這不是意外,顧客會收到保底訊息
+      if (!attempt.ok) {
+        return {
+          reply: '',
+          provider: attempt.used.provider,
+          model: attempt.used.modelName,
+          trace: attempt.touched.length > 0 ? { tools: attempt.touched } : null,
+          failed: attempt.failed,
+          reported: attempt.reported,
+        };
+      }
+
+      // -- 成功分支 -- 蒐集 AI 處理過程，存 DB
+      const trace = collectTrace(attempt.result.steps);
       const hasTrace = trace.tools.length > 0 || trace.reasoning !== undefined;
 
       return {
-        reply: result.text,
-        provider: used.provider,
-        model: used.modelName,
+        reply: attempt.result.text,
+        provider: attempt.used.provider,
+        model: attempt.used.modelName,
         trace: hasTrace ? trace : null,
       };
 
       // 主要 key 失效就換下一組候選,但只在「還沒有工具執行過」的時候 ——
       // 否則重跑會重放副作用,日曆上那筆預約已經存在了
       async function generate() {
+        let remaining = activeModels.length; // 剩下的可用模型數量
+        let reported = false;
         for (const [index, candidate] of activeModels.entries()) {
           const isLast = index === activeModels.length - 1;
-          let touched: string[] = []; // AI 已經操作過工具
+          const touched: ToolCallRecord[] = []; // AI 已經操作過的工具
 
           try {
             const result = await generateText({
@@ -86,30 +99,48 @@ export function createChatService(
               tools: Object.keys(tools).length > 0 ? tools : undefined, // 沒有時傳 undefined
               stopWhen: stepCountIs(systemConfig.maxSteps), // 工具最多操作次數上限，超過時終止
               onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
-                touched.push(toolCall.toolName);
-                if (toolOutput.type === 'tool-error')
+                const record: ToolCallRecord = {
+                  step: touched.length + 1,
+                  name: toolCall.toolName,
+                  input: toolCall.input,
+                };
+                if (toolOutput.type === 'tool-error') {
+                  record.error =
+                    toolOutput.error instanceof Error
+                      ? toolOutput.error.message
+                      : String(toolOutput.error);
                   await notifier.systemError(`工具 ${toolCall.toolName}`, toolOutput.error);
+                } else {
+                  record.output = toolOutput.output;
+                }
+
+                touched.push(record);
               },
             });
-            return { result, used: candidate };
+            return { ok: true as const, result, used: candidate };
           } catch (error) {
+            // 等待後也無法復原的問題: 降級
             if (isPermanentFailure(error)) {
-              // 等待後也無法復原的問題:降級key。只有第一次降級才通知,否則每則訊息都會發一次
               if (await aiState.demote(candidate.name, describeFailure(error))) {
                 remaining -= 1;
+                reported = true;
                 await notifier.aiDemoted(candidate.name, describeFailure(error), remaining);
               }
             }
 
             // 操作過工具後，繼續呼叫 AI 時拋錯
             if (touched.length > 0) {
-              await notifier.toolInterrupted(touched, describeFailure(error));
-              throw error;
+              reported = true;
+              await notifier.toolInterrupted(
+                touched.map((tool) => tool.name),
+                describeFailure(error),
+              );
+            } else if (!isLast) {
+              // AI拋錯，沒操作工具 且 還有備用 key 可用
+              console.error(`AI 模型 ${candidate.name} 失敗，改用下一組:`, error);
+              continue;
             }
-            // 已經是最後一個模型
-            if (isLast) throw error;
-            // AI拋錯，沒操作工具 且 還有備用 key 可用
-            console.error(`AI 模型 ${candidate.name} 失敗，改用下一組:`, error);
+            return { ok: false as const, used: candidate, failed: error, touched, reported };
           }
         }
 
