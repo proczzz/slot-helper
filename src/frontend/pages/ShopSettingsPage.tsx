@@ -250,8 +250,11 @@ function ShopForm({
             <span className="text-sm text-base-content/50">尚未新增任何服務</span>
           )}
 
+          {/* 窄螢幕不擠也不換行,跟 AI 模型列表一樣用橫向捲動 */}
+          <div className="overflow-x-auto">
+           <div className="flex min-w-[44rem] flex-col gap-4">
           {services.map((service, index) => (
-            <div key={index} className="flex flex-wrap items-end gap-2">
+            <div key={index} className="flex items-end gap-2">
               <fieldset className="fieldset flex-1">
                 {index === 0 && <legend className="fieldset-legend">名稱</legend>}
                 <input
@@ -263,7 +266,7 @@ function ShopForm({
                 />
               </fieldset>
 
-              <fieldset className="fieldset w-28">
+              <fieldset className="fieldset w-24 shrink-0">
                 {index === 0 && <legend className="fieldset-legend">分鐘</legend>}
                 <input
                   type="number"
@@ -274,7 +277,7 @@ function ShopForm({
                 />
               </fieldset>
 
-              <fieldset className="fieldset w-48">
+              <fieldset className="fieldset flex-1">
                 {index === 0 && <legend className="fieldset-legend">備註</legend>}
                 <input
                   type="text"
@@ -285,9 +288,9 @@ function ShopForm({
                 />
               </fieldset>
 
-              <fieldset className="fieldset w-40">
+              <fieldset className="fieldset w-40 shrink-0">
                 {index === 0 && (
-                  <legend className="fieldset-legend">
+                  <legend className="fieldset-legend whitespace-nowrap">
                     {calendar && <CalendarMark provider={calendar} className="size-4" />}
                     日曆標籤
                   </legend>
@@ -313,6 +316,8 @@ function ShopForm({
               </div>
             </div>
           ))}
+           </div>
+          </div>
 
           <div className="flex justify-end">
             <button type="button" className="btn btn-sm" onClick={addService}>
@@ -369,14 +374,15 @@ function ShopForm({
             )}
           </fieldset>
 
-          <div className="flex flex-col divide-y divide-base-200">
+          <div className="overflow-x-auto">
+           <div className="flex min-w-[30rem] flex-col divide-y divide-base-200">
             {DAYS.map(({ key, label }) => {
               const periods = hours[key];
               const dayErrors = errors[key];
 
               return (
                 <div key={key} className="flex gap-3 py-3">
-                  <div className="w-14 shrink-0 pt-2 font-medium">{label}</div>
+                  <div className="w-10 shrink-0 pt-2 font-medium">{label}</div>
 
                   <div className="flex flex-1 flex-col gap-2">
                     {periods.length === 0 && (
@@ -384,10 +390,11 @@ function ShopForm({
                     )}
 
                     {periods.map((period, index) => (
-                      <div key={index} className="flex flex-wrap items-center gap-2">
+                      <div key={index} className="flex flex-col gap-1">
+                       <div className="flex items-center gap-2">
                         <input
                           type="time"
-                          className="input input-sm w-28"
+                          className="input input-sm w-32"
                           value={period[0]}
                           onChange={(event) =>
                             changePeriod(key, index, event.target.value, toInputValue(period[1]))
@@ -396,7 +403,7 @@ function ShopForm({
                         <span className="text-base-content/50">至</span>
                         <input
                           type="time"
-                          className="input input-sm w-28"
+                          className="input input-sm w-32"
                           value={toInputValue(period[1])}
                           onChange={(event) =>
                             changePeriod(key, index, period[0], event.target.value)
@@ -414,6 +421,7 @@ function ShopForm({
                         >
                           ✕
                         </button>
+                       </div>
 
                         {dayErrors.periods[index] && (
                           <span className="text-sm text-error">{dayErrors.periods[index]}</span>
@@ -436,6 +444,7 @@ function ShopForm({
                 </div>
               );
             })}
+           </div>
           </div>
         </div>
       </div>

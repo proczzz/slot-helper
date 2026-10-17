@@ -160,7 +160,11 @@ export function ConversationsPage() {
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] gap-4">
-      <aside className="flex w-72 shrink-0 flex-col overflow-hidden rounded-box bg-base-100 shadow-sm">
+      <aside
+        className={`w-full shrink-0 flex-col overflow-hidden rounded-box bg-base-100 shadow-sm md:flex md:w-72 ${
+          selectedId === null ? 'flex' : 'hidden'
+        }`}
+      >
         <div className="flex items-center gap-2 border-b border-base-200 p-3">
           <select
             className="select select-sm flex-1"
@@ -227,7 +231,11 @@ export function ConversationsPage() {
         </div>
       </aside>
 
-      <section className="flex flex-1 flex-col overflow-hidden rounded-box bg-base-100 shadow-sm">
+      <section
+        className={`flex-1 flex-col overflow-hidden rounded-box bg-base-100 shadow-sm md:flex ${
+          selectedId === null ? 'hidden' : 'flex'
+        }`}
+      >
         {!selected ? (
           <div className="grid flex-1 place-items-center text-base-content/50">
             從左側選擇一位顧客
@@ -235,6 +243,14 @@ export function ConversationsPage() {
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-3 border-b border-base-200 p-4">
+              <button
+                type="button"
+                className="btn btn-sm btn-square btn-ghost text-xl leading-none md:hidden"
+                aria-label="回到顧客清單"
+                onClick={() => setSelectedId(null)}
+              >
+                ‹
+              </button>
               <span className="font-semibold">{customerDisplayName(selected)}</span>
               <span className="badge badge-sm">{selected.channel}</span>
               <AiPauseControl customer={selected} />

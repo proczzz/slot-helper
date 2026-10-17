@@ -167,12 +167,9 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
           </fieldset>
 
           <fieldset className="fieldset gap-3" disabled={!memoryEnabled}>
-            <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap items-start gap-3">
               <label className="flex grow basis-32 flex-col gap-1">
-                <span className="fieldset-legend">
-                  輪數
-                  <span className="font-normal opacity-50">（顧客與 AI 各一則訊息為一輪）</span>
-                </span>
+                <span className="fieldset-legend">輪數</span>
                 <input
                   type="number"
                   className={`input w-full ${historyInvalid ? 'input-error' : ''}`}
@@ -181,6 +178,7 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
                   max={HISTORY_RANGE.max}
                   onChange={(event) => setHistoryTurns(event.target.value)}
                 />
+                <span className="label">顧客與 AI 各一則訊息為一輪</span>
               </label>
 
               <label className="flex grow basis-32 flex-col gap-1">
@@ -209,10 +207,7 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
           </fieldset>
 
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">
-              工具操作次數上限
-              <span className="font-normal opacity-50">（回應也算一次）</span>
-            </legend>
+            <legend className="fieldset-legend">工具操作次數上限</legend>
             <input
               type="number"
               className={`input w-full ${stepsInvalid ? 'input-error' : ''}`}
@@ -221,6 +216,7 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
               max={STEPS_RANGE.max}
               onChange={(event) => setMaxSteps(event.target.value)}
             />
+            <p className="label">回應也算一次</p>
             {stepsInvalid && (
               <p className="label text-error">
                 請輸入 {STEPS_RANGE.min} 到 {STEPS_RANGE.max} 之間的整數
@@ -229,15 +225,13 @@ function SystemForm({ config }: { config: SystemConfigVo }) {
           </fieldset>
 
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">
-              保底訊息
-              <span className="font-normal opacity-50">（AI 沒能回覆時改傳這句）</span>
-            </legend>
+            <legend className="fieldset-legend">保底訊息</legend>
             <textarea
               className={`textarea h-24 w-full resize-none ${replyInvalid ? 'textarea-error' : ''}`}
               value={fallbackReply}
               onChange={(event) => setFallbackReply(event.target.value)}
             />
+            <p className="label">AI 沒能回覆時改傳這句</p>
             {replyInvalid && <p className="label text-error">請輸入保底訊息</p>}
           </fieldset>
 

@@ -242,7 +242,9 @@ function WebhookForm({ info }: { info: WebhookInfo | null }) {
       <div className="join w-full">
         <input
           type="url"
-          className={`input join-item w-full font-mono text-xs ${custom ? 'input-warning' : ''}`}
+          className={`input join-item min-w-0 flex-1 font-mono text-xs ${
+            custom ? 'input-warning' : ''
+          }`}
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           spellCheck={false}
@@ -262,7 +264,9 @@ function WebhookForm({ info }: { info: WebhookInfo | null }) {
           這不是你現在瀏覽後台的網域。內網後台或反向代理底下這是正常的；不是故意改的話按「還原」
         </p>
       ) : (
-        <p className="label">Telegram 必須連得到這個網址，所以要是公開的 HTTPS</p>
+        <p className="label">
+          Telegram 必須連得到這個網址，所以要是公開的 HTTPS
+        </p>
       )}
 
       <div className="mt-2 flex items-center gap-2">
@@ -287,7 +291,7 @@ function WebhookForm({ info }: { info: WebhookInfo | null }) {
 
       {register.isError && (
         <div className="alert alert-error mt-2">
-          <span className="whitespace-pre-wrap text-sm">{register.error.message}</span>
+          <span className="text-sm break-words whitespace-pre-wrap">{register.error.message}</span>
         </div>
       )}
 
