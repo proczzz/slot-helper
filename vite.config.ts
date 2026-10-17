@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   root: 'src/frontend',
-  publicDir: 'assets',
+  publicDir: 'static',
   build: {
     outDir: '../../public',
     emptyOutDir: true,
