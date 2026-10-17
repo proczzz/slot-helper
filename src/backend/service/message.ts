@@ -1,4 +1,5 @@
 import type { IncomingMessage, MessagingClient } from '../adapter/types.ts';
+import { logError } from '../core/log.ts';
 import { toLocalClock } from '../core/time.ts';
 import type { Message } from '../model/entity/message.ts';
 import type { ShopConfig } from '../model/shop-config.ts';
@@ -39,7 +40,7 @@ export function createMessageService(
           if (reply === null) return;
 
           await client.reply(message.replyTo, reply).catch((error) => {
-            console.error(`${message.channel} 回復失敗:`, error);
+            logError(`${message.channel} 回復失敗:`, error);
           });
         }),
       );
@@ -98,14 +99,14 @@ export function createMessageService(
 
         return { reply };
       } catch (error) {
-        console.error(`處理 ${channel} 訊息失敗:`, error);
+        logError(`處理 ${channel} 訊息失敗:`, error);
         await notifier.systemError(`處理 ${channel} 訊息`, error);
 
         // 補登。失敗就算了,原本那個錯誤比較重要
         await saveMessages(customerId, text, [
           { role: 'user', content: text, timestamp: receivedAt },
           { role: 'fallback', content: systemConfig.fallbackReply, timestamp: Date.now() },
-        ]).catch((saveError) => console.error('補登對話失敗:', saveError));
+        ]).catch((saveError) => logError('補登對話失敗:', saveError));
 
         return { reply: systemConfig.fallbackReply, failed: error };
       }

@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { Notifier } from '../service/notifier';
+import type { Notifier } from '../service/notifier.ts';
+import { logError } from './log.ts';
 
 export function createSupportTools(notifier: Notifier) {
   return {
@@ -15,7 +16,7 @@ export function createSupportTools(notifier: Notifier) {
           await notifier.reportAgentIssue(message);
         } catch (error) {
           // 不能丟錯 —— 會變成 tool-error,模型會連續重試
-          console.error('通知管理員失敗:', error);
+          logError('通知管理員失敗', error);
           return { notified: false, reason: '通知管理員失敗，請讓顧客改用電話聯絡' };
         }
 

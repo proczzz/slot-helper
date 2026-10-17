@@ -1,4 +1,5 @@
 import type { TelegramClient } from '../adapter/telegram/types.ts';
+import { logError } from '../core/log.ts';
 
 export interface Notifier {
   enabled: boolean;
@@ -20,7 +21,7 @@ export function createNotifier(telegramClient: TelegramClient | null): Notifier 
         text.length > MAX_LENGTH ? `${text.slice(0, MAX_LENGTH)}…(已截斷)` : text,
       );
     } catch (error) {
-      console.error('通知老闆失敗:', error);
+      logError('通知老闆失敗:', error);
     }
   }
 

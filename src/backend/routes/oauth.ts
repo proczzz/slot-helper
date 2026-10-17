@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppVariables } from '../boot/services.ts';
 import { ExpectedError } from '../core/app-error.ts';
+import { logError } from '../core/log.ts';
 import { takeOauthSession } from './oauth-cookies.ts';
 
 // 授權結束後導回的後台頁面
@@ -26,7 +27,7 @@ oauthRoutes.get('/outlook/callback', async (c) => {
   try {
     await calendarService.completeAuthorization(redirectUri, code);
   } catch (error) {
-    console.error('Outlook 授權失敗:', error);
+    logError('Outlook 授權失敗:', error);
     // 設定沒填完和真的授權失敗要分開,老闆才知道該去補什麼
     const reason = error instanceof ExpectedError ? 'not_configured' : 'failed';
     return c.redirect(`${SETTINGS_PAGE}?oauth=${reason}`);

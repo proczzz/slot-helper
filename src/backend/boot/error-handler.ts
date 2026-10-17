@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { ZodError } from 'zod';
 import { ExpectedError } from '../core/app-error.ts';
+import { logError } from '../core/log.ts';
 import { jsend } from '../model/dto/jsend.ts';
 import type { Notifier } from '../service/notifier.ts';
 import type { AppVariables } from './services.ts';
@@ -18,7 +19,7 @@ export function handleError(err: Error, c: Context<AppVariables>) {
     return c.json(jsend.fail(err.message), 400);
   }
 
-  console.error('未預期的錯誤:', err);
+  logError('未預期的錯誤', err);
   c.var.runInBackground(c.var.services.notifier.systemError(`${c.req.method} ${c.req.path}`, err));
 
   return c.json(jsend.error('伺服器發生錯誤'), 500);
@@ -27,7 +28,7 @@ export function handleError(err: Error, c: Context<AppVariables>) {
 // 背景執行層級錯誤處理
 export function handleBackgroundFailure(notifier: Notifier) {
   return (error: unknown) => {
-    console.error('背景工作失敗:', error);
+    logError('背景工作失敗', error);
     void notifier.systemError('背景工作', error);
   };
 }

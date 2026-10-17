@@ -1,3 +1,4 @@
+import { logError } from '../../core/log.ts';
 import type { IncomingMessage } from '../types.ts';
 import type {
   LineClient,
@@ -88,7 +89,7 @@ export function createLineClient(config: LineConfig | null): LineClient | null {
 
       return (await response.json()) as LineProfile;
     } catch (error) {
-      console.error('取得 LINE 顧客資料失敗:', error); // 查不到名稱不影響回覆
+      logError('取得 LINE 顧客資料失敗', error); // 查不到名稱不影響回覆
       return null;
     }
   }

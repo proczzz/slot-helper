@@ -7,6 +7,7 @@ import type {
 import { ADMIN_USERNAME } from '../boot/initialize.ts';
 import type { Properties } from '../boot/properties.ts';
 import { ExpectedError } from '../core/app-error.ts';
+import { logError } from '../core/log.ts';
 import type { ConfigRepository } from '../repository/types.ts';
 import type { AdminAuth } from './auth.ts';
 
@@ -70,7 +71,7 @@ export function createTelegramService(
 
       // 指令清單只影響「/」選單,失敗不該讓整個註冊算失敗
       await telegramClient.setCommands(COMMANDS).catch((error) => {
-        console.error('設定 Telegram 指令清單失敗:', error);
+        logError('設定 Telegram 指令清單失敗:', error);
       });
 
       return telegramClient.getWebhookInfo();

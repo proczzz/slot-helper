@@ -9,6 +9,7 @@ import type { Message } from '../model/entity/message.ts';
 import type { ShopConfig } from '../model/shop-config.ts';
 import type { SystemConfig } from '../model/system-config.ts';
 import type { Notifier } from './notifier.ts';
+import { logError } from '../core/log.ts';
 
 export interface ChatResult {
   reply: string; // AI 沒產出內容時是空字串,要不要換成保底訊息由呼叫端決定
@@ -119,13 +120,6 @@ export function createChatService(
             });
             return { ok: true as const, result, used: candidate };
           } catch (error) {
-            console.error('AI 失敗原始樣貌:', {
-              name: error instanceof Error ? error.name : typeof error,
-              message: error instanceof Error ? error.message : String(error),
-              isApiCallError: APICallError.isInstance(error),
-              statusCode: APICallError.isInstance(error) ? error.statusCode : undefined,
-              body: APICallError.isInstance(error) ? error.responseBody : undefined,
-            });
             // 等待後也無法復原的問題: 降級
             if (isPermanentFailure(error)) {
               if (await aiState.demote(candidate.name, describeFailure(error))) {
@@ -144,7 +138,7 @@ export function createChatService(
               );
             } else if (!isLast) {
               // AI拋錯，沒操作工具 且 還有備用 key 可用
-              console.error(`AI 模型 ${candidate.name} 失敗，改用下一組:`, error);
+              console.error(`AI 模型 ${candidate.name} 失敗，改用下一組: ${describeFailure(error)}`);
               continue;
             }
             return { ok: false as const, used: candidate, failed: error, touched, reported };
