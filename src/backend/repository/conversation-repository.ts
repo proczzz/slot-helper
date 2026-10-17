@@ -25,13 +25,17 @@ export const CREATE_MESSAGES_TABLE: Statement[] = [
 
 export function createConversationRepository(database: Database): ConversationRepository {
   return {
-    async getMessages(sessionId, limit, after) {
+    async getMessages(sessionId, limit, after, roles) {
+      if (roles.length === 0) return [];
+
+      // 只有佔位符是動態拼的,值仍然走參數
+      const placeholders = roles.map(() => '?').join(', ');
       // 先由新到舊取最後 N 筆,再反轉成時間順序交給 AI
       const rows = await database.query<Message>({
         sql: `SELECT role, content, timestamp FROM messages
-              WHERE session_id = ? AND timestamp >= ?
+              WHERE session_id = ? AND timestamp >= ? AND role IN (${placeholders})
               ORDER BY id DESC LIMIT ?`,
-        params: [sessionId, after, limit],
+        params: [sessionId, after, ...roles, limit],
       });
       return rows.reverse();
     },

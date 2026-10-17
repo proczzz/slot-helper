@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ModelIcon } from '../components/BrandMark.tsx';
+import { Icon, ModelIcon } from '../components/BrandMark.tsx';
 import { CustomerAvatar } from '../components/CustomerAvatar.tsx';
 import { NewCustomerModal } from '../components/NewCustomerModal.tsx';
 import {
@@ -262,7 +262,11 @@ export function ConversationsPage() {
                   at={message.timestamp}
                   customer={selected}
                   model={message.model}
-                  onInspect={message.role === 'user' ? undefined : () => setInspected(message)}
+                  onInspect={
+                    message.role === 'assistant' || message.role === 'fallback'
+                      ? () => setInspected(message)
+                      : undefined
+                  }
                 />
               ))}
 
@@ -410,19 +414,33 @@ function Bubble({
   pending?: boolean;
   onInspect?: () => void;
 }) {
-  let bubbleColor = 'chat-bubble-primary';
-  if (role === 'user') bubbleColor = '';
-  else if (role === 'fallback') bubbleColor = 'chat-bubble-warning';
+  // orphan 與 notice 要很淡,它們不是真正的對話
+  const MUTED = 'bg-base-200 text-base-content/50';
+  const STYLE: Record<Message['role'], string> = {
+    user: '',
+    assistant: 'chat-bubble-primary',
+    fallback: 'chat-bubble-warning',
+    orphan: MUTED,
+    notice: MUTED,
+  };
+  const fromCustomer = role === 'user' || role === 'orphan';
 
   return (
     <div
-      className={`chat ${role === 'user' ? 'chat-start' : 'chat-end'} ${
+      className={`chat ${fromCustomer ? 'chat-start' : 'chat-end'} ${
         pending ? 'opacity-50' : ''
       }`}
     >
       <div className="chat-image">
-        {role === 'user' ? (
-          <CustomerAvatar customer={customer} className="size-8" />
+        {fromCustomer ? (
+          <CustomerAvatar
+            customer={customer}
+            className={`size-8 ${role === 'orphan' ? 'opacity-40' : ''}`}
+          />
+        ) : role === 'notice' ? (
+          <div className="flex size-8 items-center justify-center rounded-full bg-base-200">
+            <Icon name="material/do-not-disturb" className="size-4 fill-current opacity-40" />
+          </div>
         ) : (
           <div className="size-8 overflow-hidden rounded-full bg-base-200">
             <ModelIcon model={model ?? ''} className="size-full" cover />
@@ -433,10 +451,12 @@ function Bubble({
         <div className="chat-header text-xs opacity-60">
           {formatTime(at)}
           {role === 'fallback' && <span className="ml-2 text-warning">保底訊息</span>}
+          {role === 'orphan' && <span className="ml-2">AI 未收到</span>}
+          {role === 'notice' && <span className="ml-2">系統訊息</span>}
         </div>
       )}
       <div
-        className={`chat-bubble whitespace-pre-wrap ${bubbleColor} ${
+        className={`chat-bubble whitespace-pre-wrap ${STYLE[role]} ${
           onInspect ? 'cursor-pointer' : ''
         }`}
         onClick={onInspect}

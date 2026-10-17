@@ -365,7 +365,8 @@ export async function pauseCustomerAi(customerId: string, minutes: number): Prom
 export interface Message {
   id: number;
   // fallback = AI 沒給出文字,顧客收到的是保底訊息
-  role: 'user' | 'assistant' | 'fallback';
+  // orphan = 顧客說了但 AI 沒收到(接手中或暫停中), notice = 系統訊息
+  role: 'user' | 'assistant' | 'fallback' | 'orphan' | 'notice';
   content: string;
   timestamp: number;
   // 只有 assistant 的訊息有,而且舊資料是 null

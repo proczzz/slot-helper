@@ -1,4 +1,4 @@
-import { generateText, stepCountIs } from 'ai';
+import { APICallError, generateText, stepCountIs } from 'ai';
 import { describeFailure, isPermanentFailure } from '../adapter/ai/errors.ts';
 import type { ActiveModel, AiStateStore } from '../adapter/ai/types.ts';
 import type { SchedulingProvider } from '../adapter/scheduling/types.ts';
@@ -42,9 +42,9 @@ export function createChatService(
   return {
     async ask(customerId, customerName, message, history) {
       const messages = [
-        // 準備歷史訊息。騙 AI 哈哈~ 保底訊息(如果有)是他說過的話
+        // 上一層只會給 user / assistant / fallback,保底訊息算 AI 說過的話
         ...history.map((m) => ({
-          role: m.role === 'fallback' ? ('assistant' as const) : m.role,
+          role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
           content: m.content,
         })),
         { role: 'user' as const, content: message },
@@ -119,6 +119,13 @@ export function createChatService(
             });
             return { ok: true as const, result, used: candidate };
           } catch (error) {
+            console.error('AI 失敗原始樣貌:', {
+              name: error instanceof Error ? error.name : typeof error,
+              message: error instanceof Error ? error.message : String(error),
+              isApiCallError: APICallError.isInstance(error),
+              statusCode: APICallError.isInstance(error) ? error.statusCode : undefined,
+              body: APICallError.isInstance(error) ? error.responseBody : undefined,
+            });
             // 等待後也無法復原的問題: 降級
             if (isPermanentFailure(error)) {
               if (await aiState.demote(candidate.name, describeFailure(error))) {

@@ -92,6 +92,7 @@ export async function createServices(database: Database): Promise<Services> {
   );
   const messageService = createMessageService(
     cache.properties.system,
+    cache.properties.shop,
     customerRepository,
     conversationRepository,
     chatService,
@@ -99,6 +100,7 @@ export async function createServices(database: Database): Promise<Services> {
   );
   const testMessageService = createMessageService(
     cache.properties.system,
+    cache.properties.shop,
     customerRepository,
     conversationRepository,
     testChatService,

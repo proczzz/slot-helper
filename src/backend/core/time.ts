@@ -31,6 +31,16 @@ export function toAbsoluteTime(local: string, timeZone: string): string {
   return new Date(absolute).toISOString();
 }
 
+// 給顧客看的時間。跨日就補上日期
+export function toLocalClock(instant: number, timeZone: string, now = Date.now()): string {
+  const [date, clock] = toLocalTime(new Date(instant).toISOString(), timeZone).split('T');
+  const [today] = toLocalTime(new Date(now).toISOString(), timeZone).split('T');
+  if (date === today) return clock!;
+
+  const [, month, day] = date!.split('-');
+  return `${Number(month)}/${Number(day)} ${clock}`;
+}
+
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 // en-US 的 weekday short 剛好就是 Sun、Mon…,小寫後與 Weekday / DayKey 相同
