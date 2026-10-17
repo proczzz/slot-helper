@@ -299,15 +299,18 @@ function ShopForm({
                 />
               </fieldset>
 
-              <button
-                type="button"
-                className="btn btn-sm btn-square self-center text-error"
-                title="移除"
-                aria-label={`移除第 ${index + 1} 個服務`}
-                onClick={() => removeService(index)}
-              >
-                <Icon name="material/delete" className="size-5" />
-              </button>
+              {/* h-10 對齊輸入框高度, mb-1 抵銷 fieldset 的下內距 */}
+              <div className="mb-1 flex h-10 items-center self-end">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-square text-error"
+                  title="移除"
+                  aria-label={`移除第 ${index + 1} 個服務`}
+                  onClick={() => removeService(index)}
+                >
+                  <Icon name="material/delete" className="size-5" />
+                </button>
+              </div>
             </div>
           ))}
 
@@ -404,12 +407,12 @@ function ShopForm({
 
                         <button
                           type="button"
-                          className="btn btn-sm btn-square text-error"
+                          className="btn btn-sm btn-square btn-ghost text-base-content/40 hover:text-error"
                           title="移除"
                           aria-label={`移除${label}的第 ${index + 1} 個時段`}
                           onClick={() => removePeriod(key, index)}
                         >
-                          <Icon name="material/delete" className="size-5" />
+                          ✕
                         </button>
 
                         {dayErrors.periods[index] && (

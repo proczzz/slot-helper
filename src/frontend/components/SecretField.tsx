@@ -15,14 +15,20 @@ export function SecretField({ label, mask, value, onChange, multiline, hint }: S
 
   let control;
   if (!editing) {
+    // 高度要跟待會出現的輸入框一樣,不然按下變更時畫面會跳
     control = (
-      <code className="flex-1 rounded-box bg-base-200 px-3 py-2 font-mono text-xs">{mask}</code>
+      <code
+        className={`flex flex-1 items-center rounded-box bg-base-200 px-3 font-mono text-xs ${
+          multiline ? 'h-24' : 'h-10'
+        }`}
+      >
+        {mask}
+      </code>
     );
   } else if (multiline) {
     control = (
       <textarea
-        className="textarea textarea-bordered flex-1 resize-none font-mono text-xs"
-        rows={4}
+        className="textarea textarea-bordered h-24 flex-1 resize-none font-mono text-xs"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         spellCheck={false}
