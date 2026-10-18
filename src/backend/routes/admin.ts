@@ -55,11 +55,6 @@ adminRoutes.use('/*', async (c, next) => {
 });
 
 adminRoutes.get('/me', (c) => {
-  console.debug('測試 debug');
-  console.log('測試 log');
-  console.info('測試 info');
-  console.warn('測試 warn');
-  console.error('測試 error');
   return c.json(jsend.success({ username: c.var.username }));
 });
 

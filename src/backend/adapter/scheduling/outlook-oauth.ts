@@ -121,7 +121,7 @@ export async function getAccessToken(
     expiresAt: fresh.expiresAt,
   };
 
-  console.log('Outlook: 已更新快取token');
+  console.info('Outlook: 已更新快取token');
   return fresh.accessToken;
 }
 

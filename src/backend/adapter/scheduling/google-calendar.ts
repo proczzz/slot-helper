@@ -84,7 +84,7 @@ export const googleCalendarProvider: SchedulingProviderDefinition = {
         expiresAt: Date.now() + data.expires_in * 1000,
       };
 
-      console.log('Google Calendar: 已更新快取token');
+      console.info('Google Calendar: 已更新快取token');
       return cachedToken.accessToken;
     }
 

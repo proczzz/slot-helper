@@ -32,7 +32,7 @@ async function start() {
   await database.batch(CREATE_TABLES);
 
   serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) }, (info) => {
-    console.log(`server is running on port ${info.port}`);
+    console.info(`server is running on port ${info.port}`);
   });
 }
 

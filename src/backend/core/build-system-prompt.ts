@@ -29,7 +29,7 @@ ${formatBusinessHours(config.businessHours)}
 ${customerName ? '目前對話的顧客: ' + customerName : ''}
 目前時間: ${now} (${weekday})`;
 
-  console.log(systemPrompt);
+  console.debug(systemPrompt);
   return systemPrompt;
 }
 

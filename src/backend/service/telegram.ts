@@ -97,7 +97,7 @@ export function createTelegramService(
         await telegramClient.sendText('找不到管理帳號，無法重設密碼。');
         return;
       }
-      console.log('已透過 Telegram 重設管理密碼');
+      console.info('已透過 Telegram 重設管理密碼');
 
       await telegramClient.sendText(
         `💡 後台登入資訊\n\n帳號：${ADMIN_USERNAME}\n新密碼：${password}\n\n` +

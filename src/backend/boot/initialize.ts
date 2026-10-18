@@ -53,11 +53,11 @@ async function initialize(
 
   await configRepository.set('system-state', JSON.stringify(system));
 
-  console.log('─'.repeat(50));
-  console.log(`SlotHelper 已初始化，管理帳號: ${ADMIN_USERNAME}`);
-  console.log(`初始密碼: ${password}`);
-  console.log('請登入後台後立即修改密碼');
-  console.log('─'.repeat(50));
+  console.info('─'.repeat(50));
+  console.info(`SlotHelper 已初始化，管理帳號: ${ADMIN_USERNAME}`);
+  console.info(`初始密碼: ${password}`);
+  console.info('請登入後台後立即修改密碼');
+  console.info('─'.repeat(50));
 
   return system;
 }
