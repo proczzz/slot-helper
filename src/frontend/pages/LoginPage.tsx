@@ -32,7 +32,7 @@ export function LoginPage() {
     <main className="grid min-h-dvh place-items-center bg-base-200 p-6">
       <div className="card w-full max-w-sm bg-base-100 shadow-sm">
         <div className="card-body items-center gap-4">
-          <img src="/icons8-helper-94.png" alt="" width={94} height={94} />
+          <img src="/favicon.svg" alt="" width={94} height={94} />
           <h1 className="card-title">SlotHelper</h1>
 
           <form

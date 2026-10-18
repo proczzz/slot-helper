@@ -76,7 +76,7 @@ export function AdminLayout() {
         <label htmlFor="admin-drawer" className="drawer-overlay" aria-label="關閉選單" />
         <aside className="min-h-full w-64 bg-base-100">
           <Link to="/" className="flex items-center gap-2 p-4" onClick={() => setOpen(false)}>
-            <img src="/icons8-helper-94.png" alt="" width={28} height={28} />
+            <img src="/favicon.svg" alt="" width={28} height={28} />
             <span className="font-semibold">SlotHelper</span>
           </Link>
 
