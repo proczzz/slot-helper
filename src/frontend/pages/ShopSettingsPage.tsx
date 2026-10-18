@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CalendarMark, Icon } from '../components/BrandMark.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import {
@@ -487,43 +487,79 @@ function LabelPicker({
   value: string;
   onChange: (labelId: string) => void;
 }) {
+  const dialog = useRef<HTMLDialogElement>(null);
   const current = labels.find((label) => label.id === value);
 
-  return (
-    <div className="dropdown w-full">
-      <div tabIndex={0} role="button" className="btn btn-block justify-start font-normal">
-        {current ? <LabelOption label={current} /> : '不指定'}
-      </div>
+  function pick(labelId: string) {
+    onChange(labelId);
+    dialog.current?.close();
+  }
 
-      <ul
-        tabIndex={0}
-        className="dropdown-content menu z-10 max-h-64 w-52 flex-nowrap overflow-y-auto rounded-box bg-base-100 p-2 shadow"
+  // 用 dialog 而不是下拉選單:它渲染在 top layer,
+  // 不會被服務項目那層 overflow-x-auto 夾住,顏色也能完整顯示
+  return (
+    <>
+      <button
+        type="button"
+        className="btn btn-block justify-start font-normal"
+        onClick={() => dialog.current?.showModal()}
       >
-        <li>
-          <button type="button" onClick={() => onChange('')}>
-            不指定
+        <LabelDot color={current?.color} />
+        <span className="truncate">{current ? current.name || '已選擇' : '不指定'}</span>
+      </button>
+
+      <dialog ref={dialog} className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box max-w-xs">
+          <h3 className="mb-4 font-semibold">日曆標籤</h3>
+
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+            <li>
+              <button
+                type="button"
+                className={`btn btn-block justify-start font-normal ${
+                  value === '' ? 'btn-outline' : 'btn-ghost'
+                }`}
+                onClick={() => pick('')}
+              >
+                <LabelDot />
+                不指定
+              </button>
+            </li>
+
+            {labels.map((label) => (
+              <li key={label.id}>
+                <button
+                  type="button"
+                  className={`btn btn-block justify-start font-normal ${
+                    label.id === value ? 'btn-outline' : 'btn-ghost'
+                  }`}
+                  onClick={() => pick(label.id)}
+                >
+                  <LabelDot color={label.color} className="size-4" />
+                  <span className="truncate">{label.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* 點背景關閉 */}
+        <form method="dialog" className="modal-backdrop">
+          <button type="button" onClick={() => dialog.current?.close()}>
+            關閉
           </button>
-        </li>
-        {labels.map((label) => (
-          <li key={label.id}>
-            <button type="button" onClick={() => onChange(label.id)}>
-              <LabelOption label={label} />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+        </form>
+      </dialog>
+    </>
   );
 }
 
-function LabelOption({ label }: { label: EventLabel }) {
+// 供應商給不出色碼時用灰底,至少看得出有選到東西
+function LabelDot({ color, className = 'size-3' }: { color?: string; className?: string }) {
   return (
-    <>
-      <span
-        className="inline-block size-3 shrink-0 rounded-full bg-base-300"
-        style={label.color ? { backgroundColor: label.color } : undefined}
-      />
-      <span className="truncate">{label.name}</span>
-    </>
+    <span
+      className={`inline-block shrink-0 rounded-full bg-base-300 ${className}`}
+      style={color ? { backgroundColor: color } : undefined}
+    />
   );
 }
