@@ -1,6 +1,7 @@
 import type { IncomingMessage, MessagingClient } from '../adapter/types.ts';
 import { logError } from '../core/log.ts';
 import { toLocalClock } from '../core/time.ts';
+import type { Customer } from '../model/entity/customer.ts';
 import type { Message } from '../model/entity/message.ts';
 import type { ShopConfig } from '../model/shop-config.ts';
 import type { SystemConfig } from '../model/system-config.ts';
@@ -59,9 +60,10 @@ export function createMessageService(
           return { reply: null };
         }
 
-        // 更新用戶資料
-        await customerRepository.upsertProfile({ id: customerId, channel, name, pictureUrl });
-
+        // (若資料有變更名稱、頭貼)更新用戶資料
+        if (profileChanged(customer, incoming)) {
+          await customerRepository.upsertProfile({ id: customerId, channel, name, pictureUrl });
+        }
         // 太頻繁就暫停他。只有觸發的這一則會收到通知,之後的都落在上面那個分支
         const pausedUntil = await pauseIfTooFrequent(customerId, name);
         if (pausedUntil !== null) {
@@ -150,5 +152,16 @@ export function createMessageService(
     if (limitNotify) await notifier.customerPaused(name ?? customerId, limitPauseMinutes);
 
     return until;
+  }
+
+  // upsertProfile 用 COALESCE,傳 null 代表保留原值,所以 null 不算變更
+  function profileChanged(customer: Customer | null, incoming: IncomingMessage): boolean {
+    if (customer === null) return true;
+
+    return (
+      customer.channel !== incoming.channel ||
+      (incoming.name !== null && customer.name !== incoming.name) ||
+      (incoming.pictureUrl !== null && customer.pictureUrl !== incoming.pictureUrl)
+    );
   }
 }
