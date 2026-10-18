@@ -72,20 +72,9 @@ function TelegramForm({ config }: { config: TelegramConfigVo }) {
     <div className="card mx-auto w-full max-w-3xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">Telegram 設定</h2>
-        <p className="text-sm opacity-70">AI 遇到無法處理的顧客需求時，會透過這個機器人通知你。</p>
-
-        <div className="alert alert-info text-sm">
-          <ol className="list-decimal space-y-1 pl-4">
-            <li>
-              在 Telegram 裡找 <span className="font-mono">@BotFather</span>，送{' '}
-              <span className="font-mono">/newbot</span>，取得 Bot token
-            </li>
-            <li>點開你的新機器人，按一次「開始」 —— 沒做這步機器人無法發訊息給你</li>
-            <li>
-              找 <span className="font-mono">@userinfobot</span> 說一句話，複製它回覆的 Id
-            </li>
-          </ol>
-        </div>
+        <p className="text-sm opacity-70">
+          設定後可以用這個機器人重設後台密碼，並在系統出狀況或 AI 需要你出面時收到通知。
+        </p>
 
         <form
           className="flex flex-col gap-4"
@@ -118,7 +107,7 @@ function TelegramForm({ config }: { config: TelegramConfigVo }) {
             {chatIdInvalid ? (
               <p className="label text-error">Chat ID 必須是數字</p>
             ) : (
-              <p className="label">要收通知的帳號，群組的話是負數</p>
+              <p className="label">要收通知的帳號</p>
             )}
           </fieldset>
 

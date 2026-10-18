@@ -81,18 +81,6 @@ function WhatsappForm({ config }: { config: WhatsappConfigVo }) {
     <div className="card mx-auto w-full max-w-3xl bg-base-100 shadow-sm">
       <div className="card-body gap-4">
         <h2 className="card-title">WhatsApp 設定</h2>
-        <p className="text-sm opacity-70">
-          顧客用 WhatsApp 傳訊息給你的商業號碼，AI 會自動回覆與處理預約。
-        </p>
-
-        <div className="alert alert-info text-sm">
-          <ol className="list-decimal space-y-1 pl-4">
-            <li>在 Meta 開發者平台建立應用程式，加入 WhatsApp 產品並綁定電話號碼</li>
-            <li>權杖請用「系統使用者」產生的永久權杖 —— 開發面板上那組只有 24 小時</li>
-            <li>App secret 在應用程式的「設定 → 基本資料」，和存取權杖是不同的東西</li>
-            <li>最後把下面的 Webhook 網址與驗證字串填進 Meta，並訂閱 messages 欄位</li>
-          </ol>
-        </div>
 
         <form
           className="flex flex-col gap-4"

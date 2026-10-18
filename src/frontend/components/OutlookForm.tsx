@@ -69,17 +69,6 @@ export function OutlookForm({ config }: { config: OutlookVo }) {
 
   return (
     <div className="flex flex-col gap-4 border-t border-base-300 pt-4">
-      <div className="alert alert-info text-sm">
-        <ol className="list-decimal space-y-1 pl-4">
-          <li>
-            到 Azure Portal 註冊應用程式，支援帳戶類型選「任何組織目錄 + 個人 Microsoft 帳戶」
-          </li>
-          <li>「驗證」頁面新增「Web」平台，重新導向 URI 貼下面那個網址 —— 必須完全一致</li>
-          <li>「憑證及祕密」建立用戶端密碼（最長 24 個月），把 Client ID 與密碼填進下面並儲存</li>
-          <li>按「連結 Outlook」同意授權，回來之後選擇預約日曆再儲存一次</li>
-        </ol>
-      </div>
-
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
