@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { hashPassword } from '../core/password.ts';
 import type { ConfigRepository, UserRepository } from '../repository/types.ts';
+import type { Database } from '../db/types.ts';
+import { CREATE_TABLES } from './schema.ts';
 
 export const ADMIN_USERNAME = 'admin';
 
@@ -12,10 +14,20 @@ const SystemStateSchema = z.object({
 export type SystemState = z.infer<typeof SystemStateSchema>;
 
 export async function ensureInitialized(
+  database: Database,
   configRepository: ConfigRepository,
   userRepository: UserRepository,
 ): Promise<SystemState> {
-  const raw = await configRepository.get('system-state'); // 有 secret 就當初始化過
+  // Cloudflare 沒有啟動階段可以建表,第一次讀不到就當成空資料庫。
+  // Node 在啟動時已經建好,所以這裡不會觸發
+  let raw: string | null;
+  try {
+    raw = await configRepository.get('system-state');
+  } catch {
+    await database.batch(CREATE_TABLES);
+    raw = null;
+  }
+
   if (raw) return SystemStateSchema.parse(JSON.parse(raw));
 
   return initialize(configRepository, userRepository);

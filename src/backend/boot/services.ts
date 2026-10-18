@@ -60,7 +60,7 @@ export async function createServices(database: Database): Promise<Services> {
   const customerRepository = createCustomerRepository(database);
   const conversationRepository = createConversationRepository(database);
 
-  const cache = await getSharedCache(configRepository, userRepository);
+  const cache = await getSharedCache(database, configRepository, userRepository);
   // ---內部底層依賴---
   const aiStateStore = createAiStateStore(configRepository, clearSharedCache);
   const schedulingProvider = createSchedulingProvider(
@@ -86,10 +86,7 @@ export async function createServices(database: Database): Promise<Services> {
     adminAuth,
     clearSharedCache,
   );
-  const customerService = createCustomerService(
-    customerRepository,
-    conversationRepository,
-  );
+  const customerService = createCustomerService(customerRepository, conversationRepository);
   const messageService = createMessageService(
     cache.properties.system,
     cache.properties.shop,
@@ -149,12 +146,13 @@ interface SharedCache {
 let sharedCache: SharedCache | undefined;
 
 async function getSharedCache(
+  database: Database,
   configRepository: ConfigRepository,
   userRepository: UserRepository,
 ): Promise<SharedCache> {
   if (sharedCache) return sharedCache;
 
-  const state = await ensureInitialized(configRepository, userRepository);
+  const state = await ensureInitialized(database, configRepository, userRepository);
   const properties = await loadProperties(configRepository);
   const telegramClient = createTelegramClient(properties.telegram);
   const demoted = properties.aiState.map((item) => item.name);
