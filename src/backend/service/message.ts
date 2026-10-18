@@ -47,11 +47,12 @@ export function createMessageService(
       );
     },
     async handleMessage(incoming: IncomingMessage): Promise<MessageResult> {
-      const { channel, customerId, name, pictureUrl, text } = incoming;
+      const { channel, customerId, name: incomingName, pictureUrl, text } = incoming;
       const receivedAt = Date.now();
 
       try {
         const customer = await customerRepository.findById(customerId);
+        const name = incomingName ?? customer?.name ?? null;
         // 老闆接手中或暫停中:AI 沉默,但顧客說的話要留下
         if (customer?.aiPausedUntil && customer.aiPausedUntil > receivedAt) {
           await saveMessages(customerId, text, [
