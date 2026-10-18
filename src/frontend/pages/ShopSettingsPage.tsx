@@ -252,71 +252,71 @@ function ShopForm({
 
           {/* 窄螢幕不擠也不換行,跟 AI 模型列表一樣用橫向捲動 */}
           <div className="overflow-x-auto">
-           <div className="flex min-w-[44rem] flex-col gap-4">
-          {services.map((service, index) => (
-            <div key={index} className="flex items-end gap-2">
-              <fieldset className="fieldset flex-1">
-                {index === 0 && <legend className="fieldset-legend">名稱</legend>}
-                <input
-                  type="text"
-                  className="input w-full"
-                  value={service.name}
-                  onChange={(event) => changeService(index, 'name', event.target.value)}
-                  placeholder="染髮"
-                />
-              </fieldset>
+            <div className="flex min-w-[44rem] flex-col gap-4">
+              {services.map((service, index) => (
+                <div key={index} className="flex items-end gap-2">
+                  <fieldset className="fieldset flex-1">
+                    {index === 0 && <legend className="fieldset-legend">名稱</legend>}
+                    <input
+                      type="text"
+                      className="input w-full"
+                      value={service.name}
+                      onChange={(event) => changeService(index, 'name', event.target.value)}
+                      placeholder="染髮"
+                    />
+                  </fieldset>
 
-              <fieldset className="fieldset w-24 shrink-0">
-                {index === 0 && <legend className="fieldset-legend">分鐘</legend>}
-                <input
-                  type="number"
-                  className="input w-full"
-                  value={service.minutes}
-                  onChange={(event) => changeService(index, 'minutes', event.target.value)}
-                  min={1}
-                />
-              </fieldset>
+                  <fieldset className="fieldset w-24 shrink-0">
+                    {index === 0 && <legend className="fieldset-legend">分鐘</legend>}
+                    <input
+                      type="number"
+                      className="input w-full"
+                      value={service.minutes}
+                      onChange={(event) => changeService(index, 'minutes', event.target.value)}
+                      min={1}
+                    />
+                  </fieldset>
 
-              <fieldset className="fieldset flex-1">
-                {index === 0 && <legend className="fieldset-legend">備註</legend>}
-                <input
-                  type="text"
-                  className="input w-full"
-                  value={service.note}
-                  onChange={(event) => changeService(index, 'note', event.target.value)}
-                  placeholder="500~800 元"
-                />
-              </fieldset>
+                  <fieldset className="fieldset flex-1">
+                    {index === 0 && <legend className="fieldset-legend">備註</legend>}
+                    <input
+                      type="text"
+                      className="input w-full"
+                      value={service.note}
+                      onChange={(event) => changeService(index, 'note', event.target.value)}
+                      placeholder="500~800 元"
+                    />
+                  </fieldset>
 
-              <fieldset className="fieldset w-40 shrink-0">
-                {index === 0 && (
-                  <legend className="fieldset-legend whitespace-nowrap">
-                    {calendar && <CalendarMark provider={calendar} className="size-4" />}
-                    日曆標籤
-                  </legend>
-                )}
-                <LabelPicker
-                  labels={labels}
-                  value={service.labelId}
-                  onChange={(labelId) => changeService(index, 'labelId', labelId)}
-                />
-              </fieldset>
+                  <fieldset className="fieldset w-40 shrink-0">
+                    {index === 0 && (
+                      <legend className="fieldset-legend whitespace-nowrap">
+                        {calendar && <CalendarMark provider={calendar} className="size-4" />}
+                        日曆標籤
+                      </legend>
+                    )}
+                    <LabelPicker
+                      labels={labels}
+                      value={service.labelId}
+                      onChange={(labelId) => changeService(index, 'labelId', labelId)}
+                    />
+                  </fieldset>
 
-              {/* h-10 對齊輸入框高度, mb-1 抵銷 fieldset 的下內距 */}
-              <div className="mb-1 flex h-10 items-center self-end">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-square text-error"
-                  title="移除"
-                  aria-label={`移除第 ${index + 1} 個服務`}
-                  onClick={() => removeService(index)}
-                >
-                  <Icon name="material/delete" className="size-5" />
-                </button>
-              </div>
+                  {/* h-10 對齊輸入框高度, mb-1 抵銷 fieldset 的下內距 */}
+                  <div className="mb-1 flex h-10 items-center self-end">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-square text-error"
+                      title="移除"
+                      aria-label={`移除第 ${index + 1} 個服務`}
+                      onClick={() => removeService(index)}
+                    >
+                      <Icon name="material/delete" className="size-5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-           </div>
           </div>
 
           <div className="flex justify-end">
@@ -375,76 +375,81 @@ function ShopForm({
           </fieldset>
 
           <div className="overflow-x-auto">
-           <div className="flex min-w-[30rem] flex-col divide-y divide-base-200">
-            {DAYS.map(({ key, label }) => {
-              const periods = hours[key];
-              const dayErrors = errors[key];
+            <div className="flex min-w-[30rem] flex-col divide-y divide-base-200">
+              {DAYS.map(({ key, label }) => {
+                const periods = hours[key];
+                const dayErrors = errors[key];
 
-              return (
-                <div key={key} className="flex gap-3 py-3">
-                  <div className="w-10 shrink-0 pt-2 font-medium">{label}</div>
+                return (
+                  <div key={key} className="flex gap-3 py-3">
+                    <div className="w-10 shrink-0 pt-2 font-medium">{label}</div>
 
-                  <div className="flex flex-1 flex-col gap-2">
-                    {periods.length === 0 && (
-                      <span className="pt-2 text-sm text-base-content/50">公休</span>
-                    )}
+                    <div className="flex flex-1 flex-col gap-2">
+                      {periods.length === 0 && (
+                        <span className="pt-2 text-sm text-base-content/50">公休</span>
+                      )}
 
-                    {periods.map((period, index) => (
-                      <div key={index} className="flex flex-col gap-1">
-                       <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          className="input input-sm w-32"
-                          value={period[0]}
-                          onChange={(event) =>
-                            changePeriod(key, index, event.target.value, toInputValue(period[1]))
-                          }
-                        />
-                        <span className="text-base-content/50">至</span>
-                        <input
-                          type="time"
-                          className="input input-sm w-32"
-                          value={toInputValue(period[1])}
-                          onChange={(event) =>
-                            changePeriod(key, index, period[0], event.target.value)
-                          }
-                        />
+                      {periods.map((period, index) => (
+                        <div key={index} className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              className="input input-sm w-32"
+                              value={period[0]}
+                              onChange={(event) =>
+                                changePeriod(
+                                  key,
+                                  index,
+                                  event.target.value,
+                                  toInputValue(period[1]),
+                                )
+                              }
+                            />
+                            <span className="text-base-content/50">至</span>
+                            <input
+                              type="time"
+                              className="input input-sm w-32"
+                              value={toInputValue(period[1])}
+                              onChange={(event) =>
+                                changePeriod(key, index, period[0], event.target.value)
+                              }
+                            />
 
-                        {isOvernight(period) && <span className="badge badge-sm">次日</span>}
+                            {isOvernight(period) && <span className="badge badge-sm">次日</span>}
 
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-square btn-ghost text-base-content/40 hover:text-error"
-                          title="移除"
-                          aria-label={`移除${label}的第 ${index + 1} 個時段`}
-                          onClick={() => removePeriod(key, index)}
-                        >
-                          ✕
-                        </button>
-                       </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-square btn-ghost text-base-content/40 hover:text-error"
+                              title="移除"
+                              aria-label={`移除${label}的第 ${index + 1} 個時段`}
+                              onClick={() => removePeriod(key, index)}
+                            >
+                              ✕
+                            </button>
+                          </div>
 
-                        {dayErrors.periods[index] && (
-                          <span className="text-sm text-error">{dayErrors.periods[index]}</span>
-                        )}
-                      </div>
-                    ))}
+                          {dayErrors.periods[index] && (
+                            <span className="text-sm text-error">{dayErrors.periods[index]}</span>
+                          )}
+                        </div>
+                      ))}
 
-                    {dayErrors.overlap && (
-                      <span className="text-sm text-error">{dayErrors.overlap}</span>
-                    )}
+                      {dayErrors.overlap && (
+                        <span className="text-sm text-error">{dayErrors.overlap}</span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm shrink-0"
+                      onClick={() => addPeriod(key)}
+                    >
+                      ＋ 時段
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-sm shrink-0"
-                    onClick={() => addPeriod(key)}
-                  >
-                    ＋ 時段
-                  </button>
-                </div>
-              );
-            })}
-           </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

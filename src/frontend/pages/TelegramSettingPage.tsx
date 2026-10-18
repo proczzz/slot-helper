@@ -253,9 +253,7 @@ function WebhookForm({ info }: { info: WebhookInfo | null }) {
           這不是你現在瀏覽後台的網域。內網後台或反向代理底下這是正常的；不是故意改的話按「還原」
         </p>
       ) : (
-        <p className="label">
-          Telegram 必須連得到這個網址，所以要是公開的 HTTPS
-        </p>
+        <p className="label">Telegram 必須連得到這個網址，所以要是公開的 HTTPS</p>
       )}
 
       <div className="mt-2 flex items-center gap-2">

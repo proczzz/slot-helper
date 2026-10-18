@@ -8,9 +8,7 @@ const MAX_REASON_LENGTH = 200;
 // 那種 isRetryable 也是 false,卻是暫時性的 —— 只有真正的 4xx 才算金鑰壞了
 export function isPermanentFailure(error: unknown): boolean {
   return (
-    APICallError.isInstance(error) &&
-    error.isRetryable === false &&
-    (error.statusCode ?? 0) >= 400
+    APICallError.isInstance(error) && error.isRetryable === false && (error.statusCode ?? 0) >= 400
   );
 }
 

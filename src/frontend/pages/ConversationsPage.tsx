@@ -262,12 +262,7 @@ export function ConversationsPage() {
               onScroll={(event) => onScrollNearBottom(event, messages)}
             >
               {send.isPending && (
-                <Bubble
-                  role="user"
-                  content={send.variables ?? ''}
-                  customer={selected}
-                  pending
-                />
+                <Bubble role="user" content={send.variables ?? ''} customer={selected} pending />
               )}
 
               {messageList.map((message) => (
@@ -443,9 +438,7 @@ function Bubble({
 
   return (
     <div
-      className={`chat ${fromCustomer ? 'chat-start' : 'chat-end'} ${
-        pending ? 'opacity-50' : ''
-      }`}
+      className={`chat ${fromCustomer ? 'chat-start' : 'chat-end'} ${pending ? 'opacity-50' : ''}`}
     >
       <div className="chat-image">
         {fromCustomer ? (

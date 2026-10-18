@@ -138,7 +138,9 @@ export function createChatService(
               );
             } else if (!isLast) {
               // AI拋錯，沒操作工具 且 還有備用 key 可用
-              console.error(`AI 模型 ${candidate.name} 失敗，改用下一組: ${describeFailure(error)}`);
+              console.error(
+                `AI 模型 ${candidate.name} 失敗，改用下一組: ${describeFailure(error)}`,
+              );
               continue;
             }
             return { ok: false as const, used: candidate, failed: error, touched, reported };

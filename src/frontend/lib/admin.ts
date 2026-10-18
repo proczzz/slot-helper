@@ -438,10 +438,7 @@ export async function createTestCustomer(id: string, name: string): Promise<void
 }
 
 // 回 null 代表後端刻意不回應(AI 暫停中)
-export async function sendTestMessage(
-  sessionId: string,
-  message: string,
-): Promise<string | null> {
+export async function sendTestMessage(sessionId: string, message: string): Promise<string | null> {
   const response = await request('/api/admin/test-chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -7,6 +7,8 @@
   "name": "slot-helper",
   "main": "src/backend/infra/cloudflare.ts",
   "compatibility_date": "2026-09-15",
+  "workers_dev": true,
+  "preview_urls": false,
   "assets": {
     "binding": "ASSETS",
     "directory": "./public",
