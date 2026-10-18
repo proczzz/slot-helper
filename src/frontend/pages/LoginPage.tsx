@@ -1,13 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { login } from '../lib/admin.ts';
+import { isLoggedIn, login } from '../lib/admin.ts';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
+
+  // 憑證還有效就直接進後台,不用再登入一次
+  useEffect(() => {
+    isLoggedIn()
+      .then((ok) => (ok ? navigate('/', { replace: true }) : setChecking(false)))
+      // 連不到後端:照樣顯示表單,送出時會給明確的錯誤訊息
+      .catch(() => setChecking(false));
+  }, [navigate]);
 
   async function submit() {
     setSubmitting(true);
@@ -26,6 +35,14 @@ export function LoginPage() {
       setError('連不到伺服器，請確認後端是否已啟動。');
       setSubmitting(false);
     }
+  }
+
+  if (checking) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-base-200">
+        <span className="loading loading-spinner loading-lg" />
+      </main>
+    );
   }
 
   return (
