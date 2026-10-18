@@ -2,8 +2,9 @@ services:
   node:
     build:
       context: .
+    restart: unless-stopped
     ports:
       - '3000:3000'
     volumes:
-      - C:/app/data:/app/data # Windows
-      # - /app/data:/app/data  #  Linux / macOS
+      - ./data:/app/data
+    

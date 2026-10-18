@@ -36,7 +36,7 @@
     "ai": "^7.0.105",
     "hono": "^4.13.8",
     "jose": "^6.2.12",
-    "llm-lister": "file:../llm-lister",
+    "llm-lister": "^0.4.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

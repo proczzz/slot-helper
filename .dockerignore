@@ -1,13 +1,15 @@
 node_modules
 dist
+public
+data
 .git
 .gitignore
 .gitattributes
 .vscode
 .wrangler
+*.log
 .dev.vars
 .env
-public
 wrangler.jsonc
 worker-configuration.d.ts
 *.tsbuildinfo

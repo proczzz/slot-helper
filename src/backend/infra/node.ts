@@ -21,7 +21,6 @@ export const CREATE_TABLES: Statement[] = [
   ...CREATE_USERS_TABLE, // 後臺用戶表
   ...CREATE_CUSTOMERS_TABLE, // 客戶表
 ];
-await database.batch(CREATE_TABLES);
 
 const app = new Hono<AppVariables>();
 
@@ -39,6 +38,13 @@ app.route('/', routes);
 app.use('/*', serveStatic({ root: './public' }));
 app.get('/*', serveStatic({ path: './public/index.html' }));
 
-serve({ fetch: app.fetch, port: 3000 }, (info) => {
-  console.log(`server is running on port ${info.port}`);
-});
+// 建表完成才開始收請求。CJS 不支援 top-level await,所以包成函式
+async function start() {
+  await database.batch(CREATE_TABLES);
+
+  serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) }, (info) => {
+    console.log(`server is running on port ${info.port}`);
+  });
+}
+
+void start();
