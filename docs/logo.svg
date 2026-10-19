@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Slot Helper">
+  <defs>
+    <clipPath id="sh-clip">
+      <rect x="0" y="0" width="64" height="46"/>
+    </clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#6C4CF1"/>
+  <rect x="4" y="36" width="56" height="14" rx="4" fill="#EDEAFF"/>
+  <rect x="9" y="40" width="46" height="6" rx="3" fill="#0C0A20"/>
+  <g clip-path="url(#sh-clip)">
+    <circle cx="32" cy="36" r="20" fill="#E8A72B"/>
+    <circle cx="32" cy="36" r="17.2" fill="#FFD15C"/>
+    <path d="M24.2 34 L32 38.5 L38.75 26.8" fill="none" stroke="#0C0A20" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M4 46 L60 46 A4 4 0 0 1 56 50 L8 50 A4 4 0 0 1 4 46 Z" fill="#EDEAFF"/>
+</svg>
