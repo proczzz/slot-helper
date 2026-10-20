@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { isLoggedIn, login } from '../lib/admin.ts';
+import { APP_VERSION } from '../../version.ts';
+import { REPO_URL } from '../hooks/use-latest-version.ts';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -87,6 +89,15 @@ export function LoginPage() {
           </form>
 
           {error && <div className="alert alert-error">{error}</div>}
+
+          <a
+            href={`${REPO_URL}/releases`}
+            target="_blank"
+            rel="noreferrer"
+            className="link link-hover text-xs opacity-50"
+          >
+            v{APP_VERSION}
+          </a>
         </div>
       </div>
     </main>

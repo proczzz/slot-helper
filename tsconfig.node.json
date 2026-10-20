@@ -14,6 +14,7 @@
     "src/backend/model/**/*.ts",
     "src/backend/repository/*.ts",
     "src/backend/routes/*.ts",
-    "src/backend/service/*ts"
+    "src/backend/service/*ts",
+    "src/version.ts"
   ]
 }

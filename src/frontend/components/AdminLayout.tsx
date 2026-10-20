@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 import { ChannelMark, Icon } from './BrandMark.tsx';
 import { logout } from '../lib/admin.ts';
+import { APP_VERSION } from '../../version.ts';
+import { REPO_URL, useLatestVersion } from '../hooks/use-latest-version.ts';
 
 // channel 的是品牌單色標,其餘走 assets/icon/
 const MENU: { to: string; label: string; end?: boolean; icon?: string; channel?: string }[] = [
@@ -20,6 +22,7 @@ const MENU: { to: string; label: string; end?: boolean; icon?: string; channel?:
 
 export function AdminLayout() {
   const [open, setOpen] = useState(false);
+  const latest = useLatestVersion();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -74,7 +77,7 @@ export function AdminLayout() {
 
       <div className="drawer-side z-10">
         <label htmlFor="admin-drawer" className="drawer-overlay" aria-label="關閉選單" />
-        <aside className="min-h-full w-64 bg-base-100">
+        <aside className="flex min-h-full w-64 flex-col bg-base-100">
           <Link to="/" className="flex items-center gap-2 p-4" onClick={() => setOpen(false)}>
             <img src="/favicon.svg" alt="" width={28} height={28} />
             <span className="font-semibold">SlotHelper</span>
@@ -94,6 +97,45 @@ export function AdminLayout() {
               </li>
             ))}
           </ul>
+
+          {/* mt-auto 把這排推到側邊欄底部 */}
+          <div className="mt-auto flex flex-col gap-2 p-4 text-xs">
+            <div className="flex items-center gap-3">
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="link link-hover inline-flex items-center gap-1 opacity-60"
+            >
+              <Icon name="github" className="size-4" />
+              GitHub
+            </a>
+            <a
+              href={`${REPO_URL}/issues/new`}
+              target="_blank"
+              rel="noreferrer"
+              className="link link-hover opacity-60"
+            >
+              回報問題
+            </a>
+            </div>
+
+            <div className="flex items-center gap-3">
+            <a
+              href={`${REPO_URL}/releases`}
+              target="_blank"
+              rel="noreferrer"
+              className="link link-hover opacity-60"
+            >
+              v{APP_VERSION}
+            </a>
+            {latest && (
+              <a href={latest.url} target="_blank" rel="noreferrer" className="badge badge-primary badge-sm">
+                新版 {latest.version}
+              </a>
+            )}
+            </div>
+          </div>
         </aside>
       </div>
     </div>

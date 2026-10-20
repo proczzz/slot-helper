@@ -1,14 +1,17 @@
 import { z } from 'zod';
+import { APP_VERSION } from '../../version.ts';
 import { hashPassword } from '../core/password.ts';
-import type { ConfigRepository, UserRepository } from '../repository/types.ts';
 import type { Database } from '../db/types.ts';
-import { CREATE_TABLES } from './schema.ts';
+import type { ConfigRepository, UserRepository } from '../repository/types.ts';
+import { CREATE_TABLES, MIGRATIONS, SCHEMA_VERSION } from './schema.ts';
 
 export const ADMIN_USERNAME = 'admin';
 
 const SystemStateSchema = z.object({
   jwtSecret: z.string(),
   initializedAt: z.string(),
+  schemaVersion: z.number().default(1),
+  appVersion: z.string().default(''), // 只是註記，不代表當前運行版本
 });
 
 export type SystemState = z.infer<typeof SystemStateSchema>;
@@ -28,9 +31,11 @@ export async function ensureInitialized(
     raw = null;
   }
 
-  if (raw) return SystemStateSchema.parse(JSON.parse(raw));
+  if (raw === null) return initialize(configRepository, userRepository);
 
-  return initialize(configRepository, userRepository);
+  const state = SystemStateSchema.parse(JSON.parse(raw));
+  if (state.schemaVersion >= SCHEMA_VERSION) return state;
+  return migrate(database, configRepository, state);
 }
 
 async function initialize(
@@ -49,6 +54,8 @@ async function initialize(
   const system = SystemStateSchema.parse({
     jwtSecret: btoa(String.fromCharCode(...bytes)),
     initializedAt: new Date().toISOString(),
+    schemaVersion: SCHEMA_VERSION,
+    appVersion: APP_VERSION,
   });
 
   await configRepository.set('system-state', JSON.stringify(system));
@@ -60,4 +67,21 @@ async function initialize(
   console.info('─'.repeat(50));
 
   return system;
+}
+
+async function migrate(
+  database: Database,
+  configRepository: ConfigRepository,
+  state: SystemState,
+): Promise<SystemState> {
+  for (let from = state.schemaVersion; from < SCHEMA_VERSION; from++) {
+    const statements = MIGRATIONS.get(from);
+    if (statements === undefined) throw new Error(`缺少 schema ${from} -> ${from + 1} 的升級語句`);
+    await database.batch(statements);
+    console.info(`資料表升級: ${from} -> ${from + 1}`);
+  }
+
+  const upgraded = { ...state, schemaVersion: SCHEMA_VERSION, appVersion: APP_VERSION };
+  await configRepository.set('system-state', JSON.stringify(upgraded));
+  return upgraded;
 }
