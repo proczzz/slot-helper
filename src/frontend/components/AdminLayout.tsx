@@ -101,39 +101,44 @@ export function AdminLayout() {
           {/* mt-auto 把這排推到側邊欄底部 */}
           <div className="mt-auto flex flex-col gap-2 p-4 text-xs">
             <div className="flex items-center gap-3">
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="link link-hover inline-flex items-center gap-1 opacity-60"
-            >
-              <Icon name="github" className="size-4" />
-              GitHub
-            </a>
-            <a
-              href={`${REPO_URL}/issues/new`}
-              target="_blank"
-              rel="noreferrer"
-              className="link link-hover opacity-60"
-            >
-              回報問題
-            </a>
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="link link-hover inline-flex items-center gap-1 opacity-60"
+              >
+                <Icon name="github" className="size-4" />
+                GitHub
+              </a>
+              <a
+                href={`${REPO_URL}/issues/new`}
+                target="_blank"
+                rel="noreferrer"
+                className="link link-hover opacity-60"
+              >
+                回報問題
+              </a>
             </div>
 
             <div className="flex items-center gap-3">
-            <a
-              href={`${REPO_URL}/releases`}
-              target="_blank"
-              rel="noreferrer"
-              className="link link-hover opacity-60"
-            >
-              v{APP_VERSION}
-            </a>
-            {latest && (
-              <a href={latest.url} target="_blank" rel="noreferrer" className="badge badge-primary badge-sm">
-                新版 {latest.version}
+              <a
+                href={`${REPO_URL}/releases`}
+                target="_blank"
+                rel="noreferrer"
+                className="link link-hover opacity-60"
+              >
+                v{APP_VERSION}
               </a>
-            )}
+              {latest && (
+                <a
+                  href={latest.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="badge badge-primary badge-sm"
+                >
+                  新版 {latest.version}
+                </a>
+              )}
             </div>
           </div>
         </aside>
