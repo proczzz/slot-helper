@@ -6,10 +6,10 @@
   <img src="docs/logo.svg" width="240" alt="slot-helper" />
 </p>
 
-<h1 align="center">slot-helper</h1>
+<h1 align="center">SlotHelper</h1>
 
 <p align="center">
-  串接了 google 日曆、outlook 行事曆、Line、Whatsapp、Telegram，的AI客服助理
+  串接了 google 日曆、outlook 行事曆、Line、Whatsapp、Telegram 的 AI 客服助理
 </p>
 
 ## 介紹
@@ -21,13 +21,13 @@ SlotHelper 是針對預約客服特別優化過的 agent
 
 一人美髮、按摩、工作室，常見的狀況是：訊息都進 LINE，老闆在服務客人時沒空回，回過頭已經錯過多位客戶。
 
-slot-helper 讓 AI 處理這些訊息 —— 它看得到你的營業時間、服務項目與行事曆，確認時間與項目之後替顧客安排預約並寫進日曆。
+SlotHelper 讓 AI 處理這些訊息 —— 它看得到你的營業時間、服務項目與行事曆，確認時間與項目之後替顧客安排預約並寫進日曆。
 
 - **用你自己的 AI 金鑰**：SlotHelper 由你架設且不會收取任何中間費用或抽成。可以配置多個AI key，若失效或餘額不足自動遞補並通知你
 - **資料在你手上**：沒有中間伺服器。對話、顧客、設定都在你的 Cloudflare 帳號或你自己的伺服器裡
 - **真的會寫日曆**：Google 日曆或 Outlook行事曆，不是只會聊天
 - **你隨時能接手**：後台可以暫停選定顧客的 AI 服務，由負責人自行在 LINE 上回他
-- **可設定閾值**：同一位顧客短時間問太多次自動暫停，避免 AI 費用爆漲
+- **可設定閾值**：同一位顧客短時間問太多次自動暫停，避免 AI 費用暴漲
 - **出事會通知你**：AI 金鑰失效、系統錯誤、顧客被暫停，都用 Telegram 告知
 
 ## 安裝
@@ -38,11 +38,17 @@ slot-helper 讓 AI 處理這些訊息 —— 它看得到你的營業時間、�
 
 Cloudflare 提供免費 V8 JS 運行環境，不用自己買設備、不用管伺服器，更新只要按一個按鈕。
 
-1. **Fork 這個專案** > [建立 fork](https://github.com/proczzz/slot-helper/fork)
-2. 登入 [Cloudflare 控制台](https://dash.cloudflare.com)，左側選 **運算 > Workers 和 Pages > 建立應用程式 > Continue with GitHub**
-3. 授權 GitHub，選剛剛 fork 的 `slot-helper`
-4. 設定不用改，按 <kbd>部署</kbd> 。(D1 資料庫會自動建立。Cloudflare 會送你三級域名 & 伺服器憑證唷，非常省心~)
-5. 等待部署完成後點擊 <kbd>造訪</kbd> ，或是訪問`https://slot-helper.<你的帳號>.workers.dev`
+1. **Fork 這個專案**  
+    [建立 fork](https://github.com/proczzz/slot-helper/fork) ⚠️ 請**取消勾選**「Copy the `main` branch only」，否則 fork 不會包含 `stable` 分支
+2. **更換 stable 為主要分支**  
+    到 fork 的專案，選擇 Settings > Default branch 點擊 <kbd>⇄</kbd> 選 stable
+3. **部署專案**  
+    登入 [Cloudflare 控制台](https://dash.cloudflare.com)，左側選單 > 運算 > Workers 和 Pages > 建立應用程式 > Continue with GitHub > 授權 GitHub (如果還沒連結) > 選剛剛 fork 的 `slot-helper` > 設定不用改直接 <kbd>部署</kbd>
+4. **等待**  
+    可以檢查 log 有沒有出問題，大概半分鐘內完成。  
+    (D1 資料庫會自動建立。Cloudflare 會送你三級域名 & 伺服器憑證唷，非常省心~)
+5. **前往後台**  
+    等待部署完成後點擊 <kbd>造訪</kbd> ，或是訪問`https://slot-helper.<你的帳號>.workers.dev`
 
 **首次登入**：管理帳號密碼在系統日誌裡(先訪問 SlotHelper 登入頁才會生成帳號哦) ——  
 Cloudflare 控制台 > 你的 Worker > **Observability**，  
@@ -77,7 +83,7 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 5. **取出私鑰**(機器人會拿這個去製作自己的識別證)  
     服務帳戶 > 選上一步創的服務帳號 > 金鑰頁籤 > <kbd>新增鍵</kbd> > 建立新的金鑰 > JSON > <kbd>建立</kbd> -> (這裡會自動下載 .json)
 6. **分享工作日曆給服務帳戶**(沒訂閱 Google One 的帳號只能分享主要日曆)  
-    進入 google 日曆 > 我的日曆裡主要日曆右邊三個點 > 設定和共用 > 共用對象 <kbd>+ 新增使用者合群組</kbd> > 貼上服務帳戶的mail；權限選**變更活動**開頭的都可以 > <kbd>傳送</kbd>  
+    進入 google 日曆 > 我的日曆裡主要日曆右邊三個點 > 設定和共用 > 共用對象 <kbd>+ 新增使用者和群組</kbd> > 貼上服務帳戶的mail；權限選**變更活動**開頭的都可以 > <kbd>傳送</kbd>  
     (順便滾動到下面複製日曆ID，若是用主要日曆，則 ID = gmail郵箱)
 7. 回 SlotHelper 後台設定  
     選中剛剛下載的.json(前端會自動帶入私鑰 & google service 帳號)，貼上分享日曆的日曆ID  
@@ -93,11 +99,11 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 1. **註冊 Azure 帳號**  
     前往 [Azure](https://azure.microsoft.com/)，點擊<kbd>開始使用 Azure</kbd> > <kbd>免費試用 Azure</kbd>
 2. **註冊應用程式**  
-    點三條線 > Microft Entra ID > <kbd>+ 新增</kbd> > 應用程式註冊
+    點三條線 > Microsoft Entra ID > <kbd>+ 新增</kbd> > 應用程式註冊
     名稱隨意，重新導向 URI 在 SlotHelper 可以複製
     ```properties
     名稱:(隨意取)
-    支援的帳戶類型:任何Entra ID 租用戶 + 個人Microsoft帳戶
+    支援的帳戶類型:任何 Entra ID 租用戶 + 個人Microsoft帳戶
     重新導向 URI:在 SlotHelper 後台可以複製
     ```
      \> <kbd>註冊</kbd>
@@ -118,7 +124,7 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 2. **停用自動回應訊息**  
     設定 > 回應設定 > 停用自動回應訊息(預設是開啟的，要把它關閉)
 3. **啟用 Message API**  
-    設定 > Messaging API > <kbd>啟用 Messaging API</kbd> (服務提公者可填所屬單位或組織名稱)
+    設定 > Messaging API > <kbd>啟用 Messaging API</kbd> (服務提供者可填所屬單位或組織名稱)
 4. **進入開發者頁面**  
     前往 [LINE Developers Console](https://developers.line.biz/console/)，選取你的 provider 與 Channel
 5. **取得 Channel secret**  
@@ -137,14 +143,17 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
     - 商家：建立或選擇你的商家(需要商家驗證)  
     - 要求 & 總覽：(都不用填資料)
 2. **取得 Phone Number ID & 存取權杖**  
-    主控板會有引導 > 自訂「透過 WhatsApp 與顧客建立聯繫」使用案例 > 步驟1. 試試看 > 兩個都在這
+    主控板會有引導 > 自訂「透過 WhatsApp 與顧客建立聯繫」使用案例 > 步驟1. 試試看 > 兩個都在這  
+    (這個權杖是24小時的，開發用)
 3. **取得 App secret**  
     左側 應用程式設定 > 基本資料 > 應用程式密鑰
-    用戶 > 系統工作人員 > <kbd>+ 新增</kbd> > System user name: slot-helper；System user role: Admin > 產生權杖 > 選擇應用程式(選 1. 建立的) > 權杖到期時間:永不
 4. **配置 回呼網址 & 驗證權杖**  
     從 SlotHelper 後台拿 Webhook 網址 & 驗證字串 > <kbd>驗證並儲存</kbd> >  
     會跳到別的畫面，回到步驟2. > webhook 欄位裡 messages 要訂閱 > 測試
-5. **後續(需要商家驗證)**  
+5. **換永久存取權杖**  
+    前往 [Meta Business Suite](https://business.facebook.com/settings/system_users) >  
+    用戶 > 系統工作人員 > <kbd>+ 新增</kbd> > System user name: slot-helper；System user role: Employee > <kbd>指派資產</kbd> > 把應用程式與 WhatsApp 帳號都指派給他 > <kbd>產生權杖</kbd> > 選擇應用程式(選 1. 建立的) > 權杖到期時間:永不 > 指派權限: 勾選 `whatsapp_business_management` 與 `whatsapp_business_messaging` > 取得權杖
+6. **後續(需要商家驗證)**  
     跟著 Meta 頁面走完步驟(這邊 SlotHelper 開發者走不了流程，未來有借到帳號再補充)
 
 ### Telegram
@@ -154,16 +163,16 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 > 為甚麼要用Telegram? 因為 Line 與 Whatsapp 帳號主動發訊息是要收費的(Line 每月前 200 則免費)，而 Telegram bot 只限制速率不收錢，SlotHelper 幫用戶省荷包 <3
 
 1. **新增 Telegram bot**  
-    在 Telegram 搜尋 **@BotFather**，依序對他發送 "/start" 、 "/newbot"，BotFater 會引導你配置，通常是依序輸入 機器人顯示名稱(日後可修改)、機器人 ID(唯一標示，會出現在uri)  
+    在 Telegram 搜尋 **@BotFather**，依序對他發送 "/start" 、 "/newbot"，BotFather 會引導你配置，通常是依序輸入 機器人顯示名稱(日後可修改)、機器人 ID(唯一標示，會出現在uri)  
     (聊天室左下角有個 <kbd>Open</kbd>，裡面也有UI可以操作)
 2. **取得 token**  
-    前一部做完時 BotFather 會告訴你，長得像 一串數字:一串亂七八糟的英數字
+    前一步做完時 BotFather 會告訴你，長得像 一串數字:一串亂七八糟的英數字
 3. **取得 自己的 Telegram Id**  
     在 Telegarm 搜尋 **@userinfobot**，啟動機器人之後就看的到 ID  
     (此時我們已經有了主動發消息的能力)
 4. **Webhook 註冊**  
     SlotHelper 後台 > <kbd>發送測試訊息</kbd> > 收到沒問題後 <kbd>註冊 Webhook</kbd>  
-    (註冊時候端會生成 secret，並把 webhook 與 secret 發送給 Telegram，註冊完我們就有了接收消息的能力)
+    (註冊時後端會生成 secret，並把 webhook 與 secret 發送給 Telegram，註冊完我們就有了接收消息的能力)
 
 ## 更新
 
