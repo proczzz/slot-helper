@@ -38,14 +38,14 @@ slot-helper 讓 AI 處理這些訊息 —— 它看得到你的營業時間、�
 
 Cloudflare 提供免費 V8 JS 運行環境，不用自己買設備、不用管伺服器，更新只要按一個按鈕。
 
-1. **Fork 這個專案** → [建立 fork](https://github.com/proczzz/slot-helper/fork)
-2. 登入 [Cloudflare 控制台](https://dash.cloudflare.com)，左側選 **運算 → Workers 和 Pages → 建立應用程式 → Continue with GitHub**
+1. **Fork 這個專案** > [建立 fork](https://github.com/proczzz/slot-helper/fork)
+2. 登入 [Cloudflare 控制台](https://dash.cloudflare.com)，左側選 **運算 > Workers 和 Pages > 建立應用程式 > Continue with GitHub**
 3. 授權 GitHub，選剛剛 fork 的 `slot-helper`
 4. 設定不用改，按 <kbd>部署</kbd> 。(D1 資料庫會自動建立。Cloudflare 會送你三級域名 & 伺服器憑證唷，非常省心~)
 5. 等待部署完成後點擊 <kbd>造訪</kbd> ，或是訪問`https://slot-helper.<你的帳號>.workers.dev`
 
 **首次登入**：管理帳號密碼在系統日誌裡(先訪問 SlotHelper 登入頁才會生成帳號哦) ——  
-Cloudflare 控制台 → 你的 Worker → **Observability**，  
+Cloudflare 控制台 > 你的 Worker > **Observability**，  
 日誌內會包含隨機密碼。登入後請到「帳號」頁改密碼。  
 
 ### B. Docker（自己的伺服器或 VPS）
@@ -61,23 +61,23 @@ Cloudflare 控制台 → 你的 Worker → **Observability**，
 
 1. 前往 [Google Cloud Console](https://console.cloud.google.com)
 2. **建立專案**  
-    點擊 <kbd>選取專案</kbd> → <kbd>新增專案</kbd>
-    取個專案名稱(重複的google會夾一串數字，不喜歡的話可以改個沒人用的) → <kbd>建立</kbd>
+    點擊 <kbd>選取專案</kbd> > <kbd>新增專案</kbd>
+    取個專案名稱(重複的google會夾一串數字，不喜歡的話可以改個沒人用的) > <kbd>建立</kbd>
 3. **啟用 google 日曆**  
-    選擇剛剛建立的專案 → 左上角三條線 → API 和服務 → 程式庫 → Google Calendar API → <kbd>啟用</kbd>
+    選擇剛剛建立的專案 > 左上角三條線 > API 和服務 > 程式庫 > Google Calendar API > <kbd>啟用</kbd>
 4. **建立服務帳戶**  
-    左上三條線 → IAM 與管理 → 服務帳戶 → <kbd>+ 建立服務帳戶</kbd>
+    左上三條線 > IAM 與管理 > 服務帳戶 > <kbd>+ 建立服務帳戶</kbd>
     範例:
     ```properties
     服務帳戶名稱:弓箭手村美髮店
     服務帳戶ID:calendar-bot
     服務帳戶說明:給 SlotHelper 操作的 google service 帳號
     ```
-    → <kbd>建立並繼續</kbd> → <kbd>繼續</kbd> → <kbd>完成</kbd>
+    \> <kbd>建立並繼續</kbd> > <kbd>繼續</kbd> > <kbd>完成</kbd>
 5. **取出私鑰**(機器人會拿這個去製作自己的識別證)  
-    服務帳戶 → 選上一步創的服務帳號 → 金鑰頁籤 → <kbd>新增鍵</kbd> → 建立新的金鑰 → JSON → <kbd>建立</kbd> -> (這裡會自動下載 .json)
+    服務帳戶 > 選上一步創的服務帳號 > 金鑰頁籤 > <kbd>新增鍵</kbd> > 建立新的金鑰 > JSON > <kbd>建立</kbd> -> (這裡會自動下載 .json)
 6. **分享工作日曆給服務帳戶**(沒訂閱 Google One 的帳號只能分享主要日曆)  
-    進入 google 日曆 → 我的日曆裡主要日曆右邊三個點 → 設定和共用 → 共用對象 <kbd>+ 新增使用者合群組</kbd> → 貼上服務帳戶的mail；權限選**變更活動**開頭的都可以 → <kbd>傳送</kbd>  
+    進入 google 日曆 > 我的日曆裡主要日曆右邊三個點 > 設定和共用 > 共用對象 <kbd>+ 新增使用者合群組</kbd> > 貼上服務帳戶的mail；權限選**變更活動**開頭的都可以 > <kbd>傳送</kbd>  
     (順便滾動到下面複製日曆ID，若是用主要日曆，則 ID = gmail郵箱)
 7. 回 SlotHelper 後台設定  
     選中剛剛下載的.json(前端會自動帶入私鑰 & google service 帳號)，貼上分享日曆的日曆ID  
@@ -91,35 +91,51 @@ Cloudflare 控制台 → 你的 Worker → **Observability**，
 > Azure 是註冊應用程式用的，不用跟日曆同一個帳號。後台連結會要求日曆帳號授權給應用程式操作權限  
 
 1. **註冊 Azure 帳號**  
-    前往 [Azure](https://azure.microsoft.com/)，點擊<kbd>開始使用 Azure</kbd> → <kbd>免費試用 Azure</kbd>
+    前往 [Azure](https://azure.microsoft.com/)，點擊<kbd>開始使用 Azure</kbd> > <kbd>免費試用 Azure</kbd>
 2. **註冊應用程式**  
-    點三條線 → Microft Entra ID → <kbd>+ 新增</kbd> → 應用程式註冊
+    點三條線 > Microft Entra ID > <kbd>+ 新增</kbd> > 應用程式註冊
     名稱隨意，重新導向 URI 在 SlotHelper 可以複製
     ```properties
     名稱:(隨意取)
     支援的帳戶類型:任何Entra ID 租用戶 + 個人Microsoft帳戶
     重新導向 URI:在 SlotHelper 後台可以複製
     ```
-     → <kbd>註冊</kbd>
+     \> <kbd>註冊</kbd>
 3. **取得帳號**  
     應用程式 (用戶端) 識別碼，複製貼到 SlotHelper 後台
 4. **取得密碼**  
-    管理 → 憑證及秘密 → <kbd>+ 新增用戶端密碼</kbd> → <kbd>新增</kbd>(最多可以2年過期，過期前要換，最好在日曆上做提醒)
-     → 「值」的欄位就是密碼，貼到 SlotHelper 後台
+    管理 > 憑證及秘密 > <kbd>+ 新增用戶端密碼</kbd> > <kbd>新增</kbd>(最多可以2年過期，過期前要換，最好在日曆上做提醒) > 「值」的欄位就是密碼，貼到 SlotHelper 後台
 5. **授權**  
     保存帳號密碼後點擊<kbd>連結 outlook</kbd>，跳轉到微軟允許應用操作日曆，回來後記得選擇要使用的日曆並保存
 
-> 第二步如果忘記填重新導向URI，管理 → Authentication(Preview) →  
-> 新增重新導向URI → Web → 貼上 URI 後按設定就好(別的不用動)
+> 第二步如果忘記填重新導向URI，管理 > Authentication(Preview) >  
+> 新增重新導向URI > Web > 貼上 URI 後按設定就好(別的不用動)
+
+### Line
+
+1. **註冊 Line biz 帳號**  
+    前往 [Line 台灣](https://tw.linebiz.com/)，登入管理頁面 or 免費開設帳號
+2. **停用自動回應訊息**  
+    設定 > 回應設定 > 停用自動回應訊息(預設是開啟的，要把它關閉)
+3. **啟用 Message API**  
+    設定 > Messaging API > <kbd>啟用 Messaging API</kbd> (服務提公者可填所屬單位或組織名稱)
+4. **進入開發者頁面**  
+    前往 [LINE Developers Console](https://developers.line.biz/console/)，選取你的 provider 與 Channel
+5. **取得 Channel secret**  
+    Basic Settings > 下方可以找到
+6. **取得 Channel access token**  
+    Messaging API > 下方找到 Channel access token > <kbd>Issue</kbd> 產生一個
+7. **配置並啟用Webhook**  
+    Messaging API > 下方找到 Webhook URL > 從 SlotHelper 後台取得並貼上 > 點 <kbd>Verify</kbd> 驗證 > 下方 Use webhook 啟用
 
 ## 更新
 
 ### Cloudflare
 
-1. 你的 fork 頁面會顯示「This branch is xxx behind」，右邊按 **Sync fork → Update branch**
+1. 你的 fork 頁面會顯示「This branch is xxx behind」，右邊按 **Sync fork > Update branch**
 2. 等待 Cloudflare 自動部署(過程不停機)，可以查看部署日誌確定沒有報錯
 
-出問題的話，Cloudflare 控制台 → 你的 Worker → **部署(Deployments)** 可以一鍵回到前一版。
+出問題的話，Cloudflare 控制台 > 你的 Worker > **部署(Deployments)** 可以一鍵回到前一版。
 
 ### Docker
 
