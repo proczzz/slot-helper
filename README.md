@@ -18,7 +18,7 @@
 SlotHelper 是針對預約客服特別優化過的 agent
 
 - **彌補AI數學不好的短板**：日曆有哪些空檔、排的進哪些服務都由後端計算好，AI不用知道時區、不用計算預約開始與結束時間
-- **顧客之間訪問權限隔離**：內建的 tools 從根本上阻斷顧客偷看或是變更"不是自己的預約"，不是用提示詞限制而是 AI 手上的工具根本訪問不到 -- 不怕 AI 被顧客哄騙出他人資訊
+- **顧客之間訪問權限隔離**：內建的 tools 從根本上阻斷顧客偷看或是變更"不是自己的預約"，不是用提示詞限制而是 AI 手上的工具根本訪問不到 —— 不怕 AI 被顧客哄騙出他人資訊
 
 一人美髮、按摩、工作室，常見的狀況是：訊息都進 LINE，老闆在服務客人時沒空回，回過頭已經錯過多位客戶。
 
@@ -57,7 +57,33 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 
 ### B. Docker（自己的伺服器或 VPS）
 
-(編輯中...)
+> [!NOTE] 
+> 需要自備網域與 TLS 憑證 —— LINE 與 WhatsApp 的 webhook 只接受 HTTPS。  
+> 推薦: Nginx + Let's Encrypt(免費憑證)或 Cloudflare Tunnel  
+> 資料庫是 SQLite，需要掛一個 volume 到 `/app/data`  
+
+```bash
+docker run -d --name slot-helper --restart unless-stopped \
+  -p 3000:3000 -v ./data:/app/data \
+  ghcr.io/proczzz/slot-helper:latest
+```
+
+或 `compose.yaml`：
+
+```yaml
+services:
+  slot-helper:
+    image: ghcr.io/proczzz/slot-helper:latest
+    restart: unless-stopped
+    init: true
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./data:/app/data
+```
+
+**首次登入**：管理帳號密碼在容器日誌裡(先訪問登入頁才會生成帳號)，
+`docker logs slot-helper` 可以找到。登入後請到「帳號」頁改密碼。
 
 ## 串接設定
 
@@ -82,7 +108,16 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 
 ### Docker
 
-(編輯中...)
+```bash
+# compose
+docker compose pull && docker compose up -d
+
+# docker run：拉新 image 後刪掉容器重建，SQLite 在 volume
+docker pull ghcr.io/proczzz/slot-helper:latest
+docker stop slot-helper && docker rm slot-helper
+```
+
+資料表如有變更，會在重啟後第一個請求時自動升級，升級前建議備份 `data/` 目錄。
 
 ## 技術棧
 
