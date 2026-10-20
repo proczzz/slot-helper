@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Icon } from './BrandMark.tsx';
 import { useAutoReset } from '../hooks/use-auto-reset.ts';
 import { saveSection, type GoogleCalendarRequest, type GoogleCalendarVo } from '../lib/admin.ts';
 
@@ -11,6 +12,7 @@ export function GoogleCalendarForm({ config }: { config: GoogleCalendarVo }) {
   );
   const [calendarId, setCalendarId] = useState(config.calendarId);
   const [fileError, setFileError] = useState('');
+  const [fileName, setFileName] = useState(''); // 非空代表欄位是從檔案帶進來的,鎖住不讓改
   const [dragging, setDragging] = useState(false);
   const queryClient = useQueryClient();
 
@@ -41,9 +43,18 @@ export function GoogleCalendarForm({ config }: { config: GoogleCalendarVo }) {
       }
       setEmail(data.client_email);
       setPrivateKey(data.private_key);
+      setFileName(file.name);
     } catch {
       setFileError('檔案不是有效的 JSON');
     }
+  }
+
+  // 移除檔案:兩欄清空並解鎖,讓使用者自己貼
+  function removeFile() {
+    setFileName('');
+    setEmail('');
+    setPrivateKey('');
+    setFileError('');
   }
 
   // 取消變更:金鑰與電子郵件都回到後端現有的那一組
@@ -51,9 +62,11 @@ export function GoogleCalendarForm({ config }: { config: GoogleCalendarVo }) {
     setPrivateKey(undefined);
     setEmail(config.serviceAccountEmail);
     setFileError('');
+    setFileName('');
   }
 
   const editing = privateKey !== undefined;
+  const fromFile = fileName !== '';
   const hasKey = editing ? !!email && privateKey !== '' : config.hasPrivateKey;
   const changed =
     editing || email !== config.serviceAccountEmail || calendarId !== config.calendarId;
@@ -84,9 +97,24 @@ export function GoogleCalendarForm({ config }: { config: GoogleCalendarVo }) {
           )}
         </div>
 
-        {editing && (
+        {/* 高度要跟上傳區一致(h-32),不然帶入檔案時整個表單會跳 */}
+        {editing && fromFile && (
+          <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-box border-2 border-base-300 bg-base-200/40 px-4">
+            <Icon name="material/description" className="size-6 fill-current opacity-60" />
+            <span className="max-w-full truncate text-sm font-medium">{fileName}</span>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost text-base-content/50 hover:text-error"
+              onClick={removeFile}
+            >
+              ✕ 移除檔案
+            </button>
+          </div>
+        )}
+
+        {editing && !fromFile && (
           <label
-            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed p-6 transition-colors ${
+            className={`flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed px-4 transition-colors ${
               dragging
                 ? 'border-primary bg-primary/5'
                 : 'border-base-300 hover:border-base-content/30'
@@ -130,7 +158,7 @@ export function GoogleCalendarForm({ config }: { config: GoogleCalendarVo }) {
             className="input w-full"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            disabled={!editing}
+            disabled={!editing || fromFile}
             spellCheck={false}
             placeholder="xxx@專案名.iam.gserviceaccount.com"
           />
@@ -143,7 +171,7 @@ export function GoogleCalendarForm({ config }: { config: GoogleCalendarVo }) {
             rows={editing ? 8 : 2}
             value={privateKey ?? ''}
             onChange={(event) => setPrivateKey(event.target.value)}
-            disabled={!editing}
+            disabled={!editing || fromFile}
             spellCheck={false}
             placeholder={editing ? '-----BEGIN PRIVATE KEY-----' : '已儲存，為安全起見不顯示內容'}
           />

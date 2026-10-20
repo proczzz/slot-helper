@@ -169,7 +169,7 @@ function WhatsappForm({ config }: { config: WhatsappConfigVo }) {
             </button>
           </div>
           <p className="mt-1 text-xs opacity-60">
-            貼到 Meta 的 Callback URL。如果你的後台和對外網域不同，請自行替換網域
+            貼到 Meta 的 回呼網址。如果你的後台和對外網域不同，請自行替換網域
           </p>
         </div>
 
