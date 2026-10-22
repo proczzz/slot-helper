@@ -63,9 +63,7 @@ Cloudflare 控制台 > 你的 Worker > **Observability**，
 > 資料庫是 SQLite，需要掛一個 volume 到 `/app/data`  
 
 ```bash
-docker run -d --name slot-helper --restart unless-stopped \
-  -p 3000:3000 -v ./data:/app/data \
-  ghcr.io/proczzz/slot-helper:latest
+docker run -d --name slot-helper --restart unless-stopped -p 3000:3000 -v ./data:/app/data ghcr.io/proczzz/slot-helper:latest
 ```
 
 或 `compose.yaml`：
